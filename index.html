@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ôn thi Nguyên lý HĐH</title>
+<meta name="description" content="Trắc nghiệm và tổng hợp kiến thức Chương 4 – Quản lý bộ nhớ, Chương 5 – Vào/Ra, Chương 6 – Hệ thống File">
+<meta name="theme-color" content="#0f1523">
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script>try{var t=localStorage.getItem("nlhdh_theme");if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+</head>
+<body>
+
+<!-- ============ MÀN HÌNH KHÓA ============ -->
+<div id="lock">
+  <form class="lock-card" id="lockForm" autocomplete="off">
+    <div class="lock-logo"><svg class="icon" style="width:28px;height:28px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+    <h1>Ôn thi Nguyên lý HĐH</h1>
+    <p>Trang được bảo vệ. Nhập mật khẩu để vào ôn tập.</p>
+    <div class="field">
+      <input id="pw" type="password" placeholder="Mật khẩu" aria-label="Mật khẩu" autofocus>
+      <button type="button" class="eye" id="eye" aria-label="Hiện mật khẩu"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+    <label class="remember"><input type="checkbox" id="remember"> Ghi nhớ trên thiết bị này</label>
+    <button class="btn primary block" type="submit" id="unlockBtn">Mở khóa</button>
+    <div class="lock-err" id="lockErr"></div>
+  </form>
+</div>
+
+<!-- ============ ỨNG DỤNG ============ -->
+<div id="app" hidden>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><div class="brand-badge">OS</div><div>Ôn thi NL HĐH<small>Chương 4 · 5 · 6</small></div></div>
+    <nav class="tabs" id="tabs">
+      <button class="tab" data-view="home"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Trang chủ</button>
+      <button class="tab" data-view="quiz"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Làm bài</button>
+      <button class="tab" data-view="summary"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>Tổng hợp <span class="lbl-long">kiến thức</span></button>
+    </nav>
+    <div class="top-actions">
+      <button class="iconbtn" id="themeBtn" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <button class="iconbtn" id="logoutBtn" title="Khóa trang" aria-label="Khóa trang"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section id="view-home" hidden></section>
+  <!-- QUIZ -->
+  <section id="view-quiz" hidden></section>
+  <!-- RESULT -->
+  <section id="view-result" hidden></section>
+  <!-- SUMMARY -->
+  <section id="view-summary" hidden></section>
+</main>
+</div>
+
+<div id="toast"></div>
+
+<script src="data/chuong4.js"></script>
+<script src="data/chuong5.js"></script>
+<script src="data/chuong6.js"></script>
+<script src="data/tomtat.js"></script>
+<script src="assets/lock.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
