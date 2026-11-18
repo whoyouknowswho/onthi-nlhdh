@@ -99,6 +99,9 @@ sections:[
 <p><b>Pentium</b> (phân đoạn + phân trang):</p>
 <div class="flow"><span>(selector, offset)</span><i>→</i><span>Descriptor<small>GDT / LDT</small></span><i>→</i><span>Địa chỉ tuyến tính</span><i>→</i><span>Phân trang<small>Dir·Page·Offset</small></span><i>→</i><span>Địa chỉ vật lý</span></div>
 <ul><li><b>GDT</b> = Global Descriptor Table (chung), <b>LDT</b> = Local Descriptor Table (riêng từng chương trình).</li>
+<li><b>Selector 16 bit</b> = Index 13 bit (tối đa 8192 descriptor) + 1 bit (0 = GDT, 1 = LDT) + 2 bit mức đặc quyền.</li>
+<li><b>Descriptor</b>: Base 32 bit, Limit 20 bit; G = 0 limit tính theo byte / 1 theo trang; D = 16/32-bit; P = có trong bộ nhớ; DPL = mức đặc quyền.</li>
+<li>Địa chỉ tuyến tính 32 bit (không gian 4 GB) = <b>Dir 10 · Page 10 · Offset 12</b>.</li>
 <li><b>4 mức bảo vệ 0–3</b>: 0 = kernel, 1 = system call, 2 = thư viện chia sẻ, 3 = chương trình user.</li></ul>`}
 ]},
 {
@@ -120,12 +123,27 @@ sections:[
 <tr><td>(a) Separate I/O & memory space</td><td>Cổng I/O ở không gian riêng, dùng lệnh IN/OUT</td></tr>
 <tr><td>(b) Memory-mapped I/O</td><td>Thanh ghi thiết bị nằm trong không gian địa chỉ bộ nhớ</td></tr>
 <tr><td>(c) Hybrid</td><td>Kết hợp cả hai</td></tr></table>
-<p>Kiến trúc bus: (a) <b>single-bus</b>; (b) <b>dual-bus memory</b> (bus bộ nhớ tốc độ cao riêng).</p>`},
+<p>Kiến trúc bus: (a) <b>single-bus</b> – mọi địa chỉ đi chung 1 bus; (b) <b>dual-bus memory</b> – CPU đọc/ghi RAM qua bus băng thông cao riêng.</p>
+<p><b>Bus trên PC:</b> <b>PCI bus</b> là bus chính (graphics controller, bridge/memory controller, SCSI controller, IDE controller); <b>expansion bus</b> nối keyboard, parallel port, serial port; <b>SCSI bus</b> nối các đĩa SCSI.</p>
+<table><tr><th>Cổng I/O (hex)</th><th>Thiết bị</th><th>Cổng I/O (hex)</th><th>Thiết bị</th></tr>
+<tr><td>000–00F</td><td>DMA controller</td><td>320–32F</td><td>Hard-disk controller</td></tr>
+<tr><td>020–021</td><td>Interrupt controller</td><td>378–37F</td><td>Parallel port</td></tr>
+<tr><td>040–043</td><td>Timer</td><td>3D0–3DF</td><td>Graphics controller</td></tr>
+<tr><td>200–20F</td><td>Game controller</td><td>3F0–3F7</td><td>Diskette-drive controller</td></tr>
+<tr><td>2F8–2FF</td><td>Serial port (secondary)</td><td>3F8–3FF</td><td>Serial port (primary)</td></tr></table>`},
 {id:"s5-3",title:"3. Ba phương pháp truyền dữ liệu",html:`
 <table><tr><th>Phương pháp</th><th>Cách làm</th><th>Ưu / nhược</th></tr>
 <tr><td><b>Programmed I/O</b> (Polling)</td><td>CPU <b>lặp chờ bận (busy-wait)</b> kiểm tra trạng thái <i>ready / busy / error</i></td><td>Đơn giản; <b>lãng phí CPU</b></td></tr>
 <tr><td><b>Interrupt-driven</b></td><td>Thiết bị báo <b>ngắt</b> khi xong (qua interrupt lines trên bus tới interrupt controller); CPU làm việc khác trong lúc chờ</td><td>Không busy-wait; nhưng <b>mỗi ký tự 1 ngắt</b></td></tr>
 <tr><td><b>DMA</b></td><td>Bộ điều khiển DMA tự chuyển dữ liệu giữa thiết bị và RAM</td><td><b>Mỗi buffer 1 ngắt</b> – tốt nhất cho khối lớn</td></tr></table>
+<p><b>Quá trình ngắt:</b> 1. thiết bị xong việc → 2. interrupt controller phát ngắt tới CPU → 3. CPU báo nhận (ack).</p>
+<table><tr><th>IRQ</th><th>Nguồn ngắt (PC)</th><th>IRQ</th><th>Nguồn ngắt (PC)</th></tr>
+<tr><td>NMI</td><td>Parity error</td><td>IRQ6</td><td>Floppy disk controller</td></tr>
+<tr><td>IRQ0</td><td>Interval Timer (PIT)</td><td>IRQ7</td><td>LPT1</td></tr>
+<tr><td>IRQ1</td><td>Keyboard</td><td>IRQ8</td><td>Real-time clock</td></tr>
+<tr><td>IRQ2</td><td>Nối tầng PIC #2 (cascade)</td><td>IRQ12</td><td>Chuột PS/2</td></tr>
+<tr><td>IRQ3 / IRQ4</td><td>COM2 / COM1</td><td>IRQ14 / IRQ15</td><td>EIDE chính / phụ</td></tr></table>
+<p>PIC #1 = kiểu ngắt 8–F (IRQ0–7), PIC #2 = 70–77 (IRQ8–15). DMA controller có 3 thanh ghi: <b>Address, Count, Control</b>.</p>
 <p><b>Quá trình DMA:</b></p>
 <ol class="steps"><li>CPU lập trình DMA controller</li><li>DMA yêu cầu đĩa truyền dữ liệu vào RAM</li><li>Dữ liệu được truyền vào RAM</li><li>Đĩa gửi ACK cho DMA</li><li>DMA ngắt CPU khi xong</li></ol>
 <div class="tip"><b>Mẹo nhớ “in một chuỗi”:</b> Programmed = CPU tự <i>đứng chờ</i> từng ký tự · Interrupt = CPU <i>ngủ</i>, mỗi ký tự đánh thức 1 lần · DMA = <i>thuê người</i> in hộ, xong cả chuỗi mới báo.</div>`},
@@ -202,6 +220,7 @@ sections:[
 <tr><td>File tăng kích thước</td><td>✘ Không được</td><td>✔</td><td>✔</td></tr>
 <tr><td>Nhược điểm khác</td><td>—</td><td>Tốn chỗ con trỏ</td><td>Overhead index block</td></tr>
 <tr><td>Ví dụ</td><td><b>CD-ROM</b></td><td><b>FAT</b> (bảng trong RAM)</td><td><b>i-node</b> (UNIX)</td></tr></table>
+<div class="ex"><b>Ví dụ slide:</b> Liên tục – mail: start 19, length 6 → block 19–24. Liên kết – jeep: 9 → 16 → 1 → 10 → 25 (−1 = hết). FAT – File A: 4 → 7 → 2 → 10 → 12; File B: 6 → 3 → 11 → 14. Chỉ mục – jeep: index block 19 chứa 9, 16, 1, 10, 25.</div>
 <ul><li><b>FAT</b> = cấp phát liên kết nhưng đưa con trỏ ra một bảng <b>trong RAM</b> → truy cập ngẫu nhiên nhanh hơn; nhược điểm: bảng lớn khi đĩa lớn.</li>
 <li><b>i-node</b>: Attributes + các địa chỉ đĩa trực tiếp + <b>single / double / triple indirect block</b> → hỗ trợ file rất lớn.</li></ul>`},
 {id:"s6-5",title:"5. Thư mục, file chia sẻ, quản lý không gian",html:`
@@ -220,7 +239,8 @@ sections:[
 <tr><td>8 KB</td><td>—</td><td>512 MB</td><td>2 TB</td></tr><tr><td>16 KB</td><td>—</td><td>1024 MB</td><td>2 TB</td></tr>
 <tr><td>32 KB</td><td>—</td><td>2048 MB</td><td>2 TB</td></tr></table>
 <div class="tip"><b>Mẹo:</b> FAT-12 = 2<sup>12</sup> block × kích thước block (4 KB → 4096 × 4 KB = 16 MB). Ô “—” = tổ hợp không được phép.</div>
-<p><b>Windows 98</b>: mở rộng entry MS-DOS; tên dài lưu trong nhiều entry phụ, mỗi entry có <b>checksum</b> liên kết với tên ngắn (vd THEQUI~1).</p>
+<p><b>Windows 98</b>: mở rộng entry MS-DOS (thêm NT, Sec, Creation date/time, Last access, <b>16 bit cao của block bắt đầu</b> → đủ 32 bit cho FAT-32). Tên dài lưu trong nhiều entry phụ, mỗi entry chứa <b>13 ký tự</b> (5 + 6 + 2) cùng Sequence và <b>checksum</b> liên kết với tên ngắn (vd THEQUI~1).</p>
+<p><b>CD-ROM</b>: dữ liệu trên một <b>rãnh xoắn ốc</b> (pit/land), chia block 2K. Entry ISO 9660 có Location of file (8 byte), File size (8 byte), Date and time (7 byte), tên dạng Base.Ext;Ver.</p>
 <p><b>UNIX V7</b>: entry = <b>2 byte số i-node + 14 byte tên</b> (16 byte); mọi thuộc tính nằm trong i-node.</p>
 <p><b>Tìm /usr/ast/mbox:</b></p>
 <div class="flow"><span>Root: usr<small>→ i-node 6</small></span><i>→</i><span>i-node 6<small>→ block 132</small></span><i>→</i><span>Block 132: ast<small>→ i-node 26</small></span><i>→</i><span>i-node 26<small>→ block 406</small></span><i>→</i><span>Block 406: mbox<small>→ i-node 60</small></span></div>`}

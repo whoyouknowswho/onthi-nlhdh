@@ -41,6 +41,14 @@ var state = { sessions:{}, active:null, view:"home", sumCh:4 };
 function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.sessions) state = Object.assign(state, s); } catch(e){}
   // bỏ các câu không còn tồn tại
   Object.keys(state.sessions).forEach(function(k){ var s=state.sessions[k]; s.ids = s.ids.filter(function(id){ return BYID[id]; }); if (!s.ids.length) delete state.sessions[k]; });
+  // bổ sung câu hỏi mới vào các bộ theo chương đã lưu từ trước
+  ["c4","c5","c6","all"].forEach(function(k){
+    var s = state.sessions[k]; if (!s) return;
+    var have = {}; s.ids.forEach(function(id){ have[id]=1; });
+    idsOfChapter(k==="all" ? "all" : +k.slice(1)).forEach(function(id){
+      if (!have[id]){ s.ids.push(id); s.opt[id] = shuffle(range(BYID[id].opts.length)); if (s.submitted) s.submitted = false; }
+    });
+  });
   if (state.active && !state.sessions[state.active]) state.active = null;
 }
 function save(){ try { localStorage.setItem(LS, JSON.stringify(state)); } catch(e){} }
