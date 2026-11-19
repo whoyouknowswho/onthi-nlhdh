@@ -338,7 +338,9 @@ function renderSummary(){
   var data = window.SUMMARY || [], ch = state.sumCh || 4;
   var c = data.filter(function(d){ return d.ch===ch; })[0] || data[0];
   var qf = fold(sumQuery.trim());
-  var secs = c.sections.filter(function(sec){ return !qf || fold(sec.title + " " + sec.html.replace(/<[^>]+>/g," ")).indexOf(qf)>=0; });
+  var gl = (window.GLOSSARY || {})[c.ch];
+  var all = gl ? [glossarySec(c.ch, gl)].concat(c.sections) : c.sections;
+  var secs = all.filter(function(sec){ return !qf || fold(sec.title + " " + sec.html.replace(/<[^>]+>/g," ")).indexOf(qf)>=0; });
   var root = $("#view-summary");
   root.innerHTML = '<div class="sum-layout"><div class="sum-nav">'+
     '<div class="chap-tabs">'+data.map(function(d){ return '<button class="chap-tab '+(d.ch===c.ch?'active':'')+'" data-sumch="'+d.ch+'">Chương '+d.ch+'</button>'; }).join("")+'</div>'+
@@ -348,10 +350,83 @@ function renderSummary(){
     (secs.length ? secs.map(renderSec).join("") : '<div class="panel empty">Không tìm thấy nội dung phù hợp “'+esc(sumQuery)+'”.</div>')+
     '<div class="sum-cta"><button class="btn primary" data-start="c'+c.ch+'">'+ICON.play+'Luyện câu hỏi Chương '+c.ch+'</button>'+
     (c.ch<6?'<button class="btn" data-sumch="'+(c.ch+1)+'">Chương '+(c.ch+1)+ICON.right+'</button>':'')+'</div></div></div>';
+  if (gl) linkTerms(root, gl);
   if (sumQuery.trim()) highlight(root.querySelectorAll(".sum-body"), sumQuery.trim());
   mountDemos(root);
   tocLock = 0; spyToc();
 }
+/* ---------- Thuật ngữ: mục riêng + gạch chân giải nghĩa tại chỗ ---------- */
+function glossarySec(ch, gl){
+  var groups = [], by = {};
+  gl.forEach(function(it, i){ if (!by[it.g]){ by[it.g] = []; groups.push(it.g); } by[it.g].push([it, i]); });
+  var secTitle = {}; ((window.SUMMARY || []).filter(function(d){ return d.ch === ch; })[0] || {sections:[]}).sections.forEach(function(s){ secTitle[s.id] = s.title.replace(/^(\d+)\..*$/, "mục $1"); });
+  var html = '<p>Giải nghĩa nhanh <b>' + gl.length + ' thuật ngữ</b> của chương, xếp theo thứ tự bài học. Trong các mục bên dưới, thuật ngữ được <span class="term-demo">gạch chân chấm</span>: rê chuột hoặc chạm vào để xem nghĩa ngay.</p>' +
+    '<input class="search gl-filter" placeholder="Lọc thuật ngữ… (vd: offset, TLB, phân mảnh)">' +
+    groups.map(function(g){
+      return '<h4 class="sub gl-gh">' + esc(g) + '</h4><div class="gl-grid">' + by[g].map(function(p){
+        var it = p[0];
+        return '<div class="gl-item" id="gl' + ch + '-' + p[1] + '"><div class="gl-t"><b>' + esc(it.t) + '</b>' + (it.en ? '<span>' + esc(it.en) + '</span>' : '') + '</div>' +
+          '<div class="gl-d">' + esc(it.d) + '</div>' + (it.ex ? '<div class="gl-ex">' + esc(it.ex) + '</div>' : '') +
+          (it.sec ? '<a href="#' + it.sec + '" data-toc="' + it.sec + '" class="gl-go">Xem ' + esc(secTitle[it.sec] || "mục liên quan") + ' →</a>' : '') + '</div>';
+      }).join("") + '</div>';
+    }).join("") + '<p class="muted gl-none" hidden>Không có thuật ngữ khớp.</p>';
+  return {id:"g" + ch, title:"📖 Thuật ngữ Chương " + ch, html:html};
+}
+function linkTerms(root, gl){
+  var pats = [];
+  gl.forEach(function(it, i){ (it.a || []).forEach(function(a){
+    pats.push({i:i, len:a.length, re:new RegExp("(?<![\\p{L}\\d])" + a.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&") + "(?![\\p{L}\\d])", it.cs ? "u" : "iu")});
+  }); });
+  pats.sort(function(x, y){ return y.len - x.len; });
+  var SKIP = "a, button, code, mark, .term, .demo, .vplayer, h3, h4, th, .addr, .flow, .bits, .xs, .gl-filter, summary";
+  Array.prototype.forEach.call(root.querySelectorAll(".sum-sec:not([id^='g']) .sum-body"), function(body){
+    var used = {};
+    pats.forEach(function(p){
+      if (used[p.i]) return;
+      var w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT), n, m;
+      while ((n = w.nextNode())){
+        if (!n.nodeValue.trim() || (n.parentElement && n.parentElement.closest(SKIP))) continue;
+        m = p.re.exec(n.nodeValue); if (!m) continue;
+        var after = n.splitText(m.index); after.splitText(m[0].length);
+        var sp = document.createElement("span"); sp.className = "term"; sp.tabIndex = 0; sp.dataset.g = p.i; sp.textContent = after.nodeValue;
+        after.parentNode.replaceChild(sp, after);
+        used[p.i] = 1; break;
+      }
+    });
+  });
+}
+var termPop = null, termHide = 0;
+function showTerm(el){
+  var gl = (window.GLOSSARY || {})[state.sumCh || 4], it = gl && gl[+el.dataset.g]; if (!it) return;
+  if (!termPop){ termPop = document.createElement("div"); termPop.id = "termPop"; termPop.setAttribute("role", "tooltip"); document.body.appendChild(termPop);
+    termPop.onmouseenter = function(){ clearTimeout(termHide); }; termPop.onmouseleave = hideTerm; }
+  clearTimeout(termHide);
+  termPop.innerHTML = '<div class="tp-t"><b>' + esc(it.t) + '</b>' + (it.en ? '<span>' + esc(it.en) + '</span>' : '') + '</div><div class="tp-d">' + esc(it.d) + '</div>' + (it.ex ? '<div class="tp-ex">' + esc(it.ex) + '</div>' : '');
+  termPop.style.display = "block";
+  var r = el.getBoundingClientRect(), pw = Math.min(340, window.innerWidth - 24);
+  termPop.style.width = pw + "px";
+  var left = Math.max(12, Math.min(window.innerWidth - pw - 12, r.left + r.width / 2 - pw / 2));
+  var top = r.bottom + 8; termPop.style.left = left + "px"; termPop.style.top = top + "px";
+  var ph = termPop.offsetHeight; if (top + ph > window.innerHeight - 8) termPop.style.top = Math.max(8, r.top - ph - 8) + "px";
+}
+function hideTerm(){ clearTimeout(termHide); termHide = setTimeout(function(){ if (termPop) termPop.style.display = "none"; }, 120); }
+document.addEventListener("mouseover", function(e){ var t = e.target.closest && e.target.closest(".term"); if (t) showTerm(t); });
+document.addEventListener("mouseout", function(e){ var t = e.target.closest && e.target.closest(".term"); if (t) hideTerm(); });
+document.addEventListener("focusin", function(e){ if (e.target.classList && e.target.classList.contains("term")) showTerm(e.target); });
+document.addEventListener("focusout", function(e){ if (e.target.classList && e.target.classList.contains("term")) hideTerm(); });
+document.addEventListener("click", function(e){
+  var t = e.target.closest && e.target.closest(".term");
+  if (t){ showTerm(t); return; }
+  if (termPop && !(e.target.closest && e.target.closest("#termPop"))) termPop.style.display = "none";
+});
+window.addEventListener("scroll", function(){ if (termPop && termPop.style.display === "block") termPop.style.display = "none"; }, {passive:true});
+document.addEventListener("input", function(e){
+  if (!e.target.classList || !e.target.classList.contains("gl-filter")) return;
+  var q = fold(e.target.value.trim()), sec = e.target.closest(".sum-sec"), any = false;
+  Array.prototype.forEach.call(sec.querySelectorAll(".gl-item"), function(it){ var ok = !q || fold(it.textContent).indexOf(q) >= 0; it.hidden = !ok; if (ok) any = true; });
+  Array.prototype.forEach.call(sec.querySelectorAll(".gl-grid"), function(g){ var vis = Array.prototype.some.call(g.children, function(c){ return !c.hidden; }); g.hidden = !vis; g.previousElementSibling.hidden = !vis; });
+  sec.querySelector(".gl-none").hidden = any;
+});
 /* Mục lục bên cạnh: tô nổi mục đang chọn / đang đọc */
 var tocLock = 0, spyRaf = 0;
 function setTocOn(id){

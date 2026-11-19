@@ -451,3 +451,21 @@ details.slide-note ul{margin:8px 0 2px}
 .bits{display:flex;flex-wrap:wrap;gap:2px;margin:8px 0;font-family:ui-monospace,Consolas,monospace;font-weight:800;font-size:15px;letter-spacing:1px}
 .bits span{padding:4px 8px;border-radius:6px}
 .bits .b1{background:var(--warn-soft)}.bits .b2{background:rgba(6,182,212,.18)}.bits .b3{background:var(--ok-soft)}
+
+/* Thuật ngữ */
+.gl-filter{margin:4px 0 6px}
+.gl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin:6px 0 4px}
+.gl-item{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card2);display:flex;flex-direction:column;gap:5px;scroll-margin-top:90px}
+.gl-t b{font-size:15px;color:var(--text)}
+.gl-t span{display:block;font-size:12px;color:var(--muted);font-style:italic}
+.gl-d{font-size:13.8px;line-height:1.5}
+.gl-ex{font-size:13px;color:var(--ok-text);background:var(--ok-soft);border-radius:8px;padding:5px 8px}
+.gl-go{font-size:12.5px;font-weight:700;color:var(--brand-text);text-decoration:none;margin-top:auto}
+.gl-go:hover{text-decoration:underline}
+.term,.term-demo{text-decoration:underline dotted var(--brand);text-decoration-thickness:2px;text-underline-offset:3px;cursor:help;border-radius:3px}
+.term:hover,.term:focus{background:var(--brand-soft);outline:none}
+#termPop{position:fixed;z-index:60;display:none;background:var(--card);color:var(--text);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;box-shadow:0 12px 32px -8px rgba(0,0,0,.45);font-size:13.8px;line-height:1.5}
+#termPop .tp-t b{font-size:15px}
+#termPop .tp-t span{display:block;font-size:12px;color:var(--muted);font-style:italic}
+#termPop .tp-d{margin-top:4px}
+#termPop .tp-ex{margin-top:6px;font-size:13px;color:var(--ok-text);background:var(--ok-soft);border-radius:8px;padding:5px 8px}
