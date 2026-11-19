@@ -85,39 +85,99 @@ function update(g, type, p){
   }
 }
 
-/* ---------- Giọng đọc ---------- */
-var viVoice = null;
+/* ---------- Giọng đọc ----------
+   Ưu tiên giọng tiếng Việt tốt nhất có trên máy: giọng Natural/Online của Microsoft (Edge: HoaiMy, NamMinh)
+   → giọng Microsoft An (Windows) → Google Tiếng Việt (Chrome) → giọng khác. Người xem có thể tự chọn, lựa chọn được nhớ lại. */
+var viVoices = [], viVoice = null, VKEY = "nlhdh_voice";
+function voiceScore(v){
+  var n = v.name || "";
+  return (/Natural|Online|Neural/i.test(n) ? 40 : 0) + (/Microsoft/i.test(n) ? 20 : 0) + (/Google/i.test(n) ? 10 : 0) + (/HoaiMy/i.test(n) ? 2 : 0);
+}
 function pickVoice(){
   if (!("speechSynthesis" in window)) return;
   var vs = speechSynthesis.getVoices() || [];
-  viVoice = vs.filter(function(v){ return /^vi/i.test(v.lang); })[0] || null;
+  viVoices = vs.filter(function(v){ return /^vi/i.test(v.lang); }).sort(function(a, b){ return voiceScore(b) - voiceScore(a); });
+  var saved = null; try { saved = localStorage.getItem(VKEY); } catch (e){}
+  viVoice = viVoices.filter(function(v){ return v.name === saved; })[0] || viVoices[0] || null;
   document.querySelectorAll(".vplayer").forEach(function(el){ if (el._p) el._p.refreshVoice(); });
+}
+function setVoice(name){
+  var v = viVoices.filter(function(x){ return x.name === name; })[0]; if (!v) return;
+  viVoice = v; try { localStorage.setItem(VKEY, name); } catch (e){}
+  document.querySelectorAll(".vplayer").forEach(function(el){ if (el._p) el._p.refreshVoice(true); });
 }
 if ("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function plain(h){ var d = document.createElement("div"); d.innerHTML = h; return d.textContent.replace(/\s+/g, " ").trim(); }
 
 /* ---------- Chuẩn hóa lời đọc: viết tắt, ký hiệu, tiếng Anh → cách đọc tiếng Việt ----------
-   Chỉ ảnh hưởng giọng đọc; phụ đề trên màn hình giữ nguyên. */
+   Chỉ ảnh hưởng giọng đọc; phụ đề trên màn hình giữ nguyên.
+   Mọi từ tiếng Anh trong lời thuyết minh được phiên âm thành âm tiết tiếng Việt hợp lệ
+   (theo cách sinh viên CNTT Việt Nam vẫn đọc), để giọng tiếng Việt không đọc lơ lớ từng chữ cái. */
 var LETTER = {A:"a",B:"bê",C:"xê",D:"đê",E:"e",F:"ép",G:"gờ",H:"hát",I:"i",J:"gi",K:"ca",L:"eo",M:"em",N:"en",O:"ô",P:"pê",Q:"qui",R:"e rờ",S:"ét",T:"tê",U:"u",V:"vê",W:"vê kép",X:"ích",Y:"i dài",Z:"dét"};
+/* Viết tắt viết hoa (phân biệt hoa thường) */
 var ABBR = [
-  ["MS-DOS","em ét đốt"],["CD-ROM","xê đê rom"],["RS-232","e rờ ét hai ba hai"],["WSClock","vê kép ét clốc"],
-  ["HĐH","hệ điều hành"],["hđh","hệ điều hành"],["CPU","xê pê u"],["RAM","ram"],["ROM","rom"],["MMU","em em u"],["TLB","tê eo bê"],
+  ["MS-DOS","em ét đốt"],["CD-ROM","xê đê rom"],["RS-232","e rờ ét hai ba hai"],["WSClock","vê kép ét cờ lốc"],
+  ["HĐH","hệ điều hành"],["CPU","xê pê u"],["RAM","ram"],["ROM","rom"],["MMU","em em u"],["TLB","tê eo bê"],
   ["DMA","đê em a"],["FAT","phát"],["LRU","eo e rờ u"],["FIFO","phi phô"],["NFU","en ép u"],["NRU","en e rờ u"],["OPT","óp"],
   ["RAID","rết"],["MBR","em bê e rờ"],["BIOS","bai ốt"],["DOS","đốt"],["UNIX","iu níc"],["PC","pê xê"],["CD","xê đê"],
   ["SCSI","ét xê ét i"],["USB","u ét bê"],["PCI","pê xê i"],["IDE","i đê e"],["UART","u a rờ tê"],["IRQ","i e rờ qui"],
-  ["ISO","i ét ô"],["READY","rét đi"],["IN","in"],["OUT","ao"],["COM","com"],
-  ["i-nodes","ai nốt"],["i-node","ai nốt"],["I-nodes","ai nốt"],["I-node","ai nốt"],["usr","u ét e rờ"],
-  ["bytes","bai"],["byte","bai"],["file","phai"],["files","phai"],["cache","cát"],["kernel","cơ nồ"],["driver","đrai vơ"],["drivers","đrai vơ"],
-  ["controller","công trô lơ"],["buffer","bắp phơ"],["entry","en tri"],["block","blốc"],["node","nốt"],["offset","óp xét"],
-  ["hole","hâu"],["track","trắc"],["sector","séc tơ"],["parity","pa ri ti"],["user","diu dơ"],["job","gióp"],["stack","xtắc"],
-  ["heap","híp"],["swap","xoáp"],["segment","xéc mần"],["table","tê bồ"],["page","pết"],["base","bây"],["limit","li mít"],
-  ["fit","phít"],["handler","hen đờ lơ"],["interrupt","in tơ rắp"],["bus","bớt"],["timer","tai mơ"],["copy","cóp pi"]
+  ["ISO","i ét ô"],["READY","rét đi"],["IN","in"],["OUT","ao"],["COM","com"],["GDT","gờ đê tê"],["LDT","eo đê tê"],
+  ["PTBR","pê tê bê e rờ"],["PRLR","pê e rờ eo e rờ"],["DPL","đê pê eo"],["DAG","đê a gờ"],["PIC","pê i xê"]
 ];
+/* Từ và cụm từ tiếng Anh (không phân biệt hoa thường). Cụm dài được thay trước. */
+var EN = {
+  "hđh":"hệ điều hành","i-nodes":"ai nốt","i-node":"ai nốt",
+  "least recently used":"lít ri xần li diu","second chance":"se cần chen","working set":"uốc kinh xét",
+  "page fault":"pết phôn","room for growth":"rum pho gờ râu","return to user":"ri tơn tu diu dơ","copy from user":"cóp pi phờ rom diu dơ",
+  "set up":"xét ắp","swap in":"xoáp in","swap out":"xoáp ao","in-line":"in lai","in a heap":"in a híp","busy-wait":"bi di quét",
+  "absent":"áp xần","ack":"ắc","active":"ác típ","address":"a đờ rét","aging":"ây dinh","analog":"a na lốc","append":"ơ pen",
+  "archive":"a cai","ast":"a ét tê","attributes":"ơ tri biu","backing":"béc kinh","base":"bết","belady":"bê la đi","best":"bét",
+  "binary":"bai na ri","bit":"bít","bits":"bít","block":"bờ lốc","blocks":"bờ lốc","boot":"bút","buffer":"bắp phơ","bus":"bớt","busy":"bi di",
+  "byte":"bai","bytes":"bai","cache":"cát","caching":"ca sinh","call":"côn","calls":"côn","card":"các",
+  "character":"ca rắc tơ","checkerboarding":"chéc cơ bo đinh","checksum":"chéc sầm","chip":"chíp","clock":"cờ lốc","close":"cờ lâu",
+  "closedir":"cờ lâu đia","code":"cốt","compaction":"com béc sần","constant":"con xờ tần","control":"con trôn","controller":"con trô lơ",
+  "copy":"cóp pi","count":"cao nờ","counter":"cao tơ","create":"cờ ri ết","cylinder":"xi lanh","data":"đa ta","delete":"đi lít",
+  "descriptor":"đi xờ cờ ríp tơ","device":"đi vai","dict":"đích","dir":"đia","directory":"đai réc tơ ri","disabled":"đi xây bồ",
+  "disk":"đĩa","double":"đắp bồ","drive":"đờ rai","driven":"đờ ri vần","driver":"đờ rai vơ","drivers":"đờ rai vơ",
+  "entry":"en tri","entries":"en tri","executable":"ích xê kiu ta bồ","expansion":"ích xờ pen sần","ext":"ích tê","external":"ích tơ nồ",
+  "fault":"phôn","file":"phai","files":"phai","first":"phớt","fit":"phít","flag":"phờ lác","flush":"phờ lớt","frame":"phờ rêm","free":"phờ ri",
+  "gigabit":"ghi ga bít","gigaplane":"ghi ga pờ lên","growth":"gờ râu","hamming":"ham minh","handler":"hen đờ lơ","handlers":"hen đờ lơ",
+  "hardware":"hát que","head":"hét","header":"hét đơ","heap":"híp","hit":"hít","holding":"hâu đinh","hole":"hâu","holes":"hâu","hybrid":"hai bờ rít",
+  "independent":"in đi pen đần","index":"in đéc","indirect":"in đai réc","interlaced":"in tơ lết","interrupt":"in tơ rắp","invalid":"in va lít",
+  "jeep":"gíp","jim":"dim","job":"gióp","jobs":"gióp","kernel":"cơ nồ","land":"len","least":"lít","length":"leng","lib":"líp","limit":"li mít",
+  "line":"lai","link":"linh","load":"lốt","logic":"lô gích","magic":"ma gích","mail":"meo","manager":"ma na giơ","map":"máp","mapped":"máp",
+  "master":"mát tơ","mbox":"em bốc","memory":"me mô ri","mirroring":"mia rơ rinh","miss":"mít","mode":"mốt","modem":"mô đem",
+  "modified":"mo đi phai","module":"mô đun","network":"nét guốc","next":"nếch","node":"nốt","nodes":"nốt","non":"non","number":"năm bơ",
+  "numeric":"niu me ríc","object":"óp dếch","offset":"óp sét","open":"âu pần","opendir":"âu pần đia","optimal":"óp ti mồ","out":"ao",
+  "overhead":"âu vơ hét","owner":"âu nơ","owners":"âu nơ","page":"pết","pages":"pết","pager":"pết giơ","parity":"pa ri ti","parse":"pát",
+  "partition":"pa ti sần","pentium":"pen ti um","pit":"pít","point":"poi","port":"pót","present":"pờ re dần","printer":"pờ rin tơ",
+  "processes":"pờ rô xét xít","program":"pờ rô gờ ram","programmed":"pờ rô gờ ram","protection":"pờ rô téc sần","put":"pút","get":"ghét",
+  "read":"rít","readdir":"rít đia","recently":"ri xần li","record":"re cót","referenced":"re phờ ren","reg":"rét","register":"re gít tơ",
+  "regular":"re gu la","relocation":"ri lô kê sần","rename":"ri nêm","reply":"ri pờ lai","return":"ri tơn","room":"rum","root":"rút",
+  "scheduler":"sờ ke giu lơ","second":"se cần","sector":"séc tơ","seek":"xíc","segment":"xéc mần","segments":"xéc mần","selector":"xi léc tơ",
+  "set":"xét","single":"xinh gồ","size":"sai","slide":"xờ lai","software":"xóp que","source":"xót","space":"xờ pết","special":"xờ pe sồ",
+  "spooling":"xờ pun linh","stack":"xờ tắc","start":"xờ tát","status":"xờ ta tút","store":"xờ to","strip":"xờ tríp","striping":"xờ trai pinh",
+  "subsystem":"xáp xít tầm","sun":"xăn","super":"xu pơ","swap":"xoáp","swapping":"xoáp pinh","symbol":"xim bồ","system":"xít tầm",
+  "table":"tê bồ","temporary":"tem po ra ri","terminal":"tơ mi nồ","text":"tếch","timer":"tai mơ","timestamps":"tai xờ tem",
+  "track":"trắc","tracks":"trắc","trap":"tráp","tree":"tri","triple":"tri pồ","txt":"tê ích tê","type":"tai","unblock":"ăn bờ lốc","unlink":"ăn linh",
+  "up":"ắp","used":"diu","user":"diu dơ","users":"diu dơ","usr":"diu dơ","valid":"va lít","victim":"víc tim","video":"vi đê ô","wait":"quét",
+  "while":"oai","windows":"uyn đâu","word":"uốt","working":"uốc kinh","worst":"uốt","write":"rai","xyz":"ích i dét","abc":"a bê xê",
+  "cat":"két","ant":"en","dog":"đóc","pig":"pích","cow":"cao","fox":"phốc","from":"phờ rom","for":"pho","fork":"phóc","exec":"ếch xéc",
+  "memory manager":"me mô ri ma na giơ","bit map":"bít máp","bitmap":"bít máp","device driver":"đi vai đờ rai vơ"
+};
 var CIRC = "①②③④⑤⑥⑦⑧⑨";
 function esc(s){ return s.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"); }
-/* viết tắt viết hoa: phân biệt hoa thường; từ tiếng Anh viết thường: không phân biệt (Block, File…) */
-var ABBR_RE = ABBR.map(function(p){ return [new RegExp("(?<![\\p{L}\\d])" + esc(p[0]) + "(?![\\p{L}])", /^[a-zđ]/.test(p[0]) ? "giu" : "gu"), p[1]]; });
+var ABBR_RE = ABBR.map(function(p){ return [new RegExp("(?<![\\p{L}\\d])" + esc(p[0]) + "(?![\\p{L}])", "gu"), p[1]]; })
+  .concat(Object.keys(EN).sort(function(a, b){ return b.length - a.length; }).map(function(k){
+    return [new RegExp("(?<![\\p{L}\\d])" + esc(k).replace(/[ -]/g, "[\\s_-]+") + "(?![\\p{L}\\d])", "giu"), EN[k]];
+  }));
 function spellCaps(w){ return w.split("").map(function(c){ return LETTER[c] || c; }).join(" "); }
+/* Mũi tên "→": trong một vế câu chỉ có 1 mũi tên thì là quan hệ nhân quả → đọc "nên";
+   có từ 2 mũi tên trở lên (chuỗi A → B → C) thì đọc "rồi". */
+function arrows(clause){
+  var k = (clause.match(/→/g) || []).length;
+  return k >= 2 ? clause.replace(/\s*→\s*/g, ", rồi ") : clause.replace(/[,\s]*→\s*/, " nên ");
+}
 function speakable(html){
   var h = String(html || "")
     .replace(/<sup>([^<]*)<\/sup>/g, " mũ $1 ")
@@ -125,10 +185,18 @@ function speakable(html){
       return " " + c.replace(/(\w)\([^)]*\)/g, "$1").replace(/!=/g, " khác ").replace(/=/g, " gán ").replace(/\[([^\]]*)\]/g, " $1 ").replace(/[_*();,]/g, " ") + " ";
     });
   var t = plain(h);
-  t = t.replace(/(Vào\/Ra|vào\/ra)\s*\(I\/O port\)/g, "vào ra").replace(/\bI\/O\b|Vào\/Ra|vào\/ra/g, "vào ra")
+  t = t.replace(/logic → địa chỉ vật lý/g, "logic sang địa chỉ vật lý").replace(/trang → khung/g, "trang sang khung")
+    .replace(/jeep → index block/g, "jeep, index block").replace(/0 → 4 GB/g, "0 đến 4 GB")
+    .replace(/(user|kernel|controller nhận) → (kernel|network|tiến trình)/g, "$1 sang $2").replace(/Pig → /g, "Pig, rồi ")
+    .replace(/ô thứ 3 → /g, "ô thứ 3 là ").replace(/→ (i-node \d)/g, "được $1").replace(/(i-node \d+) → /g, "$1 thì ")
+    .replace(/(trong bảng cấp 1) → /g, "$1, rồi ")
+    .replace(/(?<!\d)([01]{8,})(?!\d)/g, function(_, b){ return " " + b.split("").join(" ") + " "; })
+    .replace(/(Vào\/Ra|vào\/ra)\s*\(I\/O port\)/g, "vào ra").replace(/\bI\/O\b|Vào\/Ra|vào\/ra/g, "vào ra")
     .replace(/(\d)\s*[–→]\s*(\d)/g, function(m, a, b){ return /→/.test(m) && /\s/.test(m) ? m : a + " đến " + b; })
     .replace(/0x([0-9A-Fa-f]+)/g, function(_, h){ return " hếch " + h.split("").join(" ") + " "; })
     .replace(/\.txt\b/g, " chấm tê ích tê")
+    .replace(/Base\.Ext;Ver/g, "bết chấm ích tê chấm phẩy vơ")
+    .replace(/(?<![\p{L}\d])(\d[0-9A-F]*[A-F][0-9A-F]*)(?![\p{L}\d])/gu, function(_, h){ return " " + h.split("").map(function(c){ return LETTER[c] || c; }).join(" ") + " "; })
     .replace(/(?<![\p{L}\d.])(\.\.)?(\/[A-Za-z]+)+\/?|“\/”/gu, function(m){ return " " + m.replace(/[“”]/g, "").replace(/\.\./g, " chấm chấm ").replace(/\//g, " gạch chéo ") + " "; })
     .replace(/(\d)\s*\/\s*giây/g, "$1 trên giây").replace(/\/giây/g, " trên giây")
     .replace(/(\d)\s+\/\s+(\d)/g, "$1 chia $2").replace(/\s\/\s/g, " hoặc ").replace(/(\d)\/(\d)/g, "$1 hoặc $2").replace(/\//g, " ")
@@ -144,7 +212,7 @@ function speakable(html){
     .replace(/[①-⑨]/g, function(c){ return " " + (CIRC.indexOf(c) + 1) + " "; })
     .replace(/×/g, " nhân ").replace(/≈/g, " xấp xỉ ").replace(/≥/g, " lớn hơn hoặc bằng ").replace(/≤/g, " nhỏ hơn hoặc bằng ")
     .replace(/!=/g, " khác ").replace(/</g, " nhỏ hơn ").replace(/>/g, " lớn hơn ").replace(/=/g, " bằng ").replace(/\+/g, " cộng ")
-    .replace(/%/g, " phần trăm ").replace(/#/g, " số ").replace(/→/g, ", rồi ").replace(/[–—…·]/g, ", ")
+    .replace(/%/g, " phần trăm ").replace(/#/g, " số ").replace(/[^.;:!?]*→[^.;:!?]*/g, arrows).replace(/[–—…·]/g, ", ")
     .replace(/[“”"‘’*_()\[\]]/g, " ").replace(/-/g, " ")
     .replace(/\s+([,.;:!?])/g, "$1").replace(/([,.;:])(\s*[,.;:])+/g, "$1").replace(/\s+/g, " ").replace(/^[,\s]+/, "").trim();
   return t;
@@ -175,7 +243,7 @@ function Player(el, def){
     '<div class="v-sub"></div>' +
     '<div class="v-ctl"><button class="v-btn v-play" title="Phát / Tạm dừng (Space)">▶</button><button class="v-btn v-prev" title="Về đầu cảnh / cảnh trước">⏮</button><button class="v-btn v-next" title="Cảnh sau">⏭</button>' +
     '<div class="v-tl" role="slider" aria-label="Thanh thời gian (← → tua 5 giây)" aria-valuemin="0" aria-valuemax="' + Math.round(total / 1000) + '" aria-valuenow="0"><div class="v-track"><div class="v-fill"></div>' + ticks + '<div class="v-knob"></div></div><div class="v-tip" hidden></div></div>' +
-    '<span class="v-time">0:00 / ' + fmt(total) + '</span><button class="v-btn v-speed" title="Tốc độ">1×</button><button class="v-btn v-voice" title="Thuyết minh bằng giọng đọc">🔊</button><button class="v-btn v-full" title="Toàn màn hình">⛶</button></div>';
+    '<span class="v-time">0:00 / ' + fmt(total) + '</span><button class="v-btn v-speed" title="Tốc độ">1×</button><select class="v-vsel" title="Chọn giọng đọc" aria-label="Chọn giọng đọc" hidden></select><button class="v-btn v-voice" title="Thuyết minh bằng giọng đọc">🔊</button><button class="v-btn v-full" title="Toàn màn hình">⛶</button></div>';
   var layer = el.querySelector(".v-layer"), sub = el.querySelector(".v-sub"), cover = el.querySelector(".v-cover"), end = el.querySelector(".v-end");
   var bPlay = el.querySelector(".v-play"), bVoice = el.querySelector(".v-voice"), tl = el.querySelector(".v-tl"), track = el.querySelector(".v-track");
   var fill = el.querySelector(".v-fill"), knob = el.querySelector(".v-knob"), tip = el.querySelector(".v-tip"), tm = el.querySelector(".v-time");
@@ -269,7 +337,14 @@ function Player(el, def){
   this.total = total;
   this.seek = function(ms){ seekTo(ms); if (playing) startScene(); };
   this.state = function(){ return {pos: pos, scene: i, playing: playing, total: total}; };
-  this.refreshVoice = function(){ bVoice.disabled = !viVoice; bVoice.title = viVoice ? "Thuyết minh: " + viVoice.name : "Máy/trình duyệt này chưa có giọng đọc tiếng Việt – video vẫn chạy kèm phụ đề"; bVoice.textContent = (viVoice && voiceOn) ? "🔊" : "🔇"; };
+  var vsel = el.querySelector(".v-vsel");
+  vsel.onchange = function(){ setVoice(vsel.value); };
+  function shortName(v){ return (v.name || "").replace(/^Microsoft\s+/i, "").replace(/\s*-\s*Vietnamese.*$/i, "").replace(/\s*\(Vietnam\)/i, "").replace(/Online \(Natural\)/i, "(tự nhiên)"); }
+  this.refreshVoice = function(restart){
+    vsel.hidden = viVoices.length < 2;
+    vsel.innerHTML = viVoices.map(function(v){ return '<option value="' + v.name.replace(/"/g, "&quot;") + '"' + (v === viVoice ? " selected" : "") + ">" + shortName(v).replace(/</g, "&lt;") + "</option>"; }).join("");
+    if (restart && playing) startScene();
+    bVoice.disabled = !viVoice; bVoice.title = viVoice ? "Thuyết minh: " + viVoice.name : "Máy/trình duyệt này chưa có giọng đọc tiếng Việt – video vẫn chạy kèm phụ đề"; bVoice.textContent = (viVoice && voiceOn) ? "🔊" : "🔇"; };
   function jump(k){ k = Math.max(0, Math.min(n - 1, k)); seekTo(T0[k]); if (playing) startScene(); }
 
   /* Thanh thời gian: nhấp hoặc kéo để tua tới bất kỳ đâu */
