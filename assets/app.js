@@ -65,6 +65,12 @@ function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.
   // bổ sung câu hỏi mới vào các bộ theo chương đã lưu từ trước
   ["c4","c5","c6","all"].concat(Object.keys(state.sessions).filter(function(k){ return setOf(k); })).forEach(function(k){
     var s = state.sessions[k]; if (!s) return;
+    if (setOf(k)){   // đề ôn tập: bỏ câu không còn thuộc đề (ví dụ sau khi chia Ôn tập 3 thành 3 và 4)
+      var inSet = {}; setOf(k).ids.forEach(function(id){ inSet[id]=1; });
+      s.ids = s.ids.filter(function(id){ return inSet[id]; });
+      if (!s.ids.length){ delete state.sessions[k]; return; }
+      if (s.cur >= s.ids.length) s.cur = 0;
+    }
     var have = {}; s.ids.forEach(function(id){ have[id]=1; });
     (setOf(k) ? setOf(k).ids : idsOfChapter(k==="all" ? "all" : +k.slice(1))).forEach(function(id){
       if (!have[id]){ s.ids.push(id); s.opt[id] = shuffle(range(BYID[id].opts.length)); if (s.submitted) s.submitted = false; }
