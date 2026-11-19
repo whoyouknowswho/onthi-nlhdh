@@ -121,7 +121,7 @@ function Player(el, def){
   function render(k){
     var S = stateAt(scenes, k);
     Object.keys(live).forEach(function(id){
-      if (!S.st[id] || S.st[id].type !== live[id].type){ var g = live[id].g; delete live[id]; g.style.opacity = 0; setTimeout(function(){ if (g.parentNode) g.parentNode.removeChild(g); }, 450); }
+      if (!S.st[id] || S.st[id].type !== live[id].type){ var g = live[id].g; delete live[id]; g.style.opacity = 0; g.setAttribute("data-dead", "1"); setTimeout(function(){ if (g.parentNode) g.parentNode.removeChild(g); }, 450); }
     });
     S.order.forEach(function(id){
       var it = S.st[id], L = live[id];
@@ -165,9 +165,11 @@ function Player(el, def){
   }
   this.pause = function(){ playing = false; clearT(); bPlay.textContent = "▶"; segs.forEach(function(s){ s.querySelector("i").style.animation = "none"; }); };
   this.destroy = function(){ this.pause(); };
+  this.show = function(k){ jump(k); };
+  this.count = n;
   this.refreshVoice = function(){ bVoice.disabled = !viVoice; bVoice.title = viVoice ? "Thuyết minh: " + viVoice.name : "Máy/trình duyệt này chưa có giọng đọc tiếng Việt – video vẫn chạy kèm phụ đề"; bVoice.textContent = (viVoice && voiceOn) ? "🔊" : "🔇"; };
   function jump(k){ started = true; cover.hidden = true; end.hidden = true; i = Math.max(0, Math.min(n - 1, k)); render(i); if (playing) schedule(); }
-  el.addEventListener("click", function(e){
+  el.onclick = function(e){
     var b = e.target.closest("button"); if (!b) return;
     if (b.classList.contains("v-big") || b.classList.contains("v-play")){
       if (b.classList.contains("v-replay")){ started = false; }
@@ -179,8 +181,8 @@ function Player(el, def){
     else if (b.classList.contains("v-speed")){ var sp = [0.75, 1, 1.25, 1.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length]; b.textContent = speed + "×"; if (playing) schedule(); }
     else if (b.classList.contains("v-voice")){ voiceOn = !voiceOn; self.refreshVoice(); if (playing) schedule(); }
     else if (b.classList.contains("v-full")){ var fs = document.fullscreenElement; if (fs) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); }
-  });
-  el.addEventListener("keydown", function(e){ if (e.key === " "){ e.preventDefault(); if (playing) self.pause(); else play(); } });
+  };
+  el.onkeydown = function(e){ if (e.key === " "){ e.preventDefault(); if (playing) self.pause(); else play(); } };
   el.tabIndex = 0;
   this.refreshVoice();
 }
@@ -194,6 +196,12 @@ window.VideoPlayer = {
       if (!cache[id]) cache[id] = typeof f === "function" ? f() : f;
       var p = new Player(el, cache[id]); el._p = p; players.push(p);
     });
+  },
+  mountOne: function(el){
+    if (el._p){ el._p.destroy(); players = players.filter(function(p){ return p !== el._p; }); }
+    var id = el.dataset.video, f = window.VIDEOS && window.VIDEOS[id]; if (!f) return;
+    if (!cache[id]) cache[id] = typeof f === "function" ? f() : f;
+    var p = new Player(el, cache[id]); el._p = p; players.push(p);
   },
   has: function(id){ return !!(window.VIDEOS && window.VIDEOS[id]); }
 };

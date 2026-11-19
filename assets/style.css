@@ -135,6 +135,13 @@ select.sel{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(
 .badge.single{background:var(--brand-soft);color:var(--brand-text);border-color:transparent}
 .badge.multi{background:var(--violet-soft);color:var(--violet-text);border-color:transparent}
 .badge.order{background:var(--warn-soft);color:var(--warn-text);border-color:transparent}
+.badge.wr{background:var(--bad-soft);color:var(--bad-text);border-color:transparent}
+.badge.xsb{background:var(--warn-soft);color:var(--warn-text);border-color:rgba(245,158,11,.4);cursor:help}
+.panel.weak{display:flex;flex-direction:column;gap:12px}
+.weak-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.weak-n{font-size:28px;color:var(--bad-text);margin-right:4px}
+.weak-act{display:flex;gap:8px;flex-wrap:wrap}
+.weak-tp{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13.5px}
 .flagbtn{margin-left:auto;border:1px solid var(--line);background:none;border-radius:8px;padding:4px 9px;font-size:12px;font-weight:700;color:var(--muted);display:inline-flex;gap:5px;align-items:center}
 .flagbtn.on{color:var(--warn-text);border-color:var(--warn);background:var(--warn-soft)}
 .qtext{font-size:17.5px;font-weight:600;line-height:1.55;margin:0 0 6px}
@@ -323,6 +330,11 @@ ul.checklist li::before{content:"✓";position:absolute;left:0;top:1px;width:20p
 .figs-wrap summary{cursor:pointer;font-weight:700;font-size:13.5px;color:var(--muted);margin-bottom:10px;user-select:none}
 @media (max-width:760px){.easy{grid-template-columns:1fr}}
 
+.vtabs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
+.vtabs span{font-size:13px;font-weight:700;color:var(--muted);margin-right:4px}
+.vtab{border:1px solid var(--line2);background:var(--card2);border-radius:9px;padding:6px 11px;font-size:13px;font-weight:700;color:var(--muted)}
+.vtab.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.xs{display:inline-block;font-size:11px;font-weight:800;padding:1px 7px;border-radius:6px;background:var(--warn-soft);color:var(--warn-text);border:1px solid rgba(245,158,11,.4);vertical-align:2px;margin-left:4px;white-space:nowrap}
 /* ---------- Video player ---------- */
 .vplayer{--vtext:#e6e9f2;--vmuted:#94a0b8;margin:0 0 16px;border-radius:16px;overflow:hidden;background:#0b1120;border:1px solid #24304b;box-shadow:var(--shadow);outline:none}
 .vplayer:focus-visible{box-shadow:0 0 0 3px var(--brand)}

@@ -23,7 +23,7 @@ window.QUESTIONS.push(...[
 {id:"c4-05",ch:4,type:"single",topic:"Cơ bản",
  q:"Mô hình đơn nhiệm không dùng Swapping hay Paging tổ chức bộ nhớ như thế nào?",
  opts:["Nhiều tiến trình user dùng chung các phân vùng cố định","Một hệ điều hành với MỘT tiến trình user","Một hệ điều hành với nhiều phân vùng động","Không có hệ điều hành trong bộ nhớ"],
- ans:[1],exp:"Đơn nhiệm: chỉ có 1 HĐH và 1 tiến trình user trong bộ nhớ. Slide nêu 3 cách đơn giản để tổ chức (HĐH ở RAM, HĐH ở ROM, driver ở ROM + HĐH ở RAM)."},
+ ans:[1],exp:"Đơn nhiệm: chỉ có 1 HĐH và 1 tiến trình user trong bộ nhớ. Slide nêu 3 cách đơn giản để tổ chức (HĐH ở RAM, HĐH ở ROM, driver ở ROM + HĐH ở RAM). Lưu ý: tiêu đề slide 5 ghi “Đơn nhiệm với Swapping hay Paging” nhưng nội dung là mô hình KHÔNG dùng swapping/paging (đúng theo giáo trình Tanenbaum)."},
 {id:"c4-06",ch:4,type:"single",topic:"Phân vùng cố định",
  q:"Trong đa nhiệm với phân vùng cố định (Fixed Partitions), hai cách tổ chức hàng đợi được trình bày là:",
  opts:["Hàng đợi ưu tiên và hàng đợi FIFO","(a) Nhiều hàng đợi vào – mỗi phân vùng một hàng đợi; (b) Một hàng đợi vào chung","Hàng đợi sẵn sàng và hàng đợi chờ I/O","Chỉ có một hàng đợi duy nhất"],

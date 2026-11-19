@@ -170,7 +170,7 @@ sections:[
 <p><b>Chức năng của phần mềm Vào/Ra độc lập thiết bị:</b></p>
 <ul class="checklist"><li>Giao diện chung (thống nhất) với device drivers</li><li>Định bộ đệm (buffering)</li><li>Thông báo lỗi</li><li>Cấp phát và giải phóng thiết bị (dùng riêng)</li><li>Cung cấp kích thước khối độc lập thiết bị</li></ul>
 <p><b>Giao diện driver:</b> (a) <b>không chuẩn</b> – mỗi driver (disk, printer, keyboard) giao tiếp với HĐH một kiểu → thêm driver mới phải sửa HĐH; (b) <b>chuẩn</b> – mọi driver “khớp” cùng một giao diện → dễ thêm driver.</p>
-<table><tr><th>Buffering (vd nhận dữ liệu từ modem)</th><th>Cách hoạt động</th></tr>
+<table><tr><th>Buffering (vd nhận dữ liệu từ modem)</th><th>Cách hoạt động <span class="xs">giải thích ngoài slide</span></th></tr>
 <tr><td>(a) <b>Unbuffered input</b></td><td>Mỗi ký tự đến đánh thức tiến trình user → rất kém hiệu quả</td></tr>
 <tr><td>(b) <b>Buffering in user space</b></td><td>Buffer nằm trong tiến trình user; trang buffer phải bị khóa trong RAM</td></tr>
 <tr><td>(c) <b>Buffering in the kernel followed by copying to user space</b></td><td>(1) modem → buffer kernel; (2) copy sang user khi đầy</td></tr>
@@ -188,7 +188,7 @@ sections:[
 <table><tr><th>RAID</th><th>Đơn vị chia</th><th>Dư thừa (ổ tô xám)</th><th>Ghi nhớ</th></tr>
 <tr><td>0</td><td>Strip</td><td>Không có</td><td>Striping thuần – nhanh, hỏng 1 đĩa là mất</td></tr>
 <tr><td>1</td><td>Strip</td><td>Mỗi đĩa có 1 đĩa sao lưu</td><td>Mirroring – nhân đôi</td></tr>
-<tr><td>2</td><td>Bit</td><td>Nhiều đĩa mã sửa lỗi (Hamming)</td><td>Hình: Bit 1 → Bit 7</td></tr>
+<tr><td>2</td><td>Bit</td><td>Nhiều đĩa mã sửa lỗi (Hamming) <span class="xs">ngoài slide</span></td><td>Hình: Bit 1 → Bit 7</td></tr>
 <tr><td>3</td><td>Bit</td><td>1 đĩa Parity</td><td>Bit 1–4 + Parity</td></tr>
 <tr><td>4</td><td>Strip</td><td>1 đĩa parity riêng (P0-3, P4-7…)</td><td>Đĩa parity dễ nghẽn</td></tr>
 <tr><td>5</td><td>Strip</td><td>Parity <b>phân tán</b> xoay vòng trên mọi đĩa</td><td>Khắc phục nghẽn của RAID 4</td></tr></table>`},

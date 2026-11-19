@@ -1,0 +1,32 @@
+/* Các câu hỏi cần kiến thức NGOÀI slide (giáo trình Tanenbaum / kiến thức chuẩn) – hiển thị nhãn "Mở rộng ngoài slide".
+   Câu chỉ có phần giải thích mở rộng (đáp án vẫn nằm trong slide) KHÔNG nằm trong danh sách này. */
+window.XS = {
+ "c4-47":"Định nghĩa thuật toán Optimal (slide chỉ có nhận xét)",
+ "c4-51":"Mô phỏng FIFO trên chuỗi tham chiếu",
+ "c4-52":"Mô phỏng Optimal trên chuỗi tham chiếu",
+ "c4-53":"Mô phỏng LRU trên chuỗi tham chiếu",
+ "c4-54":"Nghịch lý Belady",
+ "c4-73":"Nhược điểm của nhiều hàng đợi vào",
+ "c4-86":"Suy luận trang R X là trang code",
+ "c4-91":"Mô phỏng FIFO 4 khung",
+ "c4-92":"Mô phỏng Optimal trên chuỗi khác",
+ "c4-93":"Mô phỏng LRU / Belady",
+ "c5-23":"DMA giảm số ngắt (từ code slide 25)",
+ "c5-42":"Lý do dùng đệm kép",
+ "c5-90":"Nhược điểm của không đệm",
+ "c5-99":"Chức năng của UART",
+ "c6-07":"UNIX/Windows xem file là chuỗi byte",
+ "c6-10":"File special đại diện cho thiết bị",
+ "c6-20":"Thứ tự Create → Open → Write → Close",
+ "c6-23":"Thư mục một mức dễ trùng tên",
+ "c6-26":"Khái niệm đường dẫn tuyệt đối",
+ "c6-28":"Ý nghĩa thao tác Link",
+ "c6-36":"Nhược điểm FAT phải nằm trong RAM",
+ "c6-43":"Thuật ngữ DAG",
+ "c6-64":"Công dụng của magic number",
+ "c6-72":"Ý nghĩa thao tác Append",
+ "c6-73":"Ý nghĩa thao tác Seek",
+ "c6-77":"Đường dẫn tương đối với ..",
+ "c6-78":"MBR là sector đầu đĩa",
+ "c6-100":"Thứ tự tra FAT"
+};

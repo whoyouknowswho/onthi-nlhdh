@@ -9,7 +9,7 @@ V["s5-1"] = function(){
  {s:"Thiết bị Vào/Ra chia thành <b>hai nhóm chính</b>: thiết bị <b>Block</b> và thiết bị <b>Character</b>.",
   d:[H("Thiết bị Block vs thiết bị Character"), b("bk",60,90,400,330,"","brand"), t("bkt",260,120,"THIẾT BỊ BLOCK (đĩa)",{fs:19,c:"brand"}), b("ch",500,90,400,330,"","warn"), t("cht",700,120,"THIẾT BỊ CHARACTER",{fs:19,c:"warn"})]},
  {s:"Thiết bị <b>Block</b> – điển hình là <b>đĩa</b> – lưu dữ liệu thành từng khối có địa chỉ. Lệnh: <b>read, write, seek</b>. Có thể nhảy thẳng tới khối bất kỳ.",
-  d:[[0,1,2,3,4,5,6,7].map(function(i){ return b("blk"+i,90+(i%4)*88,160+Math.floor(i/4)*80,80,70,"khối "+i,"gray",{fs:14}); }), t("bc",260,345,"read · write · seek",{fs:20,c:"ok"}), d("sk",130,190,{t:"⤵",c:"ok"}), u("sk",{x:395,y:270}), f("blk7")]},
+  d:[[0,1,2,3,4,5,6,7].map(function(i){ return b("blk"+i,90+(i%4)*88,160+Math.floor(i/4)*80,80,70,"khối "+i,"gray",{fs:14}); }), t("bc",260,345,"read · write · seek",{fs:20,c:"ok"}), d("sk",130,190,{t:"▲",c:"ok"}), u("sk",{x:394,y:324}), f("blk7")]},
  {s:"Còn thiết bị <b>Character</b> – bàn phím, chuột, cổng nối tiếp – gửi/nhận một <b>dòng ký tự</b> liên tục, không có địa chỉ. Lệnh: <b>get, put</b>.",
   d:[["H","E","L","L","O"].map(function(c,i){ return d("ch"+i,560+i*64,230,{t:c,r:24,c:"warn"}); }), a("str",540,290,880,290,{c:"warn",t:"dòng ký tự →"}), t("cc",700,345,"get · put",{fs:20,c:"ok"})]},
  {s:"Đĩa còn có thể truy cập qua hệ thống file hoặc ánh xạ bộ nhớ (memory-mapped). Thiết bị character có thư viện lớp trên hỗ trợ <b>soạn sửa dòng</b>.",
@@ -36,7 +36,7 @@ V["s5-2"] = function(){
  {s:"Ví dụ cổng trên PC: 000–00F là DMA controller, 020–021 là interrupt controller, 040–043 timer, 378–37F cổng song song, 3F8–3FF cổng nối tiếp chính (COM1).",
   d:[b("tb",680,110,260,300,"000–00F  DMA\n020–021  ngắt\n040–043  timer\n320–32F  ổ cứng\n378–37F  song song\n3D0–3DF  đồ họa\n3F8–3FF  COM1","dark",{fs:15})]},
  {s:"Trên PC thật có nhiều bus: <b>PCI bus</b> là bus chính (đồ họa, SCSI, IDE…), <b>expansion bus</b> cho bàn phím, cổng song song, nối tiếp; <b>SCSI bus</b> nối các đĩa SCSI.",
-  d:[clr(), H("Cấu trúc bus trên PC"), b("pr",380,60,200,60,"Processor","brand",{fs:16}), b("br",380,140,200,60,"Bridge/memory\ncontroller","violet",{fs:14}), b("me",640,140,140,60,"Memory","brand",{fs:15}), b("pci",40,240,880,20,"","warn",{r:10}), t("pcil",480,232,"PCI bus",{fs:15,c:"warn"}), b("gc",60,300,170,60,"Graphics","cyan",{fs:15}), b("sc",260,300,170,60,"SCSI ctrl","cyan",{fs:15}), b("ide",460,300,170,60,"IDE ctrl","cyan",{fs:15}), b("exi",660,300,240,60,"Expansion bus\ninterface","cyan",{fs:14}), b("exb",600,400,330,18,"","ok",{r:9}), t("exl",765,445,"Expansion bus: keyboard · parallel · serial",{fs:14,c:"ok"}), a("j1",480,202,480,236,{noHead:1}), a("j2",780,362,780,398,{noHead:1,c:"ok"})]}
+  d:[clr(), H("Cấu trúc bus trên PC"), b("pr",380,60,200,60,"Processor","brand",{fs:16}), b("br",380,140,200,60,"Bridge/memory\ncontroller","violet",{fs:14}), b("me",640,140,140,60,"Memory","brand",{fs:15}), b("pci",40,240,880,20,"","warn",{r:10}), t("pcil",160,232,"PCI bus",{fs:15,c:"warn"}), b("gc",60,300,170,60,"Graphics","cyan",{fs:15}), b("sc",260,300,170,60,"SCSI ctrl","cyan",{fs:15}), b("ide",460,300,170,60,"IDE ctrl","cyan",{fs:15}), b("exi",660,300,240,60,"Expansion bus\ninterface","cyan",{fs:14}), b("exb",600,400,330,18,"","ok",{r:9}), t("exl",765,445,"Expansion bus: keyboard · parallel · serial",{fs:14,c:"ok"}), a("j1",480,202,480,236,{noHead:1}), a("j2",780,362,780,398,{noHead:1,c:"ok"})]}
 ]};};
 
 V["s5-3"] = function(){ return {title:"Địa chỉ Vào/Ra: tách riêng, ánh xạ bộ nhớ, lai", scenes:[
@@ -68,15 +68,15 @@ V["s5-4"] = function(){ return {title:"3 cách truyền dữ liệu: Programmed 
  {s:"③ CPU <b>báo nhận (ack)</b>, tạm dừng việc đang làm và chạy thủ tục phục vụ ngắt. Trên PC có 2 chip PIC: IRQ0 timer, IRQ1 bàn phím, IRQ2 nối tầng PIC #2, IRQ4 COM1, IRQ14 ổ cứng…",
   d:[a("i3",225,230,375,230,{c:"ok",t:"③ CPU ack"}), t("irq",480,460,"IRQ0 timer · IRQ1 keyboard · IRQ2 cascade · IRQ3 COM2 · IRQ4 COM1 · IRQ6 floppy · IRQ8 RTC · IRQ14 EIDE",{fs:14,c:"gray"})]},
  {s:"DMA chi tiết. ① CPU <b>lập trình DMA controller</b>: nạp thanh ghi <b>Address</b> (địa chỉ RAM), <b>Count</b> (số byte), <b>Control</b> (hướng truyền), rồi đi làm việc khác.",
-  d:[clr(), H("Quá trình vận hành của DMA"), b("cpu",30,110,140,110,"CPU","brand"), b("dma",230,90,190,170,"","violet"), t("dmt",325,110,"DMA controller",{fs:15,c:"violet"}), b("ad",245,130,160,34,"Address = X","gray",{fs:14}), b("ct",245,170,160,34,"Count = 4","gray",{fs:14}), b("co",245,210,160,34,"Control: đọc","gray",{fs:14}), b("dc",490,90,190,170,"Disk controller","cyan",{fs:15}), b("buf",515,170,140,60,"Buffer","gray",{fs:14}), b("mm",760,90,170,170,"Main\nmemory","ok",{fs:16}), b("bus",20,350,920,16,"","gray",{r:8}), a("q1",172,165,240,165,{c:"brand",t:"①"})]},
+  d:[clr(), H("Quá trình vận hành của DMA"), b("cpu",30,110,140,110,"CPU","brand"), b("dma",230,90,190,170,"","violet"), t("dmt",325,110,"DMA controller",{fs:15,c:"violet"}), b("ad",245,130,160,34,"Address = X","gray",{fs:14}), b("ct",245,170,160,34,"Count = 4","gray",{fs:14}), b("co",245,210,160,34,"Control: đọc","gray",{fs:14}), b("dc",490,90,190,170,"Disk controller","cyan",{fs:15}), b("buf",515,170,140,60,"Buffer","gray",{fs:14}), b("mm",760,90,170,170,"Main\nmemory","ok",{fs:16}), b("bus",20,350,920,16,"","gray",{r:8}), a("q1",172,135,240,135,{c:"brand",t:"①"})]},
  {s:"② DMA controller yêu cầu disk controller chuyển dữ liệu vào bộ nhớ, tại địa chỉ X.",
   d:[a("q2",325,262,585,262,{c:"violet",t:"② yêu cầu truyền",cv:60})]},
  {s:"③ Disk controller ghi dữ liệu <b>thẳng vào RAM</b> qua bus – CPU không phải chép từng byte.",
   d:[d("by",585,200,{t:"A",c:"warn"}), u("by",{x:845,y:228}), a("q3",660,200,755,200,{c:"ok",t:"③ dữ liệu"})]},
  {s:"④ Disk controller gửi <b>ack</b> cho DMA. DMA tăng Address, giảm Count, rồi lặp lại cho tới khi <b>Count = 0</b>.",
-  d:[a("q4",600,262,380,262,{c:"warn",t:"④ ack",cv:-150}), u("ct",{t:"Count = 3 … 0"}), f("ct")]},
+  d:[a("q4",640,262,330,262,{c:"warn",t:"④ ack",cv:-170}), u("ct",{t:"Count = 3 … 0"}), f("ct")]},
  {s:"⑤ Xong cả khối, DMA <b>ngắt CPU đúng một lần</b> để báo hoàn tất.",
-  d:[a("q5",230,170,175,170,{c:"bad",t:"⑤ ngắt"}), u("ct",{t:"Count = 0",c:"ok"}), f("cpu")]}
+  d:[a("q5",230,205,175,205,{c:"bad",t:"⑤ ngắt",ly:30}), u("ct",{t:"Count = 0",c:"ok"}), f("cpu")]}
 ]};};
 
 V["s5-5"] = function(){ return {title:"6 mục đích của phần mềm Vào/Ra", scenes:[
@@ -186,13 +186,13 @@ V["s5-11"] = function(){
  var bits=["0","1","0","0","0","0","0","1"];
  return {title:"Màn hình, terminal RS-232 & đồng hồ", scenes:[
  {s:"<b>Màn hình ánh xạ bộ nhớ</b>: card đồ họa có <b>video RAM</b>. Driver chỉ việc <b>ghi thẳng</b> vào video RAM…",
-  d:[H("Memory-mapped display"), b("cpu",40,180,140,90,"CPU","brand"), b("ga",300,140,240,180,"","violet"), t("gal",420,160,"Graphics adapter",{fs:15,c:"violet"}), b("vr",320,190,100,100,"Video\nRAM","warn",{fs:15}), b("vc",430,190,95,100,"Video\nctrl","gray",{fs:14}), b("mon",680,120,240,200,"","dark"), t("scr",800,220,"",{fs:46,c:"ok"}), d("ch",110,170,{t:"A"}), u("ch",{x:370,y:240})]},
+  d:[H("Memory-mapped display"), b("cpu",40,180,140,90,"CPU","brand"), b("ga",300,140,240,180,"","violet"), t("gal",420,160,"Graphics adapter",{fs:15,c:"violet"}), b("vr",320,190,100,100,"Video\nRAM","warn",{fs:15}), b("vc",430,190,95,100,"Video\nctrl","gray",{fs:14}), b("mon",680,120,240,200,"","dark"), t("scr",800,220,"",{fs:46,c:"ok"}), d("ch",110,170,{t:"A"}), u("ch",{x:370,y:306})]},
  {s:"…video controller đọc video RAM và phát <b>tín hiệu video analog</b> ra màn hình. Màn hình quét các dòng lần lượt từ trên xuống (<b>non-interlaced</b>: line 1, 2, 3 … 625).",
   d:[a("vs",527,240,675,220,{c:"ok",t:"analog video"}), u("scr",{t:"A"})]},
  {s:"<b>Terminal RS-232</b> nói chuyện với máy tính qua <b>đường nối tiếp</b>: các bit đi ra <b>từng bit một</b>. Chip <b>UART</b> trong giao diện RS-232 lo việc chuyển đổi.",
-  d:[clr(), H("Terminal RS-232 – truyền nối tiếp"), b("pc",40,170,260,170,"","gray"), t("pcl",170,190,"Máy tính",{fs:15,c:"gray"}), b("ua",150,230,120,60,"UART","warn"), b("tm",700,150,220,210,"Terminal","dark"), a("tx",275,245,695,245,{c:"warn",t:"Transmit"}), a("rx",695,300,275,300,{c:"cyan",t:"Receive"}), bits.map(function(v,i){ return d("bt"+i,290-i*0,245,{t:v,r:15,c:v==="1"?"ok":"gray",o:0}); })]},
+  d:[clr(), H("Terminal RS-232 – truyền nối tiếp"), b("pc",40,170,260,170,"","gray"), t("pcl",170,190,"Máy tính",{fs:15,c:"gray"}), b("ua",150,230,120,60,"UART","warn"), b("tm",700,150,220,210,"Terminal","dark"), a("tx",275,245,695,245,{c:"warn",t:"Transmit",ly:-14}), a("rx",695,300,275,300,{c:"cyan",t:"Receive"})]},
  {s:"Gửi chữ 'A' = 01000001: từng bit lần lượt chạy trên dây. Windows gọi 2 đường nối tiếp đầu tiên là <b>COM1</b> và <b>COM2</b>. Máy tính và terminal <b>hoàn toàn độc lập</b>.",
-  d:[bits.map(function(v,i){ return u("bt"+i,{o:1,x:640-i*42}); })]},
+  d:[bits.map(function(v,i){ return d("bt"+i,640-i*42,245,{t:v,r:15,c:v==="1"?"ok":"gray"}); })]},
  {s:"<b>Đồng hồ khả trình</b>: bộ dao động <b>thạch anh</b> phát xung đều đặn. Mỗi xung làm <b>bộ đếm (counter) giảm 1</b>.",
   d:[clr(), H("Đồng hồ khả trình (programmable clock)"), b("xo",60,120,200,90,"Thạch anh","cyan",{s:"phát xung"}), b("cn",360,120,260,90,"Counter = 3","warn",{fs:22}), b("hr",360,280,260,90,"Holding register = 3","violet",{fs:18}), a("pz",262,165,355,165,{c:"cyan",t:"xung"})]},
  {s:"Counter: 3 → 2 → 1 → <b>0</b>. Khi về 0, đồng hồ <b>sinh ngắt</b> cho CPU (ví dụ để bộ lập lịch đổi tiến trình).",

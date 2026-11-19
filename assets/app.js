@@ -37,7 +37,8 @@ var ICON = {
 };
 
 /* ---------- trạng thái ---------- */
-var state = { sessions:{}, active:null, view:"home", sumCh:4 };
+var state = { sessions:{}, active:null, view:"home", sumCh:4, stats:{} };
+var XS = window.XS || {};
 function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.sessions) state = Object.assign(state, s); } catch(e){}
   // bỏ các câu không còn tồn tại
   Object.keys(state.sessions).forEach(function(k){ var s=state.sessions[k]; s.ids = s.ids.filter(function(id){ return BYID[id]; }); if (!s.ids.length) delete state.sessions[k]; });
@@ -63,6 +64,8 @@ function newSession(key, name, ids, mode, extra){
 function idsOfChapter(ch){ return QS.filter(function(q){ return ch==="all" || q.ch===ch; }).map(function(q){ return q.id; }); }
 
 function isCorrect(q, sel){ return !!sel && sel.length>0 && sameSet(sel, q.ans); }
+function recordGrade(id, ok){ state.stats = state.stats || {}; var r = state.stats[id] || (state.stats[id] = {w:0, r:0}); if (ok) r.r++; else r.w++; r.t = Date.now(); }
+function weakIds(){ var st = state.stats || {}; return Object.keys(st).filter(function(id){ var r = st[id]; return BYID[id] && r.w > 0 && r.w * 2 - r.r > 0; }).sort(function(a, b){ var A = st[a], B = st[b]; return (B.w * 2 - B.r) - (A.w * 2 - A.r) || B.t - A.t; }); }
 function graded(s, id){ var a=s.ans[id]; return s.submitted || (a && a.done); }
 function status(s, id){
   var a = s.ans[id], q = BYID[id];
@@ -119,16 +122,27 @@ function renderHome(){
   '<div class="hero"><div class="hero-main"><h2>Ôn thi Nguyên lý Hệ điều hành</h2><p>Ngân hàng câu hỏi trắc nghiệm soạn từ slide bài giảng Chương 4, 5, 6 – có giải thích từng câu, chấm điểm ngay, thi thử có giờ và phần tổng hợp kiến thức dễ hiểu.</p>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="goExam">'+ICON.shuffle+'Tạo đề thi thử</button><button class="btn" data-view-go="summary">'+ICON.book+'Đọc tổng hợp kiến thức</button>'+exBtn+'</div></div>'+
   '<div class="stats"><div class="stat"><b>'+QS.length+'</b><span>câu hỏi</span></div><div class="stat"><b>3</b><span>chương</span></div><div class="stat"><b>'+(allGraded?Math.round(allG/allGraded*100)+'%':'—')+'</b><span>tỉ lệ đúng</span></div></div></div>'+
-  '<div class="section-h">Bộ câu hỏi theo chương</div><div class="sets">'+sets.map(setCard).join("")+'</div>'+
+  '<div class="section-h">Bộ câu hỏi theo chương</div><div class="sets">'+sets.map(setCard).join("")+'</div>'+weakPanel()+
   '<div class="section-h" id="examSetup">Tạo đề thi thử ngẫu nhiên</div>'+
   '<div class="panel"><div class="exam-grid">'+
    '<div><span class="lbl">Chương</span><div class="chk-row">'+CHAPS.map(function(c){ return '<label class="chk"><input type="checkbox" name="exch" value="'+c.ch+'" checked> Chương '+c.ch+'</label>'; }).join("")+'</div></div>'+
    '<div><span class="lbl">Số câu</span><select class="sel" id="exN"><option>20</option><option selected>30</option><option>40</option><option>50</option><option value="0">Tất cả</option></select></div>'+
    '<div><span class="lbl">Thời gian</span><select class="sel" id="exT"><option value="0">Không giới hạn</option><option value="15">15 phút</option><option value="30">30 phút</option><option value="45" selected>45 phút</option><option value="60">60 phút</option><option value="90">90 phút</option></select></div>'+
-   '<div><button class="btn primary block" id="mkExam">'+ICON.shuffle+'Tạo đề & bắt đầu</button></div>'+
+   '<div><label class="chk" style="margin-bottom:8px"><input type="checkbox" id="exXS"> Chỉ câu có trong slide</label><button class="btn primary block" id="mkExam">'+ICON.shuffle+'Tạo đề & bắt đầu</button></div>'+
   '</div><div class="legend"><span>• Câu hỏi và đáp án được xáo trộn ngẫu nhiên</span><span>• Không hiện đúng/sai cho đến khi nộp bài</span><span>• Hết giờ sẽ tự động nộp</span></div></div>';
 }
+function weakPanel(){
+  var w = weakIds(), st = state.stats || {}, topics = {};
+  w.forEach(function(id){ var q = BYID[id], k = "Ch"+q.ch+" · "+q.topic; topics[k] = (topics[k]||0) + st[id].w; });
+  var top = Object.keys(topics).sort(function(a,b){ return topics[b]-topics[a]; }).slice(0,6);
+  var done = Object.keys(st).length;
+  return '<div class="section-h">🎯 Ôn câu hay sai</div><div class="panel weak">'+
+    (w.length ? '<div class="weak-top"><div><b class="weak-n">'+w.length+'</b> câu bạn hay sai <span class="muted">(đã làm '+done+' câu khác nhau)</span></div><div class="weak-act"><button class="btn primary" data-start="weak">▶ Ôn ngay các câu này</button><button class="btn danger" data-clearstats="1" title="Xóa thống kê đúng/sai">Xóa thống kê</button></div></div>'+
+      '<div class="weak-tp"><span class="muted">Chủ đề yếu nhất:</span> '+top.map(function(k){ return '<span class="chip">'+esc(k)+' · '+topics[k]+' lần sai</span>'; }).join(" ")+'</div>'
+    : '<div class="muted">Chưa có dữ liệu. Mỗi lần bạn trả lời sai, câu đó sẽ được ghi lại; câu sai nhiều hơn đúng sẽ xuất hiện ở đây để ôn lại (trả lời đúng nhiều lần thì câu tự rời danh sách).</div>')+'</div>';
+}
 function startSet(key){
+  if (key==="weak"){ var w = weakIds(); if (!w.length){ toast("Chưa có câu nào hay sai – cứ làm bài trước đã!"); return; } newSession("weak", "Ôn câu hay sai ("+w.length+" câu)", w, "practice"); go("quiz"); return; }
   if (key==="exam"){ if (state.sessions.exam){ state.active="exam"; save(); go(state.sessions.exam.submitted?"result":"quiz"); } return; }
   if (!state.sessions[key]){
     var o = key==="all" ? {ch:"all", name:"Tất cả 3 chương"} : CHAPS.filter(function(c){ return c.key===key; })[0];
@@ -141,14 +155,15 @@ function resetSet(key, silent){
   var s = state.sessions[key]; if (!s) return;
   if (!silent && !confirm("Làm lại từ đầu bộ \""+s.name+"\"? Toàn bộ đáp án đã chọn sẽ bị xóa.")) return;
   var keepInstant = s.instant;
-  var ids = s.mode==="exam" ? shuffle(s.ids) : (key==="wrong" ? s.ids : idsOfChapter(key==="all"?"all":+key.slice(1)));
+  var ids = s.mode==="exam" ? shuffle(s.ids) : ((key==="wrong"||key==="weak") ? s.ids : idsOfChapter(key==="all"?"all":+key.slice(1)));
   var n = newSession(key, s.name, ids, s.mode, {duration:s.duration, chapters:s.chapters});
   n.instant = keepInstant; save();
 }
 function makeExam(){
   var chs = Array.prototype.map.call(document.querySelectorAll('input[name="exch"]:checked'), function(i){ return +i.value; });
   if (!chs.length){ toast("Hãy chọn ít nhất 1 chương"); return; }
-  var pool = QS.filter(function(q){ return chs.indexOf(q.ch)>=0; }).map(function(q){ return q.id; });
+  var onlySlide = $("#exXS") && $("#exXS").checked;
+  var pool = QS.filter(function(q){ return chs.indexOf(q.ch)>=0 && !(onlySlide && XS[q.id]); }).map(function(q){ return q.id; });
   var n = +$("#exN").value || pool.length; n = Math.min(n, pool.length);
   var mins = +$("#exT").value;
   if (state.sessions.exam && !state.sessions.exam.submitted && !confirm("Bạn đang có một đề thi thử chưa nộp. Tạo đề mới sẽ xóa đề cũ?")) return;
@@ -219,7 +234,7 @@ function renderQuiz(){
     var nextI = pos>=0 ? vis[pos+1] : vis.filter(function(i){return i>s.cur;})[0];
     var checkBtn = (!isG && !exam && s.instant && q.type==="multi") ? '<button class="btn ok" id="checkBtn" '+(sel.length?'':'disabled')+'>'+ICON.check+'Kiểm tra</button>' : '';
     var redoBtn = (isG && !s.submitted) ? '<button class="btn" id="redoBtn">'+ICON.reset+'Làm lại câu</button>' : '';
-    card = '<div class="qcard"><div class="qhead"><span class="badge no">Câu '+(s.cur+1)+'</span><span class="badge '+q.type+'">'+TYPE_LABEL[q.type]+'</span><span class="badge">Chương '+q.ch+'</span><span class="badge">'+esc(q.topic)+'</span>'+
+    card = '<div class="qcard"><div class="qhead"><span class="badge no">Câu '+(s.cur+1)+'</span><span class="badge '+q.type+'">'+TYPE_LABEL[q.type]+'</span><span class="badge">Chương '+q.ch+'</span><span class="badge">'+esc(q.topic)+'</span>'+((state.stats||{})[id]&&state.stats[id].w?'<span class="badge wr">Đã sai '+state.stats[id].w+' lần</span>':'')+(XS[id]?'<span class="badge xsb" title="'+esc(XS[id])+'">Mở rộng ngoài slide</span>':'')+
       '<button class="flagbtn '+(s.flags[id]?'on':'')+'" id="flagBtn" title="Đánh dấu để xem lại (phím F)">'+ICON.flag+(s.flags[id]?'Đã đánh dấu':'Đánh dấu')+'</button></div>'+
       '<p class="qtext">'+esc(q.q)+'</p><p class="qhint">'+hint+'</p>'+steps+'<div class="opts">'+opts+'</div>'+fb+
       '<div class="qactions sticky"><button class="btn" id="prevBtn" '+(prevI===undefined?'disabled':'')+' data-i="'+prevI+'">'+ICON.left+'Câu trước</button>'+
@@ -261,7 +276,7 @@ function selectOpt(oi){
     var k = a.sel.indexOf(oi); if (k>=0) a.sel.splice(k,1); else a.sel.push(oi);
   } else {
     a.sel = [oi];
-    if (s.instant && s.mode==="practice") a.done = true;
+    if (s.instant && s.mode==="practice"){ a.done = true; recordGrade(id, isCorrect(q, a.sel)); }
   }
   if (!a.sel.length) delete s.ans[id];
   save(); renderQuiz();
@@ -269,13 +284,14 @@ function selectOpt(oi){
 function checkMulti(){
   var s = cur(), id = s.ids[s.cur], a = s.ans[id];
   if (!a || !a.sel.length){ toast("Hãy chọn ít nhất một đáp án"); return; }
-  a.done = true; save(); renderQuiz();
+  a.done = true; recordGrade(id, isCorrect(BYID[id], a.sel)); save(); renderQuiz();
 }
 function jump(i){ var s=cur(); if (i===undefined||i===null||isNaN(i)) return; s.cur = +i; save(); renderQuiz(); var qc=$(".qcard"); if (qc && window.innerWidth<1024) qc.scrollIntoView({block:"start"}); }
 function doSubmit(force){
   var s = cur(); if (!s || s.submitted) return;
   var c = counts(s), left = s.ids.length - c.answered;
   if (!force && !confirm(left>0 ? "Còn "+left+" câu chưa trả lời. Bạn vẫn muốn nộp bài?" : "Nộp bài và xem kết quả?")) return;
+  s.ids.forEach(function(id){ var a = s.ans[id]; if (a && a.sel && a.sel.length && !a.done) recordGrade(id, isCorrect(BYID[id], a.sel)); });
   s.submitted = true; s.finished = Date.now(); s.filter = "all"; save(); go("result");
 }
 
@@ -328,7 +344,7 @@ function renderSummary(){
     '<div class="chap-tabs">'+data.map(function(d){ return '<button class="chap-tab '+(d.ch===c.ch?'active':'')+'" data-sumch="'+d.ch+'">Chương '+d.ch+'</button>'; }).join("")+'</div>'+
     '<input class="search" id="sumSearch" placeholder="Tìm trong chương… (vd: TLB, RAID)" value="'+esc(sumQuery)+'">'+
     '<nav class="toc">'+secs.map(function(sec){ return '<a href="#'+sec.id+'" data-toc="'+sec.id+'">'+esc(sec.title)+'</a>'; }).join("")+'</nav></div>'+
-    '<div><div class="sum-head"><div class="kicker">Chương '+c.ch+' · '+esc(c.en)+'</div><h2>'+esc(c.title)+'</h2><p>'+c.intro+'</p></div>'+
+    '<div><div class="sum-head"><div class="kicker">Chương '+c.ch+' · '+esc(c.en)+'</div><h2>'+esc(c.title)+'</h2><p>'+c.intro+'</p><p class="muted" style="margin-top:8px;font-size:13.5px">Nhãn <span class="xs">ngoài slide</span> = kiến thức bổ sung từ giáo trình gốc (Tanenbaum), không có trong slide – nên ôn sau phần chính.</p></div>'+
     (secs.length ? secs.map(renderSec).join("") : '<div class="panel empty">Không tìm thấy nội dung phù hợp “'+esc(sumQuery)+'”.</div>')+
     '<div class="sum-cta"><button class="btn primary" data-start="c'+c.ch+'">'+ICON.play+'Luyện câu hỏi Chương '+c.ch+'</button>'+
     (c.ch<6?'<button class="btn" data-sumch="'+(c.ch+1)+'">Chương '+(c.ch+1)+ICON.right+'</button>':'')+'</div></div></div>';
@@ -341,7 +357,13 @@ function renderSec(sec){
     return '<figure class="fig"><button class="fig-btn" data-zoom="'+f[0]+'" data-cap="'+esc(f[1])+'"><img loading="lazy" src="'+slideSrc(f[0])+'" alt="'+esc(f[1])+'"></button><figcaption>'+esc(f[1])+'</figcaption></figure>';
   }).join("");
   var ez = (window.EASY||{})[sec.id], easy = ez ? '<div class="easy"><div class="easy-tl"><span>💡 Hiểu nhanh</span>'+ez.tl+'</div>'+(ez.vi?'<div class="easy-vi"><span>🧠 Ví von đời thường</span>'+ez.vi+'</div>':'')+'</div>' : '';
-  var vid = (window.VideoPlayer && VideoPlayer.has(sec.id)) ? '<div class="vplayer" data-video="'+sec.id+'"></div>' : '';
+  var vkeys = Object.keys(window.VIDEOS||{}).filter(function(k){ return k===sec.id || k.indexOf(sec.id+"~")===0; });
+  var vid = '';
+  if (vkeys.length){
+    var lab = window.VLABEL||{};
+    vid = (vkeys.length>1 ? '<div class="vtabs"><span>🎬 Chọn video:</span>'+vkeys.map(function(k,i){ return '<button class="vtab'+(i?'':' on')+'" data-vtab="'+k+'">'+esc(lab[k]||("Video "+(i+1)))+'</button>'; }).join("")+'</div>' : '')+
+      '<div class="vplayer" data-video="'+vkeys[0]+'"></div>';
+  }
   return '<article class="sum-sec" id="'+sec.id+'"><div class="sec-head"><h3>'+esc(sec.title)+'</h3></div>'+easy+vid+
     (figs ? '<details class="figs-wrap" open><summary>🖼 Hình slide gốc ('+sec.figs.length+')</summary><div class="figs">'+figs+'</div></details>' : '')+'<div class="sum-body">'+sec.html+'</div></article>';
 }
@@ -457,31 +479,36 @@ var DEMOS = {
   pagerep: function(el){
     el.innerHTML = '<div class="demo-h">🧪 Mô phỏng thay thế trang (đếm lỗi trang)</div><div class="demo-row">'+
       '<label class="w">Chuỗi tham chiếu<input data-f="r" value="7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1"></label><label>Số khung<input type="number" min="1" max="8" data-f="n" value="3"></label>'+
-      '<label>Thuật toán<select data-f="g"><option value="fifo">FIFO</option><option value="lru">LRU</option><option value="opt">Optimal</option></select></label></div><div class="demo-out"></div>';
+      '<label>Thuật toán<select data-f="g"><option value="fifo">FIFO</option><option value="lru">LRU</option><option value="opt">Optimal</option><option value="clock">Clock / Second chance</option></select></label>'+
+      '<label>Clock: trang mới nạp có<select data-f="rl"><option value="1">R = 1</option><option value="0">R = 0</option></select></label></div><div class="demo-out"></div>';
     function run(){
       var r=numList(el.querySelector('[data-f=r]').value), n=Math.max(1,Math.min(8,+el.querySelector('[data-f=n]').value||3)), g=el.querySelector('[data-f=g]').value;
-      var fr=[], last={}, cols=[], faults=0;
+      var fr=[], last={}, cols=[], faults=0, rb=[], hand=0, r1=el.querySelector('[data-f=rl]').value==="1";
+      el.querySelector('[data-f=rl]').parentNode.style.display = g==="clock" ? "" : "none";
       r.forEach(function(p,i){
-        var hit = fr.indexOf(p)>=0, victim=null;
-        if (!hit){
+        var at = fr.indexOf(p), hit = at>=0, victim=null;
+        if (hit){ if (g==="clock") rb[at]=1; }
+        else {
           faults++;
-          if (fr.length<n) fr.push(p);
+          if (fr.length<n){ fr.push(p); rb.push(r1?1:0); }
           else {
             var vi=0;
             if (g==="fifo") vi=0;
             else if (g==="lru"){ fr.forEach(function(x,j){ if (last[x]<last[fr[vi]]) vi=j; }); }
-            else { var best=-1; fr.forEach(function(x,j){ var nx=r.indexOf(x,i+1); nx = nx<0?1e9:nx; if (nx>best){ best=nx; vi=j; } }); }
+            else if (g==="opt"){ var best=-1; fr.forEach(function(x,j){ var nx=r.indexOf(x,i+1); nx = nx<0?1e9:nx; if (nx>best){ best=nx; vi=j; } }); }
+            else { while (rb[hand]===1){ rb[hand]=0; hand=(hand+1)%n; } vi=hand; hand=(hand+1)%n; }
             victim=fr[vi];
-            if (g==="fifo"){ fr.shift(); fr.push(p); } else fr[vi]=p;
+            if (g==="fifo"){ fr.shift(); fr.push(p); } else { fr[vi]=p; rb[vi]=r1?1:0; }
           }
         }
         last[p]=i;
-        cols.push({p:p, fr:fr.slice(), hit:hit, v:victim});
+        cols.push({p:p, fr:fr.slice(), rb:rb.slice(), hand:hand, hit:hit, v:victim});
       });
       var head='<tr><th>Tham chiếu</th>'+cols.map(function(c){ return '<th>'+c.p+'</th>'; }).join("")+'</tr>';
-      var rows=''; for (var k=0;k<n;k++) rows+='<tr><th>Khung '+(k+1)+'</th>'+cols.map(function(c){ var v=c.fr[k]; return '<td class="'+(!c.hit && v===c.p?'new':'')+'">'+(v===undefined?'':v)+'</td>'; }).join("")+'</tr>';
+      var rows=''; for (var k=0;k<n;k++) rows+='<tr><th>Khung '+(k+1)+'</th>'+cols.map(function(c){ var v=c.fr[k]; return '<td class="'+(!c.hit && v===c.p?'new':'')+'">'+(v===undefined?'':v+(g==="clock"?'<sup class="muted">'+c.rb[k]+'</sup>':''))+'</td>'; }).join("")+'</tr>';
+      if (g==="clock") rows+='<tr><th>Kim ở</th>'+cols.map(function(c){ return '<td class="muted">K'+(c.hand+1)+'</td>'; }).join("")+'</tr>';
       rows+='<tr><th>Lỗi?</th>'+cols.map(function(c){ return '<td>'+(c.hit?'':'<span class="bad-t">F</span>')+'</td>'; }).join("")+'</tr>';
-      el.querySelector(".demo-out").innerHTML='<div class="tbl-wrap"><table class="demo-t pr">'+head+rows+'</table></div><div>Tổng số lỗi trang: <b class="bad-t">'+faults+'</b> / '+r.length+' tham chiếu'+(g==="fifo"?' <small class="muted">(FIFO: khung 1 luôn là trang vào sớm nhất)</small>':'')+'</div>';
+      el.querySelector(".demo-out").innerHTML='<div class="tbl-wrap"><table class="demo-t pr">'+head+rows+'</table></div><div>Tổng số lỗi trang: <b class="bad-t">'+faults+'</b> / '+r.length+' tham chiếu'+(g==="fifo"?' <small class="muted">(FIFO: khung 1 luôn là trang vào sớm nhất)</small>':g==="clock"?' <small class="muted">(số nhỏ cạnh trang = bit R; “Kim ở” = khung kim sẽ xét tiếp)</small>':'')+'</div>';
     }
     el.oninput = run; run();
   }
@@ -511,11 +538,17 @@ function bind(){
       var idx = 0; list.forEach(function(x,i){ if (x[0]===d.zoom) idx=i; });
       openLightbox(list, idx); return;
     }
+    if (d.vtab){
+      var art = t.closest(".sum-sec"), pl = art && art.querySelector(".vplayer");
+      if (pl && window.VideoPlayer){ art.querySelectorAll(".vtab").forEach(function(x){ x.classList.toggle("on", x===t); }); pl.dataset.video = d.vtab; VideoPlayer.mountOne(pl); }
+      return;
+    }
     if (t.closest(".demo")) return;
     if (t.classList.contains("tab")){ var v=d.view; if (v==="quiz" && !cur()){ toast("Hãy chọn một bộ câu hỏi trước"); go("home"); return; } if (v==="quiz" && cur().submitted && state.view!=="result" && state.view!=="quiz"){ go("result"); return; } go(v); return; }
     if (d.viewGo){ go(d.viewGo); return; }
     if (d.start){ startSet(d.start); return; }
     if (d.reset){ resetSet(d.reset); renderHome(); return; }
+    if (d.clearstats){ if (confirm("Xóa toàn bộ thống kê đúng/sai?")){ state.stats = {}; save(); renderHome(); } return; }
     if (d.resetCur){ var s0=cur(); if (!s0) return; if (confirm("Làm lại toàn bộ \""+s0.name+"\"?")){ resetSet(s0.key, true); go("quiz"); } return; }
     if (d.sum){ state.sumCh = +d.sum; sumQuery=""; go("summary"); return; }
     if (d.sumch){ state.sumCh = +d.sumch; sumQuery=""; save(); renderSummary(); window.scrollTo({top:0}); return; }

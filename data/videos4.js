@@ -34,20 +34,20 @@ V["s4-2"] = function(){ return {title:"Đơn nhiệm & phân vùng cố định"
  {s:"(b) <b>Một hàng đợi chung</b>: phân vùng nào trống thì lấy job phù hợp trong hàng đợi chung.",
   d:[x("em"), u("qa",{t:"(b) một hàng đợi chung"}), u("j1",{x:370,y:230}), u("j2",{x:335,y:230}), u("j3",{x:300,y:230}), u("j4",{x:265,y:230}), u("j5",{x:230,y:230})]},
  {s:"Nhược điểm: job 60K vào phân vùng 300K thì 240K còn lại bị bỏ phí. Đó là <b>phân mảnh nội</b>.",
-  d:[x("j1"), b("job",430,235,180,38,"Job 60K","ok",{fs:15}), b("waste",430,140,180,90,"240K bỏ phí\n= phân mảnh nội","bad",{fs:15,dash:1})]}
+  d:[x("j1"), u("p3",{t:""}), t("p3l",630,205,"← Phân vùng 3 (300K)",{a:"start",fs:15}), b("job",430,235,180,38,"Job 60K","ok",{fs:15}), b("waste",430,140,180,90,"240K bỏ phí\n= phân mảnh nội","bad",{fs:15,dash:1})]}
 ]};};
 
 V["s4-3"] = function(){ return {title:"Tái cấp phát & bảo vệ bộ nhớ (Base – Limit)", scenes:[
  {s:"Chương trình không biết trước mình sẽ được nạp vào chỗ nào trong RAM, nên mọi địa chỉ nó dùng đều tính <b>từ 0</b>.",
   d:[H("Tái cấp phát động bằng thanh ghi relocation"), b("cpu",50,210,150,100,"CPU","brand"), b("mmu",360,170,220,180,"MMU","violet",{s:"relocation = 14000"}), b("ram",760,100,160,320,"RAM","gray"), d("p",125,180,{t:"346",r:26})]},
  {s:"Địa chỉ logic <b>346</b> đi vào MMU. MMU <b>cộng</b> giá trị thanh ghi relocation vào: 346 + 14000.",
-  d:[a("l1",205,260,355,260,{t:"logic 346"}), u("p",{x:470,y:300}), f("mmu")]},
+  d:[a("l1",205,260,355,260,{t:"logic 346"}), u("p",{x:470,y:322}), f("mmu")]},
  {s:"Ra địa chỉ vật lý <b>14346</b>. Muốn dời chương trình sang chỗ khác, HĐH chỉ cần đổi giá trị thanh ghi relocation.",
-  d:[a("l2",585,260,755,260,{c:"ok",t:"vật lý 14346"}), u("p",{x:840,y:260,t:"14346",r:34,c:"ok"})]},
+  d:[a("l2",585,260,755,260,{c:"ok",t:"vật lý 14346"}), u("p",{x:840,y:345,t:"14346",r:34,c:"ok"})]},
  {s:"Để <b>bảo vệ</b>, mỗi tiến trình có 2 thanh ghi: <b>base</b> – địa chỉ vật lý nhỏ nhất của nó, và <b>limit</b> – kích thước vùng của nó.",
   d:[clr(), H("Bảo vệ bằng base và limit"), b("m0",700,60,200,120,"Tiến trình khác","bad",{o:.7}), b("m1",700,180,200,200,"Tiến trình P","ok",{s:"chỉ được dùng vùng này"}), b("m2",700,380,200,110,"HĐH","brand"), t("bl",690,380,"base = 30000",{a:"end",fs:16,c:"ok"}), t("ll",690,180,"base + limit = 42000",{a:"end",fs:16,c:"warn"})]},
  {s:"Mỗi lần truy cập, phần cứng kiểm tra: địa chỉ <b>≥ base</b> và <b>&lt; base + limit</b>. Địa chỉ 35000 thỏa cả hai → được phép.",
-  d:[b("cpu",30,240,110,70,"CPU","brand"), b("k1",190,235,150,80,"≥ base ?","warn"), b("k2",390,235,170,80,"< base+limit ?","warn"), a("e1",140,275,185,275,{noHead:0}), a("e2",340,275,385,275), d("q",85,215,{t:"35000",r:30}), u("q",{x:640,y:275,c:"ok"}), a("e3",560,275,695,275,{c:"ok",t:"OK"})]},
+  d:[b("cpu",30,240,110,70,"CPU","brand"), b("k1",190,235,150,80,"≥ base ?","warn"), b("k2",390,235,170,80,"< base+limit ?","warn"), a("e1",140,275,185,275,{noHead:0}), a("e2",340,275,385,275), d("q",85,215,{t:"35000",r:30}), u("q",{x:628,y:318,c:"ok"}), a("e3",560,275,695,275,{c:"ok",t:"OK",ly:-8})]},
  {s:"Địa chỉ <b>43000</b> vượt quá base + limit → phần cứng <b>bẫy (trap)</b> về HĐH, báo lỗi địa chỉ. Tiến trình không thể phá vùng nhớ của người khác hay của HĐH.",
   d:[d("q2",85,215,{t:"43000",r:30,c:"bad"}), u("q2",{x:475,y:380}), a("e4",475,318,475,350,{c:"bad"}), t("tr",475,435,"TRAP → HĐH: addressing error",{c:"bad",fs:19})]},
  {s:"Tóm lại: <b>vật lý = base + logic</b>, và logic phải <b>nhỏ hơn limit</b>. MMU làm việc này <b>động</b>, ngay lúc chương trình chạy.",
@@ -89,9 +89,9 @@ V["s4-5"] = function(){
  {s:"<b>Worst-fit</b> cũng duyệt toàn bộ nhưng chọn hole <b>lớn nhất</b> 600K – để phần dư (388K) vẫn đủ lớn cho tiến trình khác dùng.",
   d:[u("hh3",{c:"none"}), u("hh4",{c:"ok"}), u("req",{x:mid(4),y:180}), u("al",{t:"Worst-fit → hole 600K (dư 388K)"})]},
  {s:"<b>Next-fit</b> giống First-fit nhưng bắt đầu tìm từ <b>vị trí con trỏ lần trước dừng</b> (ví dụ hole 200K) chứ không quay lại đầu → chọn 300K.",
-  d:[u("hh4",{c:"none"}), d("ptr",mid(2),340,{t:"▲",c:"violet",r:16}), t("pl",mid(2),380,"con trỏ",{fs:14,c:"violet"}), u("hh3",{c:"ok"}), u("req",{x:mid(3),y:180}), u("al",{t:"Next-fit → tìm tiếp từ con trỏ → hole 300K"})]},
+  d:[x("lg"), u("hh4",{c:"none"}), d("ptr",mid(2),340,{t:"▲",c:"violet",r:16}), t("pl",mid(2),380,"con trỏ",{fs:14,c:"violet"}), u("hh3",{c:"ok"}), u("req",{x:mid(3),y:180}), u("al",{t:"Next-fit → tìm tiếp từ con trỏ → hole 300K"})]},
  {s:"Nhớ nhanh: First = <b>đầu tiên đủ</b> · Next = <b>từ con trỏ</b> · Best = <b>nhỏ nhất đủ</b> · Worst = <b>lớn nhất</b>. Best và Worst phải duyệt hết danh sách.",
-  d:[x("ptr","pl","req","lg"), u("hh3",{c:"none"}), u("al",{t:"First: đầu tiên · Next: từ con trỏ · Best: nhỏ nhất đủ · Worst: lớn nhất",fs:18})]},
+  d:[x("ptr","pl","req"), u("hh3",{c:"none"}), u("al",{t:"First: đầu tiên · Next: từ con trỏ · Best: nhỏ nhất đủ · Worst: lớn nhất",fs:18})]},
  {s:"HĐH ghi nhớ vùng nào trống bằng <b>Bit map</b> – mỗi đơn vị cấp phát 1 bit: 1 = đã dùng, 0 = trống…",
   d:[clr(), H("Theo dõi bộ nhớ: Bit map và Linked list"), [0,1,2,3,4,5,6,7].map(function(i){ return [b("bu"+i,120+i*60,110,56,56,i<5?"A":"",i<5?"ok":"none",{dash:i>=5,fs:16}), t("bt"+i,148+i*60,195,i<5?"1":"0",{fs:24,c:i<5?"ok":"gray"})]; }), t("bm",360,240,"Bit map: 1 1 1 1 1 0 0 0",{fs:18,c:"warn"})]},
  {s:"…hoặc bằng <b>danh sách liên kết</b>: mỗi nút ghi P (tiến trình) hay H (hole), vị trí bắt đầu và độ dài.",
@@ -105,19 +105,19 @@ V["s4-6"] = function(){
  var map={0:2,1:0,3:3,6:1};
  return {title:"Bộ nhớ ảo & phân trang", scenes:[
  {s:"Chương trình có <b>8 trang</b>, nhưng RAM chỉ có <b>4 khung trang</b>. Không có bộ nhớ ảo thì không chạy được.",
-  d:[H("Chương trình lớn hơn RAM vẫn chạy được"), pg, fr, t("vl",145,500,"Bộ nhớ ẢO (logic)",{fs:17,c:"brand"}), t("rl",680,470,"Bộ nhớ VẬT LÝ",{fs:17,c:"gray"}), b("dk",810,150,130,250,"Đĩa","gray",{r:30})]},
+  d:[H("Chương trình lớn hơn RAM vẫn chạy được"), pg, fr, t("vl",145,500,"Bộ nhớ ẢO (logic)",{fs:17,c:"brand"}), t("rl",680,470,"Bộ nhớ VẬT LÝ",{fs:17,c:"gray"}), b("dk",300,455,300,70,"Đĩa (các trang còn lại)","gray",{r:20,fs:15})]},
  {s:"Với bộ nhớ ảo: chỉ những trang <b>đang cần</b> mới nạp vào RAM, và nằm ở <b>khung bất kỳ</b> – không cần liền nhau.",
   d:Object.keys(map).map(function(p){ return [a("m"+p,225,94+p*52,595,130+map[p]*90,{c:"ok"}), u("fr"+map[p],{t:"Trang "+p,c:"ok"})]; })},
  {s:"Các trang còn lại vẫn nằm trên <b>đĩa</b>. Khi nào chương trình cần tới, HĐH mới nạp vào.",
-  d:[2,4,5,7].map(function(p){ return a("dk"+p,225,94+p*52,805,280,{c:"gray",dash:1,cv:30}); })},
+  d:[2,4,5,7].map(function(p){ return a("dd"+p,225,94+p*52,300,490,{c:"gray",dash:1}); })},
  {s:"<b>Bảng trang</b> ghi lại: trang nào đang ở khung nào; X nghĩa là trang chưa có trong RAM.",
-  d:[b("pt",320,90,180,340,"Bảng trang\n\n0 → 2\n1 → 0\n2 → X\n3 → 3\n4 → X\n5 → X\n6 → 1\n7 → X","violet",{fs:17})]},
+  d:[x("m0","m1","m3","m6","dd2","dd4","dd5","dd7"), b("pt",320,90,180,340,"Bảng trang\n\n0 → 2\n1 → 0\n2 → X\n3 → 3\n4 → X\n5 → X\n6 → 1\n7 → X","violet",{fs:17})]},
  {s:"Trang (logic) và khung (vật lý) có <b>cùng kích thước</b>: từ 512 byte đến 8 KB. Mọi khung bằng nhau nên <b>không có phân mảnh ngoài</b> – chỉ có phân mảnh nội ở trang cuối.",
-  d:[t("r1",480,505,"1 trang = 1 khung (512 B – 8 KB) · chỉ có phân mảnh NỘI",{fs:18,c:"warn"})]},
+  d:[t("r1",790,507,"1 trang = 1 khung (512 B – 8 KB)\nchỉ có phân mảnh NỘI",{fs:15,c:"warn"})]},
  {s:"Ai làm việc tra bảng trang? Là <b>MMU</b>, nằm ngay trong chip CPU. CPU gửi <b>địa chỉ ảo</b> cho MMU…",
   d:[clr(), H("Vị trí và chức năng của MMU"), b("pk",80,90,280,300,"","none",{dash:1}), t("pkl",220,115,"Gói CPU (CPU package)",{fs:15,c:"gray"}), b("cp",150,140,140,80,"CPU","brand"), b("mu",150,270,140,90,"MMU","violet"), a("va",220,222,220,265,{t:"địa chỉ ảo",lx:60}), b("bus",60,450,840,16,"","gray",{r:8}), b("me",480,180,160,130,"Memory","gray"), b("dc",700,180,180,130,"Disk\ncontroller","gray")]},
  {s:"…MMU tra bảng trang rồi gửi <b>địa chỉ vật lý</b> ra bus tới bộ nhớ.",
-  d:[a("pa",220,362,220,445,{c:"ok",t:"địa chỉ vật lý",lx:70}), a("pm",230,452,560,315,{c:"ok",cv:-40}), f("mu")]}
+  d:[a("pa",220,362,220,445,{c:"ok",t:"địa chỉ vật lý",lx:-75}), a("pm",230,452,560,315,{c:"ok",cv:-40}), f("mu")]}
 ]};};
 
 V["s4-7"] = function(){ var rows=[], fr=[2,1,6,0,4,3];
@@ -146,17 +146,17 @@ V["s4-8"] = function(){ return {title:"Bảng trang 2 mức & TLB", scenes:[
  {s:"Giải pháp: chia địa chỉ thành <b>PT1 (10 bit) – PT2 (10 bit) – Offset (12 bit)</b>. Ví dụ 0x00403004 → PT1 = 1, PT2 = 3, offset = 4.",
   d:[x("big"), b("a1",240,70,160,60,"PT1 = 1","warn",{fs:20,s:"10 bit"}), b("a2",400,70,160,60,"PT2 = 3","cyan",{fs:20,s:"10 bit"}), b("a3",560,70,160,60,"Offset = 4","ok",{fs:20,s:"12 bit"})]},
  {s:"PT1 chọn một entry trong <b>bảng cấp 1</b> → entry đó trỏ tới một <b>bảng cấp 2</b>.",
-  d:[b("t1",100,190,160,300,"Bảng cấp 1\n(1024 entry)","gray",{fs:15}), b("t1e",100,330,160,36,"entry 1","warn",{fs:15}), a("x1",320,135,190,325,{c:"warn"})]},
+  d:[b("t1",100,190,160,300,"","gray"), t("t1l",180,510,"Bảng cấp 1 (1024 entry)",{fs:14,c:"gray"}), b("t1e",100,330,160,36,"entry 1","warn",{fs:15}), a("x1",320,135,190,325,{c:"warn"})]},
  {s:"PT2 chọn entry trong bảng cấp 2 → ra số khung trang. Cộng offset là có địa chỉ vật lý.",
-  d:[b("t2",400,190,160,300,"Bảng cấp 2\n(1024 entry)","gray",{fs:15}), b("t2e",400,380,160,36,"entry 3","cyan",{fs:15}), a("x2",262,348,395,398,{c:"warn"}), a("x3",480,135,480,375,{c:"cyan"}), b("fr",700,300,190,110,"Khung trang\n+ offset 4","ok",{fs:17}), a("x4",562,398,695,360,{c:"ok"})]},
+  d:[b("t2",400,190,160,300,"","gray"), t("t2l",480,510,"Bảng cấp 2 (1024 entry)",{fs:14,c:"gray"}), b("t2e",400,380,160,36,"entry 3","cyan",{fs:15}), a("x2",262,348,395,398,{c:"warn"}), a("x3",480,135,480,375,{c:"cyan"}), b("fr",700,300,190,110,"Khung trang\n+ offset 4","ok",{fs:17}), a("x4",562,398,695,360,{c:"ok"})]},
  {s:"Mỗi bảng cấp 2 quản lý 1024 × 4 KB = <b>4 MB</b>. Vùng nhớ nào không dùng thì <b>không cần tạo</b> bảng cấp 2 → tiết kiệm rất nhiều.",
-  d:[t("n1",480,520,"1 bảng cấp 2 = 1024 × 4 KB = 4 MB · vùng không dùng → không cần bảng",{fs:17,c:"warn"})]},
+  d:[t("n1",795,215,"Mỗi bảng cấp 2 = 4 MB\nVùng không dùng → không cần bảng",{fs:15,c:"warn"})]},
  {s:"Bảng trang nằm trong RAM: <b>PTBR</b> trỏ tới nó, <b>PRLR</b> cho biết kích thước. Mỗi lần truy cập dữ liệu phải vào RAM <b>2 lần</b>: tra bảng trang, rồi lấy dữ liệu.",
   d:[clr(), H("TLB – bộ nhớ đệm cho bảng trang"), b("cpu",40,200,130,90,"CPU","brand"), b("tlb",260,190,170,110,"TLB","warn",{s:"cực nhanh, ít entry"}), b("pt",560,90,200,130,"Bảng trang\n(trong RAM)","violet",{fs:16}), b("dt",560,320,200,130,"Dữ liệu\n(trong RAM)","gray",{fs:16}), t("pb",660,240,"PTBR → bảng trang · PRLR = kích thước",{fs:13,c:"gray"})]},
  {s:"<b>TLB</b> (bộ nhớ kết hợp) lưu các ánh xạ trang → khung vừa dùng. <b>TLB hit</b>: có ngay số khung, chỉ còn <b>1 lần</b> vào RAM để lấy dữ liệu.",
   d:[d("q",105,170,{t:"p"}), u("q",{x:345,y:170}), u("tlb",{c:"ok",t:"TLB hit ✔"}), a("h1",432,260,555,370,{c:"ok",t:"1 lần vào RAM"})]},
  {s:"<b>TLB miss</b>: phải tra bảng trang trong RAM, rồi nạp ánh xạ đó vào TLB cho lần sau. Chương trình hay dùng lại các trang cũ nên tỉ lệ hit rất cao.",
-  d:[x("h1"), u("tlb",{c:"bad",t:"TLB miss ✘"}), u("q",{x:660,y:80,c:"bad"}), a("m1",432,220,555,160,{c:"bad",t:"tra bảng trang"}), a("m2",560,200,435,250,{c:"warn",t:"nạp vào TLB",cv:-30}), a("m3",660,222,660,315,{c:"ok"})]}
+  d:[x("h1","pb"), u("tlb",{c:"bad",t:"TLB miss ✘"}), u("q",{x:660,y:80,c:"bad"}), a("m1",432,220,555,160,{c:"bad",t:"tra bảng trang"}), a("m2",560,200,435,250,{c:"warn",t:"nạp vào TLB",cv:-30}), a("m3",660,222,660,315,{c:"ok"})]}
 ]};};
 
 V["s4-9"] = function(){ return {title:"Lỗi trang & thay thế trang", scenes:[
@@ -228,9 +228,9 @@ V["s4-11"] = function(){ return {title:"HĐH tham gia phân trang & external pag
   d:[clr(), H("Điều khiển lỗi trang với external pager"), b("us",30,70,640,190,"","none",{dash:1}), t("usl",80,90,"User space",{fs:14,c:"gray",a:"start"}), b("ks",30,270,640,200,"","none",{dash:1}), t("ksl",80,290,"Kernel space",{fs:14,c:"gray",a:"start"}),
    b("up",70,130,170,90,"User process","brand",{fs:16}), b("ep",420,120,200,100,"External pager","violet",{fs:16}), b("fh",120,340,180,90,"Fault handler","warn",{fs:16}), b("mh",440,340,180,90,"MMU handler","gray",{fs:16}), b("dk",780,120,150,160,"Đĩa","gray",{r:30}), a("e1",155,222,195,335,{c:"bad",t:"① page fault",lx:-55})]},
  {s:"② Fault handler báo cho external pager biết <b>cần trang nào</b>. ③ Pager yêu cầu trang từ đĩa…",
-  d:[a("e2",250,338,440,225,{c:"warn",t:"② needed page",cv:30}), a("e3",622,150,775,170,{c:"cyan",t:"③ request page"})]},
+  d:[a("e2",250,338,430,222,{c:"warn",t:"② needed page",lx:-70}), a("e3",622,150,775,170,{c:"cyan",t:"③ request page"})]},
  {s:"④ Trang về tới pager. ⑤ Pager trả trang cho fault handler. ⑥ Fault handler bảo MMU handler <b>ánh xạ trang vào</b>. Xong!",
-  d:[a("e4",775,230,622,200,{c:"ok",t:"④ page arrives"}), a("e5",520,222,300,360,{c:"ok",t:"⑤ here is page",cv:-30}), a("e6",302,385,435,385,{c:"ok",t:"⑥ map page in"}), f("mh")]}
+  d:[a("e4",775,230,622,200,{c:"ok",t:"④ page arrives"}), a("e5",520,224,300,372,{c:"ok",t:"⑤ here is page",lx:70}), a("e6",302,385,435,385,{c:"ok",t:"⑥ map page in"}), f("mh")]}
 ]};};
 
 V["s4-12"] = function(){ return {title:"Phân đoạn (Segmentation) & checkerboarding", scenes:[
@@ -245,22 +245,22 @@ V["s4-12"] = function(){ return {title:"Phân đoạn (Segmentation) & checkerbo
  {s:"So sánh: phân trang có <b>1</b> không gian tuyến tính, lập trình viên không cần biết; phân đoạn có <b>nhiều</b> không gian, hỗ trợ chia sẻ và bảo vệ. Cả hai đều cho tổng không gian vượt RAM.",
   d:[clr(), H("Phân trang vs Phân đoạn"), b("pg",60,110,400,330,"PHÂN TRANG\n\n• 1 không gian tuyến tính\n• LTV không cần biết\n• Mục đích: không gian lớn\n  mà không cần mua thêm RAM","brand",{fs:17}), b("sg",500,110,400,330,"PHÂN ĐOẠN\n\n• Nhiều không gian\n• LTV phải biết\n• Bảng co giãn, chia sẻ,\n  bảo vệ riêng code / data","violet",{fs:17})]},
  {s:"Nhược điểm của phân đoạn thuần: các segment kích thước khác nhau vào ra liên tục, để lại các lỗ trống xen kẽ như <b>bàn cờ</b> – <b>checkerboarding</b> (phân mảnh ngoài).",
-  d:[clr(), H("Checkerboarding và nén (compaction)"), b("s0",380,420,200,60,"Seg 0 (4K)","ok",{fs:15}), b("s7",380,340,200,80,"Seg 7 (5K)","cyan",{fs:15}), b("h1",380,300,200,40,"3K trống","none",{dash:1,fs:14}), b("s2",380,220,200,80,"Seg 2 (5K)","warn",{fs:15}), b("s6",380,160,200,60,"Seg 6 (4K)","violet",{fs:15}), b("h2",380,110,200,50,"4K trống","none",{dash:1,fs:14}), b("s5",380,50,200,60,"Seg 5 (4K)","brand",{fs:15}), b("h3",380,20,200,30,"3K trống","none",{dash:1,fs:13})]},
+  d:[clr(), H("Checkerboarding và nén (compaction)"), b("s0",380,460,200,60,"Seg 0 (4K)","ok",{fs:15}), b("s7",380,380,200,80,"Seg 7 (5K)","cyan",{fs:15}), b("h1",380,340,200,40,"3K trống","none",{dash:1,fs:14}), b("s2",380,260,200,80,"Seg 2 (5K)","warn",{fs:15}), b("s6",380,200,200,60,"Seg 6 (4K)","violet",{fs:15}), b("h2",380,150,200,50,"4K trống","none",{dash:1,fs:14}), b("s5",380,90,200,60,"Seg 5 (4K)","brand",{fs:15}), b("h3",380,60,200,30,"3K trống","none",{dash:1,fs:13})]},
  {s:"Cách chữa: <b>nén (compaction)</b> – dồn các segment lại với nhau, gom 3K + 4K + 3K thành một vùng trống liền <b>10K</b>.",
-  d:[x("h1","h2","h3"), u("s2",{y:260}), u("s6",{y:200}), u("s5",{y:140}), b("hb",380,20,200,120,"10K trống","ok",{dash:1}), f("hb")]}
+  d:[x("h1","h2","h3"), u("s2",{y:300}), u("s6",{y:240}), u("s5",{y:180}), b("hb",380,60,200,120,"10K trống","ok",{dash:1}), f("hb")]}
 ]};};
 
 V["s4-13"] = function(){ return {title:"Phân đoạn kết hợp phân trang trên Pentium", scenes:[
  {s:"Pentium dùng <b>cả hai</b>: (selector, offset) → cơ chế <b>phân đoạn</b> → địa chỉ tuyến tính → cơ chế <b>phân trang</b> → địa chỉ vật lý.",
   d:[H("Pentium: phân đoạn + phân trang"), b("p1",20,220,170,90,"Selector\n+ Offset","brand",{fs:16}), b("p2",250,220,170,90,"Phân đoạn","violet",{fs:17}), b("p3",480,220,170,90,"Địa chỉ\ntuyến tính","warn",{fs:16}), b("p4",710,220,100,90,"Phân\ntrang","cyan",{fs:15}), b("p5",840,220,100,90,"Vật lý","ok",{fs:15}), a("q1",192,265,245,265), a("q2",422,265,475,265), a("q3",652,265,705,265), a("q4",812,265,835,265)]},
  {s:"<b>Selector 16 bit</b> gồm: <b>Index 13 bit</b> (chọn 1 trong 8192 descriptor), <b>1 bit</b> chọn bảng (0 = GDT, 1 = LDT) và <b>2 bit</b> mức đặc quyền 0–3.",
-  d:[clr(), H("Bộ chọn (selector) 16 bit"), b("s1",120,120,460,80,"Index (13 bit)","brand",{fs:20}), b("s2",580,120,110,80,"TI\n1 bit","warn",{fs:16}), b("s3",690,120,150,80,"Mức 0–3\n2 bit","violet",{fs:16}), t("n",480,250,"2^13 = 8192 descriptor mỗi bảng",{fs:18,c:"gray"})]},
+  d:[clr(), H("Bộ chọn (selector) 16 bit"), b("s1",120,120,460,80,"Index (13 bit)","brand",{fs:20}), b("s2",580,120,110,80,"TI\n1 bit","warn",{fs:16}), b("s3",690,120,150,80,"Mức 0–3\n2 bit","violet",{fs:16}), t("n",480,510,"2^13 = 8192 descriptor mỗi bảng",{fs:16,c:"gray"})]},
  {s:"Bit TI = 0 → tra <b>GDT</b> (bảng mô tả toàn cục, dùng chung). TI = 1 → tra <b>LDT</b> (bảng mô tả cục bộ, riêng từng chương trình).",
   d:[b("g",160,310,280,170,"GDT – Global\nDescriptor Table","ok",{fs:17,s:"chung cho hệ thống (GDTR)"}), b("l",520,310,280,170,"LDT – Local\nDescriptor Table","cyan",{fs:17,s:"riêng mỗi chương trình (LDTR)"}), a("tg",620,205,310,305,{c:"ok",t:"TI = 0",cv:20}), a("tl",650,205,660,305,{c:"cyan",t:"TI = 1",lx:35})]},
  {s:"Descriptor chứa <b>Base 32 bit</b>, <b>Limit 20 bit</b> và các cờ: G (limit theo byte hay trang), D (16/32 bit), P (có trong RAM?), DPL (mức đặc quyền), S, Type.",
   d:[clr(), H("Descriptor (bộ mô tả đoạn)"), b("d1",60,140,280,90,"Base (32 bit)","ok",{fs:18}), b("d2",350,140,250,90,"Limit (20 bit)","warn",{fs:18}), b("d3",610,140,290,90,"G · D · P · DPL · S · Type","violet",{fs:16}), t("dg",480,290,"G = 0: limit tính theo byte · G = 1: theo trang",{fs:16}), t("dd",480,325,"D: đoạn 16 / 32 bit · P = 0: đoạn không có trong bộ nhớ",{fs:16}), t("dp",480,360,"DPL: mức đặc quyền 0–3 · S: System / Application",{fs:16})]},
  {s:"Lấy <b>Base + Offset</b> (sau khi kiểm tra không vượt Limit) → được <b>địa chỉ tuyến tính 32 bit</b>, trong không gian 0 → 4 GB.",
-  d:[b("o",100,420,200,70,"Offset","brand"), t("pl",420,455,"+",{fs:34}), b("ln",500,410,380,90,"Địa chỉ tuyến tính 32 bit","warn",{fs:18,s:"không gian 4 GB"}), a("bl",200,232,520,405,{c:"ok",cv:-30})]},
+  d:[x("dg","dd","dp"), b("o",100,420,200,70,"Offset","brand"), t("pl",420,455,"+",{fs:34}), b("ln",500,410,380,90,"Địa chỉ tuyến tính 32 bit","warn",{fs:18,s:"không gian 4 GB"}), a("bl",200,232,520,405,{c:"ok",cv:-30})]},
  {s:"Địa chỉ tuyến tính chia <b>Dir (10) · Page (10) · Offset (12)</b>. Dir chọn entry trong <b>page directory</b> (1024 entry) → trỏ tới <b>page table</b> → trỏ tới <b>page frame</b>; offset chọn đúng word.",
   d:[clr(), H("Địa chỉ tuyến tính → địa chỉ vật lý"), b("l1",200,70,190,60,"Dir 10","warn",{fs:18}), b("l2",390,70,190,60,"Page 10","cyan",{fs:18}), b("l3",580,70,190,60,"Offset 12","ok",{fs:18}), b("pd",80,220,200,240,"Page\ndirectory","gray",{fs:16}), b("pt",380,220,200,240,"Page\ntable","gray",{fs:16}), b("pf",680,220,200,240,"Page\nframe","gray",{fs:16}), a("c1",295,132,180,215,{c:"warn"}), a("c2",485,132,480,215,{c:"cyan"}), a("c3",675,132,780,215,{c:"ok"}), a("c4",282,340,375,340), a("c5",582,340,675,340)]},
  {s:"Pentium có <b>4 mức bảo vệ</b>: 0 = kernel (quyền cao nhất, trong cùng), 1 = system calls, 2 = thư viện dùng chung, 3 = chương trình người dùng (ngoài cùng).",

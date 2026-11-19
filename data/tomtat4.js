@@ -61,12 +61,12 @@ sections:[
  yt:"fixed partition memory management multiple input queues",
  html:`
 <p><b>Đơn nhiệm (không Swapping/Paging)</b>: chỉ có <b>1 HĐH + 1 tiến trình user</b>. Ba cách bố trí:</p>
-<table><tr><th>Cách</th><th>Bố trí (từ địa chỉ 0 lên 0xFFF…)</th><th>Ví dụ thực tế</th></tr>
+<table><tr><th>Cách</th><th>Bố trí (từ địa chỉ 0 lên 0xFFF…)</th><th>Ví dụ thực tế <span class="xs">ngoài slide</span></th></tr>
 <tr><td>(a)</td><td>HĐH ở RAM (dưới) – User program (trên)</td><td>Máy mainframe/mini đời đầu</td></tr>
 <tr><td>(b)</td><td>User program (dưới) – HĐH ở ROM (trên)</td><td>Máy cầm tay, hệ nhúng</td></tr>
 <tr><td>(c)</td><td>HĐH ở RAM (dưới) – User program – Device drivers ở ROM (trên)</td><td>PC thời MS-DOS (BIOS trong ROM)</td></tr></table>
 <p><b>Đa nhiệm với phân vùng cố định (Fixed Partitions)</b>: RAM chia sẵn thành các phân vùng kích thước cố định. Ví dụ slide: OS 0–100K · P1 100–200K · P2 200–400K · P3 400–700K · P4 700–800K.</p>
-<ul><li><b>(a) Nhiều hàng đợi vào</b>: mỗi phân vùng một hàng đợi → có lúc phân vùng lớn bỏ trống trong khi hàng đợi phân vùng nhỏ rất dài.</li>
+<ul><li><b>(a) Nhiều hàng đợi vào</b>: mỗi phân vùng một hàng đợi → có lúc phân vùng lớn bỏ trống trong khi hàng đợi phân vùng nhỏ rất dài. <span class="xs">ngoài slide</span></li>
 <li><b>(b) Một hàng đợi vào chung</b>: phân vùng nào trống thì lấy job phù hợp trong hàng đợi chung.</li>
 <li>Nhược điểm chung: <b>phân mảnh nội</b> (job nhỏ chiếm phân vùng lớn, phần dư bỏ phí).</li></ul>`},
 {id:"s4-3",title:"3. Tái cấp phát & bảo vệ (Relocation – Base/Limit)",
@@ -113,7 +113,7 @@ sections:[
 <tr><td><b>Next-fit</b></td><td>Bắt đầu tìm từ <b>vị trí con trỏ hiện hành</b>, lấy vùng đầu tiên đủ lớn</td><td>Không</td></tr>
 <tr><td><b>Best-fit</b></td><td>Vùng free <b>nhỏ nhất</b> nhưng đủ lớn</td><td><b>Có</b></td></tr>
 <tr><td><b>Worst-fit</b></td><td>Vùng free <b>lớn nhất</b></td><td><b>Có</b></td></tr></table>
-<div class="ex"><b>Ví dụ kinh điển:</b> hole 100K, 500K, 200K, 300K, 600K; yêu cầu lần lượt 212K, 417K, 112K, 426K.<br>First-fit: 212→500, 417→600, 112→288(còn lại), <b>426 phải chờ</b>. Best-fit: 212→300, 417→500, 112→200, 426→600 (<b>đủ cả 4</b>). Worst-fit: 212→600, 417→500, 112→388, <b>426 phải chờ</b>.</div>
+<div class="ex"><b>Ví dụ kinh điển</b> <span class="xs">ngoài slide</span>: hole 100K, 500K, 200K, 300K, 600K; yêu cầu lần lượt 212K, 417K, 112K, 426K.<br>First-fit: 212→500, 417→600, 112→288(còn lại), <b>426 phải chờ</b>. Best-fit: 212→300, 417→500, 112→200, 426→600 (<b>đủ cả 4</b>). Worst-fit: 212→600, 417→500, 112→388, <b>426 phải chờ</b>.</div>
 <div class="demo" data-demo="fit"></div>`},
 {id:"s4-6",title:"6. Bộ nhớ ảo & phân trang (Paging)",
  figs:[["c4-20","Slide 20 – Bộ nhớ ảo lớn hơn bộ nhớ vật lý: memory map + đĩa"],["c4-21","Slide 21 – Ví dụ: không gian ảo 64K, bộ nhớ vật lý 32K, trang 4K"],["c4-22","Slide 22 – Vị trí và chức năng của MMU"]],
@@ -162,7 +162,7 @@ sections:[
 <ul><li>PT1 chọn entry trong <b>top-level page table</b> (1024 entry) → trỏ tới một <b>second-level page table</b>.</li>
 <li>Mỗi bảng mức 2 có 1024 entry × trang 4 KB = quản lý <b>4 MB</b>.</li>
 <li>Lợi ích: chỉ cần tạo bảng mức 2 cho vùng thực sự dùng → <b>tiết kiệm bộ nhớ</b> cho bảng trang.</li></ul>
-<div class="ex">0x00403004 → PT1 = 1, PT2 = 3, Offset = 4. &nbsp;32 bit, trang 4 KB (1 mức) → 2<sup>20</sup> entry.</div>
+<div class="ex"><span class="xs">ví dụ ngoài slide</span> 0x00403004 → PT1 = 1, PT2 = 3, Offset = 4. &nbsp;32 bit, trang 4 KB (1 mức) → 2<sup>20</sup> entry.</div>
 <p><b>Thực hiện bảng trang:</b></p>
 <ul><li>Bảng trang được giữ <b>trong bộ nhớ</b>.</li>
 <li><b>PTBR</b> (Page-table base register) <b>trỏ đến</b> bảng trang; <b>PRLR</b> (Page-table length register) chỉ ra <b>kích thước</b> bảng trang.</li>
@@ -186,7 +186,7 @@ sections:[
  figs:[["c4-36","Slide 36 – Bảng tổng kết các thuật toán thay thế trang"]],
  yt:"page replacement algorithms FIFO LRU optimal example",
  html:`
-<table><tr><th>Thuật toán</th><th>Ý tưởng</th><th>Nhận xét (slide)</th></tr>
+<table><tr><th>Thuật toán</th><th>Ý tưởng <span class="xs">ngoài slide</span></th><th>Nhận xét (slide)</th></tr>
 <tr><td><b>Optimal</b></td><td>Thay trang sẽ <b>lâu nhất mới được dùng lại</b> (nhìn tương lai)</td><td>Không cài đặt được, dùng làm <b>chuẩn so sánh</b></td></tr>
 <tr><td><b>NRU</b> (Not Recently Used)</td><td>Chia trang theo bit R, M thành 4 lớp; bỏ trang ở lớp thấp nhất</td><td>Rất thô (very crude)</td></tr>
 <tr><td><b>FIFO</b></td><td>Bỏ trang <b>vào sớm nhất</b></td><td>Có thể loại bỏ trang quan trọng</td></tr>
@@ -197,7 +197,7 @@ sections:[
 <tr><td><b>Aging</b></td><td>NFU có “lão hóa”: dịch phải bộ đếm rồi thêm bit R vào bên trái</td><td><b>Xấp xỉ LRU tốt</b>, hiệu quả</td></tr>
 <tr><td><b>Working set</b></td><td>Giữ tập trang tiến trình đang dùng gần đây</td><td>Hơi tốn kém để cài đặt</td></tr>
 <tr><td><b>WSClock</b></td><td>Working set + Clock</td><td>Thuật toán hiệu quả tốt</td></tr></table>
-<div class="ex"><b>Bài tập kinh điển</b> – chuỗi 7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1:<br>3 khung: FIFO <b>15</b> · LRU <b>12</b> · Optimal <b>9</b> lỗi trang. &nbsp;4 khung: FIFO 10 · LRU 8 · Optimal 8.<br><b>Nghịch lý Belady</b> (chỉ ở FIFO): chuỗi 1 2 3 4 1 2 5 1 2 3 4 5 → 3 khung 9 lỗi, 4 khung lại <b>10</b> lỗi.</div>
+<div class="ex"><b>Bài tập kinh điển</b> <span class="xs">ngoài slide</span> – chuỗi 7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1:<br>3 khung: FIFO <b>15</b> · LRU <b>12</b> · Clock <b>14</b> (trang mới nạp có R = 1; nếu quy ước R = 0 thì 11) · Optimal <b>9</b> lỗi trang. Xem từng bước trong các video FIFO / LRU / Optimal / Clock / Aging ở trên. &nbsp;4 khung: FIFO 10 · LRU 8 · Optimal 8.<br><b>Nghịch lý Belady</b> (chỉ ở FIFO): chuỗi 1 2 3 4 1 2 5 1 2 3 4 5 → 3 khung 9 lỗi, 4 khung lại <b>10</b> lỗi.</div>
 <div class="tip"><b>Mẹo làm bài:</b> FIFO bỏ trang <i>vào sớm nhất</i> · LRU bỏ trang <i>lâu nhất chưa dùng</i> (nhìn sang trái) · OPT bỏ trang <i>lâu nhất mới dùng lại</i> (nhìn sang phải, trang không bao giờ dùng lại thì bỏ trước).</div>
 <div class="demo" data-demo="pagerep"></div>`},
 {id:"s4-11",title:"11. Cách thực hiện phân trang trong HĐH",

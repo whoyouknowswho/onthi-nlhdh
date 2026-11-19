@@ -52,7 +52,7 @@ sections:[
 <tr><td>file.html</td><td>Tài liệu Web HTML</td><td>file.tex</td><td>Input cho chương trình định dạng TEX</td></tr>
 <tr><td>file.jpg</td><td>Ảnh tĩnh chuẩn JPEG</td><td>file.txt</td><td>File văn bản</td></tr>
 <tr><td>file.mp3</td><td>Nhạc MPEG layer 3</td><td>file.zip</td><td>File nén</td></tr></table>
-<p><b>Ba loại cấu trúc file:</b> (a) <b>byte sequence</b> – chuỗi byte (UNIX, Windows: HĐH không quan tâm nội dung); (b) <b>record sequence</b> – chuỗi bản ghi kích thước cố định; (c) <b>tree</b> – cây các bản ghi sắp theo khóa (Ant, Fox, Pig → Cat, Cow, Dog…).</p>
+<p><b>Ba loại cấu trúc file:</b> (a) <b>byte sequence</b> – chuỗi byte (UNIX, Windows: HĐH không quan tâm nội dung <span class="xs">ngoài slide</span>); (b) <b>record sequence</b> – chuỗi bản ghi kích thước cố định; (c) <b>tree</b> – cây các bản ghi sắp theo khóa (Ant, Fox, Pig → Cat, Cow, Dog…).</p>
 <p><b>Kiểu file:</b> người dùng thấy file là <b>không gian địa chỉ logic liên tục</b>. Các kiểu:</p>
 <ul><li><b>Data</b>: numeric, character, binary.</li><li><b>Program</b>: source, object, executable.</li><li><b>Regular</b> và <b>special</b> (character, block – đại diện cho thiết bị).</li></ul>
 <table><tr><th>(a) File thực thi (executable)</th><th>(b) File lưu trữ (archive)</th></tr>
@@ -87,7 +87,7 @@ sections:[
 <tr><td><b>Phân cấp (cây)</b></td><td>Người dùng tạo <b>thư mục con</b> (user subdirectories) lồng nhau tùy ý → linh hoạt nhất</td></tr></table>
 <p><b>Đường dẫn (Path names)</b> – cây thư mục UNIX: root (/) có bin, etc, lib, usr, tmp; /usr có ast, jim, lib; /usr/lib có dict.</p>
 <ul><li><b>Tuyệt đối</b>: bắt đầu từ gốc “/”, vd <b>/usr/jim</b>.</li>
-<li><b>Tương đối</b>: tính từ thư mục làm việc hiện hành; “.” là thư mục hiện tại, “..” là thư mục cha (vd đang ở /usr/jim thì ../lib/dict = /usr/lib/dict).</li></ul>
+<li><b>Tương đối</b> <span class="xs">ngoài slide</span>: tính từ thư mục làm việc hiện hành; “.” là thư mục hiện tại, “..” là thư mục cha (vd đang ở /usr/jim thì ../lib/dict = /usr/lib/dict).</li></ul>
 <p><b>8 thao tác thư mục:</b> 1. Create · 2. Delete · 3. Opendir · 4. Closedir · 5. Readdir · 6. Rename · 7. Link · 8. Unlink.</p>
 <div class="tip"><b>Đừng nhầm:</b> Seek / Append / Get–Set attributes là thao tác <b>file</b>; Opendir / Closedir / Readdir / Link / Unlink là thao tác <b>thư mục</b>. Create, Delete, Rename có ở cả hai.</div>`},
 {id:"s6-5",title:"5. Cấu trúc hệ thống file trên đĩa",
@@ -120,7 +120,7 @@ sections:[
 <div class="ex"><b>Slide 26:</b> thư mục ghi jeep: start <b>9</b>, end <b>25</b>; chuỗi 9 → 16 → 1 → 10 → 25 (block 25 chứa −1).<br><b>Slide 28:</b> File A: block vật lý 4, 7, 2, 10, 12; File B: 6, 3, 11, 14 (block cuối có con trỏ 0).</div>
 <p><b>FAT (File Allocation Table)</b> = cấp phát liên kết nhưng gom tất cả con trỏ vào <b>một bảng trong RAM</b>: entry thư mục chỉ lưu <b>start block</b>; FAT[i] = số block tiếp theo; −1 = hết file.</p>
 <ul><li>Ưu: block dữ liệu chứa trọn dữ liệu; lần chuỗi diễn ra trong RAM nên truy cập ngẫu nhiên nhanh hơn nhiều.</li>
-<li>Nhược: <b>toàn bộ bảng phải nằm trong RAM</b> – đĩa càng lớn bảng càng lớn.</li></ul>
+<li>Nhược: <b>toàn bộ bảng phải nằm trong RAM</b> – đĩa càng lớn bảng càng lớn. <span class="xs">ngoài slide</span></li></ul>
 <div class="demo" data-demo="steps" data-key="fat"></div>`},
 {id:"s6-8",title:"8. Cấp phát chỉ mục (Indexed) & i-node",
  figs:[["c6-30","Slide 30 – Index table"],["c6-31","Slide 31 – jeep: index block 19"],["c6-32","Slide 32 – Ví dụ i-node"],["c6-33","Slide 33 – Lược đồ kết nối UNIX (4 KB/block)"],["c6-49","Slide 49 – UNIX i-node với block gián tiếp 1, 2, 3 mức"]],
@@ -135,7 +135,7 @@ sections:[
 <ul><li>Ví dụ slide 32: File attributes + <b>8 địa chỉ trực tiếp</b> (disk block 0–7) + <b>address of block of pointers</b> (block chứa thêm địa chỉ).</li>
 <li>UNIX (4 KB/block): <b>mode, owners (2), timestamps (3), size, block count</b>, <b>direct blocks</b>, <b>single indirect</b>, <b>double indirect</b>, <b>triple indirect</b>.</li>
 <li>File nhỏ chỉ dùng địa chỉ trực tiếp; file lớn dùng thêm block gián tiếp → hỗ trợ file rất lớn mà i-node vẫn nhỏ, cố định.</li>
-<li>Chỉ i-node của file <b>đang mở</b> mới cần nằm trong RAM (khác FAT phải nạp cả bảng).</li></ul>
+<li>Chỉ i-node của file <b>đang mở</b> mới cần nằm trong RAM (khác FAT phải nạp cả bảng). <span class="xs">ngoài slide</span></li></ul>
 <table><tr><th></th><th>Liên tục</th><th>Liên kết</th><th>FAT</th><th>Chỉ mục / i-node</th></tr>
 <tr><td>Cần lưu</td><td>Block đầu + số block</td><td>Block đầu</td><td>Block đầu + bảng FAT</td><td>Index block / i-node</td></tr>
 <tr><td>Truy cập ngẫu nhiên</td><td>✔</td><td>✘</td><td>✔ (lần trong RAM)</td><td>✔</td></tr>
@@ -150,7 +150,7 @@ sections:[
 <tr><td>(a) <b>Thư mục đơn</b></td><td>Các entry <b>kích thước cố định</b>; <b>địa chỉ đĩa và các thuộc tính nằm trong entry</b> thư mục (games | attributes…) – kiểu MS-DOS</td></tr>
 <tr><td>(b) <b>Entry trỏ tới i-node</b></td><td>Entry chỉ có tên; thuộc tính nằm trong cấu trúc dữ liệu riêng (i-node) – kiểu UNIX</td></tr></table>
 <p><b>Hai cách quản lý tên file dài:</b> (a) <b>In-line</b> – mỗi entry có độ dài thay đổi (File entry length + attributes + tên, kết thúc bằng ký tự đặc biệt); (b) <b>In a heap</b> – entry kích thước cố định chứa <b>con trỏ</b> tới tên nằm trong vùng heap ở cuối thư mục.</p>
-<p><b>File chia sẻ:</b> một file xuất hiện trong nhiều thư mục (của B và C) → cấu trúc thư mục không còn là cây mà thành <b>đồ thị có hướng không chu trình (DAG)</b>.</p>
+<p><b>File chia sẻ:</b> một file xuất hiện trong nhiều thư mục (của B và C) → cấu trúc thư mục không còn là cây mà thành <b>đồ thị có hướng không chu trình (DAG)</b> <span class="xs">ngoài slide</span>.</p>
 <div class="demo" data-demo="steps" data-key="shared"></div>`},
 {id:"s6-10",title:"10. Quản lý không gian đĩa",
  figs:[["c6-38","Slide 38 – Tốc độ dữ liệu và hiệu quả không gian theo kích thước block"],["c6-39","Slide 39 – (a) danh sách liên kết free, (b) bit map"]],
