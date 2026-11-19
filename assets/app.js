@@ -120,6 +120,81 @@ function go(view){
   window.scrollTo({top:0});
 }
 
+/* ---------- Tag (chủ đề gộp) cho đề ôn tập ---------- */
+var TAG_RULES = [
+  [4, /LRU|Second chance|Thay thế trang|Bit Modified/i, "Thay thế trang (LRU, Second chance, bit R/M)"],
+  [4, /TLB/i, "TLB"],
+  [4, /Phân trang|Bảng trang|Kích thước trang|Phân mảnh trong/i, "Phân trang & bảng trang"],
+  [4, /Phân đoạn/i, "Phân đoạn"],
+  [4, /Bộ nhớ ảo/i, "Bộ nhớ ảo"],
+  [4, /Bộ nhớ của tiến trình/i, "Text / data segment (Linux)"],
+  [4, /./, "Cấp phát bộ nhớ (fit, bitmap, swapping, bảo vệ)"],
+  [5, /Lập lịch đĩa/i, "Lập lịch đĩa (SSF, Elevator)"],
+  [5, /Đĩa/i, "Đĩa (dung lượng, định dạng, thời gian)"],
+  [5, /Thiết bị block/i, "Thiết bị block / character"],
+  [5, /./, "Phần mềm Vào/Ra (driver, ngắt, DMA)"],
+  [6, /Đường dẫn|Thư mục/i, "Thư mục & đường dẫn"],
+  [6, /Bitmap|Cấp phát|không gian đĩa|Kích thước block|Phân mảnh đĩa|FAT|i-node/i, "Cấp phát & quản lý đĩa (FAT, i-node, bitmap)"],
+  [6, /Cấu trúc hệ thống file/i, "Cấu trúc đĩa (MBR, boot block)"],
+  [6, /./, "File & thao tác file"],
+  [0, /System call|Chế độ kernel/i, "System call & chế độ kernel"],
+  [0, /Chương 1/i, "Tổng quan HĐH & phần cứng"],
+  [0, /Lập lịch CPU/i, "Lập lịch CPU"],
+  [0, /Luồng/i, "Luồng (threads)"],
+  [0, /Deadlock/i, "Deadlock"],
+  [0, /Đồng bộ|Loại trừ/i, "Đồng bộ (miền găng, semaphore)"],
+  [0, /Tiến trình|Giao tiếp/i, "Tiến trình (PCB, fork, IPC)"],
+  [0, /Bảo mật/i, "Bảo mật"],
+  [0, /./, "Thực hành Linux / Windows"]
+];
+function tagOf(q){ var r = TAG_RULES.filter(function(x){ return x[0]===q.ch && x[1].test(q.topic); })[0]; return r ? r[2] : q.topic; }
+var TAG_GROUPS = [[4,"Chương 4 – Bộ nhớ"],[5,"Chương 5 – Vào/Ra"],[6,"Chương 6 – File"],[0,"Ngoài chương 4–6"]];
+function tagSetKey(setKey){ var sc = state.otScope || "all"; return setKey + (sc==="all" ? "" : "@"+sc); }
+function openTagPicker(setKey){
+  var o = setOf(tagSetKey(setKey)); if (!o) return;
+  state.otTags = state.otTags || {};
+  var picked = {}; (state.otTags[setKey] || []).forEach(function(t){ picked[t] = 1; });
+  var groups = {}, subs = {};
+  o.ids.forEach(function(id){ var q = BYID[id], t = tagOf(q);
+    var g = groups[q.ch] || (groups[q.ch] = {}); g[t] = (g[t] || 0) + 1;
+    (subs[t] || (subs[t] = {}))[q.topic] = 1; });
+  var tot = state.sessions["ottag:" + setKey];
+  var html = '<div class="tp-box" role="dialog" aria-label="Chọn tag">'+
+    '<div class="tp-head"><div><b>🏷 Chọn tag để ôn</b><div class="muted">'+esc(o.name)+' · '+o.ids.length+' câu</div></div><button class="btn sm ghost" data-tpclose="1" aria-label="Đóng">✕</button></div>'+
+    '<div class="tp-body">'+TAG_GROUPS.filter(function(g){ return groups[g[0]]; }).map(function(g){
+      var tags = Object.keys(groups[g[0]]).sort(function(a, b){ return groups[g[0]][b] - groups[g[0]][a]; });
+      return '<div class="tp-grp"><label class="tp-gh"><input type="checkbox" data-tpgroup="'+g[0]+'"> '+g[1]+'</label>'+
+        tags.map(function(t){ var sub = Object.keys(subs[t]).filter(function(x){ return x !== t; });
+          return '<label class="tp-tag"><input type="checkbox" data-tptag="'+esc(t)+'" data-g="'+g[0]+'"'+(picked[t]?' checked':'')+'><span><b>'+esc(t)+'</b> <span class="tp-n">'+groups[g[0]][t]+'</span>'+
+            (sub.length ? '<small>'+esc(sub.slice(0, 6).join(" · "))+(sub.length>6?' …':'')+'</small>' : '')+'</span></label>'; }).join("")+'</div>';
+    }).join("")+'</div>'+
+    '<div class="tp-foot"><button class="btn sm" data-tpall="1">Chọn hết</button><button class="btn sm" data-tpnone="1">Bỏ chọn</button><span class="grow"></span>'+
+    (tot && !tot.submitted ? '<button class="btn" data-start="ottag:'+setKey+'">Làm tiếp bài theo tag</button>' : '')+
+    '<button class="btn primary" data-tpgo="'+setKey+'" disabled>Bắt đầu ôn</button></div></div>';
+  var ov = document.createElement("div"); ov.id = "tagPicker"; ov.className = "tp-ov"; ov.innerHTML = html;
+  document.body.appendChild(ov); tpUpdate();
+}
+function tpChecked(){ return Array.prototype.filter.call(document.querySelectorAll("#tagPicker [data-tptag]"), function(c){ return c.checked; }).map(function(c){ return c.dataset.tptag; }); }
+function tpUpdate(){
+  var ov = $("#tagPicker"); if (!ov) return;
+  var sel = {}, n = 0; tpChecked().forEach(function(t){ sel[t] = 1; });
+  ov.querySelectorAll("[data-tptag]").forEach(function(c){ if (c.checked) n += +c.parentNode.querySelector(".tp-n").textContent; });
+  ov.querySelectorAll("[data-tpgroup]").forEach(function(g){
+    var cs = ov.querySelectorAll('[data-tptag][data-g="'+g.dataset.tpgroup+'"]'), k = 0; cs.forEach(function(c){ if (c.checked) k++; });
+    g.checked = k === cs.length; g.indeterminate = k > 0 && k < cs.length; });
+  var go = ov.querySelector("[data-tpgo]"); go.disabled = !n; go.textContent = n ? "Bắt đầu ôn (" + n + " câu)" : "Chọn ít nhất 1 tag";
+}
+function tpClose(){ var ov = $("#tagPicker"); if (ov) ov.remove(); }
+function tpStart(setKey){
+  var o = setOf(tagSetKey(setKey)), sel = tpChecked(), set = {}; sel.forEach(function(t){ set[t] = 1; });
+  var ids = o.ids.filter(function(id){ return set[tagOf(BYID[id])]; }); if (!ids.length) return;
+  state.otTags = state.otTags || {}; state.otTags[setKey] = sel;
+  var key = "ottag:" + setKey, old = state.sessions[key];
+  if (old && !old.submitted && counts(old).answered > 0 && !confirm("Bạn đang làm dở một bài theo tag của đề này. Tạo bài mới sẽ xóa bài cũ?")) return;
+  var name = o.name + " · " + (sel.length === 1 ? sel[0] : sel.length + " tag");
+  newSession(key, name, ids, "practice", {tags: sel}); tpClose(); go("quiz");
+}
+
 /* ================= TRANG CHỦ ================= */
 function setCard(o){
   var s = state.sessions[o.key];
@@ -135,6 +210,7 @@ function setCard(o){
       '<button class="btn primary" data-start="'+o.key+'">'+ICON.play+(started?'Làm tiếp (Câu '+(s.cur+1)+')':(s&&s.submitted?'Xem lại bài':'Vào làm bài'))+'</button>'+
       (s?'<button class="btn danger" data-reset="'+o.key+'" title="Làm lại từ đầu">'+ICON.reset+'</button>':'')+
       (typeof o.ch==="number"?'<button class="btn" data-sum="'+o.ch+'" title="Xem tổng hợp kiến thức">'+ICON.book+'</button>':'')+
+      (o.tagsFor?'<button class="btn" data-tags="'+o.tagsFor+'" title="Chọn tag để ôn">🏷 Tag</button>':'')+
     '</div></div>';
 }
 function renderHome(){
@@ -166,7 +242,7 @@ function otSection(){
     var by = {}; x.ids.forEach(function(id){ var c = BYID[id].ch; by[c] = (by[c]||0) + 1; });
     var sub = [4,5,6,0].filter(function(c){ return by[c]; }).map(function(c){ return '<span class="chip'+(scopeOk(sc, c)?' on':'')+'">'+(c ? 'Ch'+c : 'Ngoài 4–6')+': <b>'+by[c]+'</b></span>'; }).join(" ");
     var note = (x.dropped ? 'Đã lược <b>'+x.dropped+'</b> câu trùng với đề trước. ' : '') + (x.note ? esc(x.note) : '');
-    return setCard({key:o.key, ch:"set", ids:o.ids, title:o.name, badge:x.badge, cls:"ot", sub:sub+(note?'<br><span class="muted">'+note+'</span>':'')});
+    return setCard({key:o.key, ch:"set", tagsFor:x.key, ids:o.ids, title:o.name, badge:x.badge, cls:"ot", sub:sub+(note?'<br><span class="muted">'+note+'</span>':'')});
   }).join("");
   return '<div class="section-h">📝 Đề ôn tập</div>'+
     '<div class="ot-scope"><span class="lbl">Lấy câu:</span>'+OT_SCOPES.map(function(x){ return '<button class="fbtn'+(sc===x[0]?' active':'')+'" data-otscope="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div>'+
@@ -197,7 +273,7 @@ function resetSet(key, silent){
   var s = state.sessions[key]; if (!s) return;
   if (!silent && !confirm("Làm lại từ đầu bộ \""+s.name+"\"? Toàn bộ đáp án đã chọn sẽ bị xóa.")) return;
   var keepInstant = s.instant;
-  var ids = s.mode==="exam" ? shuffle(s.ids) : setOf(key) ? setOf(key).ids : ((key==="wrong"||key==="weak") ? s.ids : idsOfChapter(key==="all"?"all":+key.slice(1)));
+  var ids = s.mode==="exam" ? shuffle(s.ids) : setOf(key) ? setOf(key).ids : ((key==="wrong"||key==="weak"||/^ottag:/.test(key)) ? s.ids : idsOfChapter(key==="all"?"all":+key.slice(1)));
   var n = newSession(key, s.name, ids, s.mode, {duration:s.duration, chapters:s.chapters});
   n.instant = keepInstant; save();
 }
@@ -888,6 +964,13 @@ function highlight(nodes, term){
 
 /* ================= SỰ KIỆN ================= */
 function bind(){
+  document.addEventListener("change", function(e){
+    var c = e.target; if (!c.closest || !c.closest("#tagPicker")) return;
+    if (c.dataset.tpgroup != null) document.querySelectorAll('#tagPicker [data-tptag][data-g="' + c.dataset.tpgroup + '"]').forEach(function(x){ x.checked = c.checked; });
+    tpUpdate();
+  });
+  document.addEventListener("mousedown", function(e){ if (e.target.id === "tagPicker") tpClose(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") tpClose(); });
   document.addEventListener("click", function(e){
     var t = e.target.closest("button, a"); if (!t) return;
     var d = t.dataset;
@@ -907,7 +990,11 @@ function bind(){
     if (t.classList.contains("tab")){ var v=d.view; if (v==="quiz" && !cur()){ toast("Hãy chọn một bộ câu hỏi trước"); go("home"); return; } if (v==="quiz" && cur().submitted && state.view!=="result" && state.view!=="quiz"){ go("result"); return; } go(v); return; }
     if (d.viewGo){ go(d.viewGo); return; }
     if (d.otscope){ state.otScope = d.otscope; save(); renderHome(); return; }
-    if (d.start){ startSet(d.start); return; }
+    if (d.tags){ openTagPicker(d.tags); return; }
+    if (d.tpclose){ tpClose(); return; }
+    if (d.tpall || d.tpnone){ document.querySelectorAll("#tagPicker [data-tptag]").forEach(function(c){ c.checked = !!d.tpall; }); tpUpdate(); return; }
+    if (d.tpgo){ tpStart(d.tpgo); return; }
+    if (d.start){ tpClose(); startSet(d.start); return; }
     if (d.reset){ resetSet(d.reset); renderHome(); return; }
     if (d.clearstats){ if (confirm("Xóa toàn bộ thống kê đúng/sai?")){ state.stats = {}; save(); renderHome(); } return; }
     if (d.resetCur){ var s0=cur(); if (!s0) return; if (confirm("Làm lại toàn bộ \""+s0.name+"\"?")){ resetSet(s0.key, true); go("quiz"); } return; }
