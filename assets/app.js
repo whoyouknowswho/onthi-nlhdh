@@ -83,6 +83,7 @@ function go(view){
   ["home","quiz","result","summary"].forEach(function(v){ $("#view-"+v).hidden = v!==view; });
   document.querySelectorAll("#tabs .tab").forEach(function(t){ t.classList.toggle("active", t.dataset.view===view || (view==="result" && t.dataset.view==="quiz")); });
   clearInterval(timerH); timerH = null;
+  if (window.VideoPlayer && view!=="summary") VideoPlayer.destroyAll();
   if (view==="home") renderHome();
   else if (view==="quiz") renderQuiz();
   else if (view==="result") renderResult();
@@ -339,9 +340,10 @@ function renderSec(sec){
   var figs = (sec.figs||[]).map(function(f){
     return '<figure class="fig"><button class="fig-btn" data-zoom="'+f[0]+'" data-cap="'+esc(f[1])+'"><img loading="lazy" src="'+slideSrc(f[0])+'" alt="'+esc(f[1])+'"></button><figcaption>'+esc(f[1])+'</figcaption></figure>';
   }).join("");
-  var yt = sec.yt ? '<a class="btn sm ghost yt" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query='+encodeURIComponent(sec.yt)+'">▶ Tìm video giảng giải trên YouTube</a>' : '';
-  return '<article class="sum-sec" id="'+sec.id+'"><div class="sec-head"><h3>'+esc(sec.title)+'</h3>'+yt+'</div>'+
-    (figs ? '<div class="figs">'+figs+'</div>' : '')+'<div class="sum-body">'+sec.html+'</div></article>';
+  var ez = (window.EASY||{})[sec.id], easy = ez ? '<div class="easy"><div class="easy-tl"><span>💡 Hiểu nhanh</span>'+ez.tl+'</div>'+(ez.vi?'<div class="easy-vi"><span>🧠 Ví von đời thường</span>'+ez.vi+'</div>':'')+'</div>' : '';
+  var vid = (window.VideoPlayer && VideoPlayer.has(sec.id)) ? '<div class="vplayer" data-video="'+sec.id+'"></div>' : '';
+  return '<article class="sum-sec" id="'+sec.id+'"><div class="sec-head"><h3>'+esc(sec.title)+'</h3></div>'+easy+vid+
+    (figs ? '<details class="figs-wrap" open><summary>🖼 Hình slide gốc ('+sec.figs.length+')</summary><div class="figs">'+figs+'</div></details>' : '')+'<div class="sum-body">'+sec.html+'</div></article>';
 }
 
 /* ---------- Lightbox ---------- */
@@ -368,6 +370,7 @@ function openLightbox(list, idx){
 var stepTimers = [];
 function mountDemos(root){
   stepTimers.forEach(clearInterval); stepTimers = [];
+  if (window.VideoPlayer){ VideoPlayer.destroyAll(); VideoPlayer.mountAll(root); }
   Array.prototype.forEach.call(root.querySelectorAll(".demo"), function(el){
     var k = el.dataset.demo;
     if (k==="steps") demoSteps(el, window.STEPS && window.STEPS[el.dataset.key]);

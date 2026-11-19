@@ -9,6 +9,8 @@ Trang web tĩnh để ôn trắc nghiệm, có khóa mật khẩu.
 - `data/chuong4.js`, `data/chuong5.js`, `data/chuong6.js` + `data/chuong4b.js`, `data/chuong5b.js`, `data/chuong6b.js` – ngân hàng câu hỏi (100 câu/chương)
 - `data/tomtat4.js`, `data/tomtat5.js`, `data/tomtat6.js` – tổng hợp kiến thức đầy đủ từng chương (kèm trình chiếu từng bước)
 - `assets/slides/` – ảnh các slide hình minh họa
+- `assets/video.js` + `data/videos4.js`, `data/videos5.js`, `data/videos6.js` – 36 video hoạt hình tự dựng (SVG, phụ đề, thuyết minh giọng đọc)
+- `data/easy.js` – phần “Hiểu nhanh” và “Ví von đời thường” cho từng mục
 
 ## Thêm / sửa câu hỏi
 Mỗi câu trong `data/chuongX.js`:
