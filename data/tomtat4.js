@@ -119,20 +119,60 @@ sections:[
  figs:[["c4-20","Slide 20 – Bộ nhớ ảo lớn hơn bộ nhớ vật lý: memory map + đĩa"],["c4-21","Slide 21 – Ví dụ: không gian ảo 64K, bộ nhớ vật lý 32K, trang 4K"],["c4-22","Slide 22 – Vị trí và chức năng của MMU"]],
  yt:"virtual memory paging explained pages frames",
  html:`
-<p><b>Bộ nhớ ảo (Virtual memory)</b> – tách bộ nhớ logic của user khỏi bộ nhớ vật lý:</p>
-<ul><li>Chỉ <b>một phần</b> của chương trình được nạp vào bộ nhớ khi thực thi.</li>
-<li>Không gian địa chỉ logic có thể <b>lớn hơn nhiều</b> không gian vật lý.</li>
-<li>Cho phép không gian vật lý được <b>chia sẻ</b> cho nhiều tiến trình; cho phép tạo <b>nhiều tiến trình hơn</b>.</li>
-<li>Thực hiện qua: <b>Phân trang (paging)</b> và <b>Phân đoạn (segmentation)</b>.</li></ul>
-<p><b>Phân trang:</b></p>
-<ul><li>Không gian địa chỉ ảo của tiến trình có thể <b>không liên tục</b> trong bộ nhớ; tiến trình được cấp RAM ở bất kỳ đâu có vùng free.</li>
-<li>Bộ nhớ <b>logic</b> chia thành các block gọi là <b>trang (pages)</b>; bộ nhớ <b>vật lý</b> chia thành <b>khung trang (page frames)</b>.</li>
-<li><b>1 trang = 1 khung trang</b> (từ 512 bytes đến 8.192 bytes). HĐH theo dõi mọi khung free.</li>
-<li>Chạy chương trình <b>n trang</b> → tìm <b>n khung free</b> và tải chương trình vào.</li>
-<li>Thiết lập <b>bảng trang (page table)</b> để chuyển địa chỉ logic → vật lý.</li>
-<li>Chỉ có <b>phân mảnh nội</b> (trang cuối không dùng hết).</li></ul>
-<p><b>Ví dụ slide 21:</b> 16 trang ảo × 4K (0–64K) nhưng chỉ có 8 khung vật lý (0–32K). Trang 0 (0K–4K) → khung 2, trang 1 → khung 1, trang 2 → khung 6, trang 3 → khung 0, trang 4 → khung 4, trang 5 → khung 3, trang 9 → khung 5, trang 11 → khung 7; các trang đánh <b>X</b> chưa có trong RAM.</p>
-<p><b>MMU</b> (Memory Management Unit) nằm trong gói CPU: <b>CPU gửi địa chỉ ảo cho MMU → MMU gửi địa chỉ vật lý</b> ra bus tới bộ nhớ.</p>`},
+<h4 class="sub">① Vấn đề: chương trình lớn hơn RAM thì sao?</h4>
+<p>Ở các mục 2–5, muốn chạy chương trình thì phải nạp <b>toàn bộ</b> nó vào <b>một vùng liền nhau</b> trong RAM. Cách này vướng hai chuyện:</p>
+<ul><li>Chương trình <b>64 KB</b> mà RAM chỉ <b>32 KB</b> → <b>không chạy được</b>.</li>
+<li>Phải tìm được một lỗ trống <b>liền mạch</b> đủ lớn → sinh ra <b>phân mảnh ngoài</b> (mục 4). Tổng chỗ trống thì đủ, nhưng chỗ nào cũng vụn.</li></ul>
+
+<h4 class="sub">② Ý tưởng: cắt nhỏ ra, cần mảnh nào nạp mảnh đó</h4>
+<ol class="steps">
+<li>Cắt <b>chương trình</b> thành các mảnh bằng nhau, gọi là <b>trang (page)</b>.</li>
+<li>Cắt <b>RAM</b> thành các ô <b>cùng cỡ</b> với trang, gọi là <b>khung trang (frame)</b>.</li>
+<li>Chỉ nạp những trang <b>đang cần</b> vào RAM. Trang nào cũng nhét được vào <b>khung trống bất kỳ</b>, không cần liền nhau. Các trang chưa cần thì nằm trên <b>đĩa</b>.</li>
+<li>Ghi lại trang nào đang ở khung nào vào <b>bảng trang (page table)</b>. Trang chưa có trong RAM thì đánh dấu <b>X</b>.</li>
+</ol>
+<div class="tip"><b>Ví von:</b> chương trình là <b>cuốn sách dày</b>, RAM là <b>cái bàn</b> chỉ đặt vừa vài tờ, đĩa là <b>kệ sách</b>. Bạn chỉ để trên bàn những tờ đang đọc, đặt chỗ nào trên bàn cũng được. Một tờ <b>mục lục</b> ghi "trang mấy đang nằm ở ô nào trên bàn" chính là bảng trang.</div>
+
+<table>
+<tr><th>Thuật ngữ</th><th>Nói đơn giản</th><th>Trong ví von</th></tr>
+<tr><td><b>Bộ nhớ ảo</b> (virtual memory)</td><td>Bộ nhớ mà chương trình <i>tưởng</i> mình có: rất lớn, liền một dải từ 0</td><td>Cả cuốn sách</td></tr>
+<tr><td><b>Trang</b> (page)</td><td>Một mảnh của chương trình (bộ nhớ <b>logic</b>)</td><td>Một tờ sách</td></tr>
+<tr><td><b>Khung trang</b> (page frame)</td><td>Một ô trong RAM (bộ nhớ <b>vật lý</b>), cùng cỡ với trang</td><td>Một ô trên bàn</td></tr>
+<tr><td><b>Bảng trang</b> (page table)</td><td>Ghi trang nào ở khung nào; X = chưa có trong RAM</td><td>Tờ mục lục</td></tr>
+<tr><td><b>MMU</b></td><td>Mạch phần cứng trong CPU, tra bảng trang để đổi địa chỉ ảo ra địa chỉ thật</td><td>Người tra mục lục giùm bạn</td></tr>
+</table>
+
+<h4 class="sub">③ Ví dụ slide 21: chương trình 64K, RAM chỉ 32K</h4>
+<p>Trang = 4K. Chương trình 64K có <b>16 trang</b> (0–15), RAM 32K chỉ có <b>8 khung</b> (0–7). Cột trái là bảng trang, cột phải là RAM thật:</p>
+<div class="vm-ex">
+ <div class="vm-col"><div class="vm-h">Bảng trang (bộ nhớ ảo)</div><div class="vm-row on"><span class="vm-rng">0K–4K</span><span class="vm-pg">trang 0</span><span class="vm-to">→ khung 2</span></div><div class="vm-row on"><span class="vm-rng">4K–8K</span><span class="vm-pg">trang 1</span><span class="vm-to">→ khung 1</span></div><div class="vm-row on"><span class="vm-rng">8K–12K</span><span class="vm-pg">trang 2</span><span class="vm-to">→ khung 6</span></div><div class="vm-row on"><span class="vm-rng">12K–16K</span><span class="vm-pg">trang 3</span><span class="vm-to">→ khung 0</span></div><div class="vm-row on"><span class="vm-rng">16K–20K</span><span class="vm-pg">trang 4</span><span class="vm-to">→ khung 4</span></div><div class="vm-row on"><span class="vm-rng">20K–24K</span><span class="vm-pg">trang 5</span><span class="vm-to">→ khung 3</span></div><div class="vm-row off"><span class="vm-rng">24K–28K</span><span class="vm-pg">trang 6</span><span class="vm-to">X · trên đĩa</span></div><div class="vm-row off"><span class="vm-rng">28K–32K</span><span class="vm-pg">trang 7</span><span class="vm-to">X · trên đĩa</span></div><div class="vm-row off"><span class="vm-rng">32K–36K</span><span class="vm-pg">trang 8</span><span class="vm-to">X · trên đĩa</span></div><div class="vm-row on"><span class="vm-rng">36K–40K</span><span class="vm-pg">trang 9</span><span class="vm-to">→ khung 5</span></div><div class="vm-row off"><span class="vm-rng">40K–44K</span><span class="vm-pg">trang 10</span><span class="vm-to">X · trên đĩa</span></div><div class="vm-row on"><span class="vm-rng">44K–48K</span><span class="vm-pg">trang 11</span><span class="vm-to">→ khung 7</span></div><div class="vm-row off"><span class="vm-rng">48K–52K</span><span class="vm-pg">trang 12</span><span class="vm-to">X · trên đĩa</span></div><div class="vm-row off"><span class="vm-rng">52K–56K</span><span class="vm-pg">trang 13</span><span class="vm-to">X · trên đĩa</span></div><div class="vm-row off"><span class="vm-rng">56K–60K</span><span class="vm-pg">trang 14</span><span class="vm-to">X · trên đĩa</span></div><div class="vm-row off"><span class="vm-rng">60K–64K</span><span class="vm-pg">trang 15</span><span class="vm-to">X · trên đĩa</span></div></div>
+ <div class="vm-col"><div class="vm-h">RAM thật (8 khung)</div><div class="vm-row on"><span class="vm-rng">0K–4K</span><span class="vm-pg">khung 0</span><span class="vm-to">chứa trang 3</span></div><div class="vm-row on"><span class="vm-rng">4K–8K</span><span class="vm-pg">khung 1</span><span class="vm-to">chứa trang 1</span></div><div class="vm-row on"><span class="vm-rng">8K–12K</span><span class="vm-pg">khung 2</span><span class="vm-to">chứa trang 0</span></div><div class="vm-row on"><span class="vm-rng">12K–16K</span><span class="vm-pg">khung 3</span><span class="vm-to">chứa trang 5</span></div><div class="vm-row on"><span class="vm-rng">16K–20K</span><span class="vm-pg">khung 4</span><span class="vm-to">chứa trang 4</span></div><div class="vm-row on"><span class="vm-rng">20K–24K</span><span class="vm-pg">khung 5</span><span class="vm-to">chứa trang 9</span></div><div class="vm-row on"><span class="vm-rng">24K–28K</span><span class="vm-pg">khung 6</span><span class="vm-to">chứa trang 2</span></div><div class="vm-row on"><span class="vm-rng">28K–32K</span><span class="vm-pg">khung 7</span><span class="vm-to">chứa trang 11</span></div></div>
+</div>
+<p>Hai điều cần thấy trong hình:</p>
+<ul><li>Các trang nằm <b>lộn xộn</b> trong RAM: trang 0 ở khung 2, trang 3 ở khung 0. Chương trình không hề biết, vì nó vẫn thấy mình liền một dải từ 0K đến 64K.</li>
+<li>8 trang có <b>X</b> đang ở đĩa. Chương trình 64K vẫn chạy được trên RAM 32K. Khi đụng tới trang X thì xảy ra <b>lỗi trang</b> và HĐH nạp trang đó vào (mục 9).</li></ul>
+
+<h4 class="sub">④ Được gì, mất gì?</h4>
+<ul class="checklist">
+<li><b>Chương trình lớn hơn RAM vẫn chạy</b>, vì không gian logic có thể lớn hơn nhiều so với không gian vật lý.</li>
+<li><b>Chạy được nhiều tiến trình hơn</b>, vì RAM được chia sẻ, mỗi tiến trình chỉ giữ những trang đang cần.</li>
+<li><b>Không có phân mảnh ngoài</b>: mọi khung bằng nhau, khung trống nào cũng dùng được.</li>
+<li>Chỉ còn <b>phân mảnh nội ở trang cuối</b>. Ví dụ chương trình 10K, trang 4K thì cần 3 trang (12K), trang cuối bỏ phí 2K.</li></ul>
+
+<h4 class="sub">⑤ Ai làm việc tra bảng trang? MMU</h4>
+<div class="flow"><span>CPU<small>phát địa chỉ ẢO</small></span><i>→</i><span>MMU<small>tra bảng trang</small></span><i>→</i><span>Bus → RAM<small>địa chỉ VẬT LÝ</small></span></div>
+<p>MMU nằm ngay trong gói CPU. Mọi lần truy cập bộ nhớ đều đi qua nó, nên việc đổi địa chỉ diễn ra tự động và rất nhanh. Cách MMU tính ra địa chỉ cụ thể nằm ở mục 7.</p>
+
+<div class="demo" data-demo="vmem"></div>
+
+<details class="slide-note"><summary>Nguyên văn các ý trong slide 19–22</summary>
+<ul><li>Bộ nhớ ảo tách bộ nhớ logic của user khỏi bộ nhớ vật lý: chỉ <b>một phần</b> chương trình được nạp khi thực thi; không gian logic có thể <b>lớn hơn nhiều</b> không gian vật lý; không gian vật lý được <b>chia sẻ</b> cho nhiều tiến trình, cho phép tạo <b>nhiều tiến trình hơn</b>.</li>
+<li>Bộ nhớ ảo được thực hiện qua <b>phân trang (paging)</b> và <b>phân đoạn (segmentation)</b>.</li>
+<li>Phân trang: không gian địa chỉ ảo của tiến trình có thể <b>không liên tục</b> trong bộ nhớ; tiến trình được cấp RAM ở bất kỳ đâu có vùng free.</li>
+<li>Bộ nhớ logic chia thành các <b>trang (pages)</b>, bộ nhớ vật lý chia thành <b>khung trang (page frames)</b>; <b>1 trang = 1 khung</b>, kích thước từ <b>512 bytes đến 8.192 bytes</b>. HĐH theo dõi mọi khung free.</li>
+<li>Chạy chương trình <b>n trang</b> thì tìm <b>n khung free</b> và tải chương trình vào; thiết lập <b>bảng trang</b> để chuyển địa chỉ logic sang địa chỉ vật lý; chỉ có <b>phân mảnh nội</b>.</li>
+<li>MMU (Memory Management Unit) nằm trong gói CPU: CPU gửi địa chỉ ảo cho MMU, MMU gửi địa chỉ vật lý ra bus tới bộ nhớ.</li></ul>
+</details>`},
 {id:"s4-7",title:"7. Chuyển đổi địa chỉ & bảng trang",
  figs:[["c4-23","Slide 23 – Lược đồ chuyển đổi địa chỉ (p, d)"],["c4-24","Slide 24 – Một entry (hàng) của bảng trang"],["c4-25","Slide 25 – Paging hardware"],["c4-26","Slide 26 – Ví dụ 16 trang × 4KB: địa chỉ ảo 8196 → 24580"]],
  yt:"paging address translation page number offset page table entry",

@@ -476,6 +476,66 @@ var DEMOS = {
     }
     el.oninput = run; run();
   },
+  /* Bộ nhớ ảo bằng tay: chương trình 8 trang, RAM 4 khung. Bấm trang để "dùng" → thấy bảng trang / RAM / đĩa đổi theo. */
+  vmem: function(el){
+    var NP = 8, FREE = [2, 0, 3, 1], SEQ = [0, 1, 2, 0, 3, 4, 0, 5];
+    var pt, frames, order, uses, faults, last, msg, cls, auto = null;
+    function reset(){
+      pt = []; for (var p = 0; p < NP; p++) pt.push(null);
+      frames = [null, null, null, null]; order = []; uses = 0; faults = 0; last = {}; cls = "";
+      msg = 'Bấm vào một trang để chương trình <b>dùng</b> trang đó. Lúc đầu RAM trống, cả 8 trang đều nằm trên đĩa, bảng trang toàn <b>X</b>.';
+    }
+    function use(p){
+      uses++;
+      if (pt[p] !== null){
+        last = {hit: pt[p]}; cls = "hit";
+        msg = '✔ Trang ' + p + ' <b>đã có</b> trong RAM: bảng trang ghi ' + p + ' → khung ' + pt[p] + '. MMU đổi địa chỉ ngay, <b>không lỗi trang</b>.';
+        return;
+      }
+      faults++; cls = "fault";
+      var f = FREE.filter(function(k){ return frames[k] === null; })[0], out = null;
+      if (f === undefined){ out = order.shift(); f = pt[out]; pt[out] = null; }
+      frames[f] = p; pt[p] = f; order.push(p); last = {nw: f, out: out};
+      msg = '✘ Bảng trang ghi trang ' + p + ' là <b>X</b> → <b>lỗi trang</b>. ' +
+        (out === null ? 'Còn khung ' + f + ' trống, HĐH chép trang ' + p + ' từ đĩa vào <b>khung ' + f + '</b>.'
+                      : 'RAM đã đầy, HĐH trả trang ' + out + ' (vào sớm nhất) về đĩa rồi nạp trang ' + p + ' vào <b>khung ' + f + '</b> vừa trống. <small class="muted">(Chọn trang nào để bỏ: mục 9–10.)</small>') +
+        ' Bảng trang cập nhật: ' + p + ' → ' + f + '.';
+    }
+    function draw(){
+      var pages = '', ptRows = '', fr = '', disk = '';
+      for (var p = 0; p < NP; p++){
+        pages += '<button data-p="' + p + '" class="' + (pt[p] !== null ? 'in' : '') + '">Trang ' + p + '</button>';
+        var hl = pt[p] !== null && (pt[p] === last.hit || pt[p] === last.nw) ? (pt[p] === last.hit ? ' hit' : ' new') : '';
+        ptRows += '<div class="vmd-cell' + (pt[p] !== null ? ' ok' : '') + hl + '"><span>trang ' + p + '</span><b>' + (pt[p] !== null ? '→ khung ' + pt[p] : 'X') + '</b></div>';
+        if (pt[p] === null) disk += '<span class="chip' + (p === last.out ? ' out' : '') + '">trang ' + p + '</span>';
+      }
+      for (var f = 0; f < 4; f++){
+        var h2 = f === last.hit ? ' hit' : f === last.nw ? ' new' : '';
+        fr += '<div class="vmd-cell' + (frames[f] !== null ? ' ok' : '') + h2 + '"><span>khung ' + f + '</span><b>' + (frames[f] !== null ? 'trang ' + frames[f] : 'trống') + '</b></div>';
+      }
+      el.innerHTML = '<div class="demo-h">🧪 Tự tay chạy bộ nhớ ảo: chương trình 8 trang, RAM chỉ 4 khung</div>' +
+        '<div class="muted" style="font-size:13.5px">Chương trình dùng trang:</div><div class="vmd-pages">' + pages + '</div>' +
+        '<div class="vmd-grid"><div class="vmd-box"><h5>Bảng trang</h5>' + ptRows + '</div>' +
+        '<div class="vmd-box"><h5>RAM (4 khung)</h5>' + fr + '</div>' +
+        '<div class="vmd-box vmd-disk"><h5>Đĩa (trang chưa nạp)</h5><div class="vmd-chips">' + (disk || '<span class="muted">—</span>') + '</div></div></div>' +
+        '<div class="vmd-msg ' + cls + '">' + msg + '</div>' +
+        '<div class="vmd-stat"><span>Đã dùng <b>' + uses + '</b> lần · Lỗi trang <b>' + faults + '</b></span>' +
+        '<button class="btn sm primary" data-a="seq">' + (auto ? '❚❚ Dừng' : '▶ Chạy thử chuỗi 0 1 2 0 3 4 0 5') + '</button><button class="btn sm" data-a="reset">↺ Làm lại</button></div>';
+    }
+    function stopAuto(){ if (auto){ clearInterval(auto); auto = null; } }
+    el.onclick = function(e){
+      var b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.p != null){ stopAuto(); use(+b.dataset.p); }
+      else if (b.dataset.a === "reset"){ stopAuto(); reset(); }
+      else if (b.dataset.a === "seq"){
+        if (auto) stopAuto();
+        else { reset(); var k = 0; use(SEQ[k++]);
+          auto = setInterval(function(){ if (k < SEQ.length){ use(SEQ[k++]); draw(); } if (k >= SEQ.length){ stopAuto(); draw(); } }, 1800); stepTimers.push(auto); }
+      }
+      draw();
+    };
+    reset(); draw();
+  },
   pagerep: function(el){
     el.innerHTML = '<div class="demo-h">🧪 Mô phỏng thay thế trang (đếm lỗi trang)</div><div class="demo-row">'+
       '<label class="w">Chuỗi tham chiếu<input data-f="r" value="7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1"></label><label>Số khung<input type="number" min="1" max="8" data-f="n" value="3"></label>'+
