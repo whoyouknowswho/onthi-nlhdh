@@ -186,7 +186,108 @@ function simulateClock0(){
   return faults;
 }
 
+/* Aging dễ hiểu: dùng "điểm" thập phân (chia đôi = dịch phải 1 bit, +128 = bật bit trái nhất), chạy từng bước như FIFO / LRU */
 V["s4-10~aging"] = function(){
+  var REF = [1,2,3,1,4,2,1,3], N = 3, sc = [];
+  function bin(v){ return ("00000000" + v.toString(2)).slice(-8); }
+
+  /* --- Ý tưởng --- */
+  sc.push({s:"Aging làm gần giống <b>LRU</b>: bỏ trang lâu nhất chưa được dùng. Nhưng thay vì nhớ thời điểm của mọi lần dùng, mỗi trang chỉ giữ một con số gọi là <b>điểm</b>, giống độ nóng: trang lâu không dùng thì nguội dần, trang vừa dùng thì nóng lên.",
+    d:[H("Aging = LRU “phiên bản rẻ”"),
+       b("i1",80,110,380,130,"LRU","ok",{fs:24,s:"bỏ trang lâu nhất chưa dùng\ncần nhớ thời điểm MỌI lần dùng → đắt"}),
+       b("i2",500,110,380,130,"Aging","brand",{fs:24,s:"mỗi trang chỉ giữ 1 con số: ĐIỂM\nđiểm thấp = lâu không dùng"}),
+       t("i3",480,320,"Trang lâu không dùng thì “nguội” dần · trang vừa dùng thì “nóng” lên",{fs:18,c:"warn"})]});
+  sc.push({s:"Luật chỉ có 2 việc, làm sau mỗi nhịp đồng hồ. Một: điểm của mọi trang <b>chia đôi</b>. Hai: trang nào được dùng trong nhịp vừa qua thì <b>cộng 128</b>. Khi cần bỏ trang, bỏ trang có <b>điểm thấp nhất</b>, tức nguội nhất.",
+    d:[clr(), H("Luật của Aging: 2 việc sau mỗi nhịp đồng hồ"),
+       b("r1",80,95,800,85,"① Mọi trang: điểm CHIA ĐÔI   (nguội đi một nửa)","cyan",{fs:22}),
+       b("r2",80,200,800,85,"② Trang được dùng trong nhịp vừa qua: + 128   (nóng lên)","ok",{fs:22}),
+       b("r3",80,305,800,85,"Cần bỏ trang → bỏ trang có điểm THẤP NHẤT (nguội nhất)","bad",{fs:22}),
+       t("r4",480,450,"Ví von: mỗi trang là một cốc trà. Cứ mỗi nhịp trà nguội đi một nửa;\ncốc nào vừa được uống thì rót thêm trà nóng. Cần chỗ thì dọn cốc nguội nhất.",{fs:15,c:"gray"})]});
+  sc.push({s:"Trong slide, Aging được tả bằng bit: <b>dịch phải</b> bộ đếm rồi đưa bit R vào <b>bên trái</b>. Dịch phải 1 bit chính là chia đôi, còn bật bit trái nhất chính là cộng 128. Hai cách nói là một. Video này tính bằng số thập phân cho dễ.",
+    d:[clr(), H("Liên hệ với cách nói bằng bit trong slide"),
+       b("k1",80,110,380,120,"Chia đôi","cyan",{fs:24,s:"= dịch phải 1 bit\n144 (10010000) → 72 (01001000)"}),
+       b("k2",500,110,380,120,"+ 128","ok",{fs:24,s:"= bật bit trái nhất (bit R = 1)\n16 (00010000) → 144 (10010000)"}),
+       t("k3",480,300,"Đó chính là “dịch phải bộ đếm 8 bit, đưa bit R vào bên trái” trong slide.",{fs:17,c:"warn"}),
+       t("k4",480,350,"Video này dùng số thập phân cho dễ tính.",{fs:16,c:"gray"})]});
+
+  /* --- Chạy từng bước --- */
+  var base = [clr(), H("Aging từng bước · 3 khung trang")];
+  REF.forEach(function(p, i){ base.push(b("tk"+i,60+i*105,60,95,52,"trang "+p,"gray",{fs:16,s:"nhịp "+(i+1),ss:11})); });
+  for (var k = 0; k < N; k++) base.push(b("f"+k,180,180+k*90,170,64,"(trống)","none",{dash:1,fs:18}), t("fl"+k,150,212+k*90,"Khung "+(k+1),{a:"end",fs:15,c:"gray"}), t("fi"+k,370,212+k*90,"",{a:"start",fs:15,c:"violet"}));
+  base.push(b("rule",560,160,370,150,"Sau mỗi nhịp đồng hồ:\n① điểm mọi trang chia đôi\n② trang vừa dùng + 128\nCần bỏ trang → bỏ điểm THẤP nhất","violet",{fs:15}),
+    b("cnt",600,340,300,56,"Lỗi trang: 0","bad",{fs:20}), t("note",750,450,"",{fs:16}));
+  sc.push({s:"Chạy thử 8 nhịp đồng hồ. Mỗi nhịp CPU dùng một trang, ghi ở hàng trên cùng. RAM có 3 khung. Trang mới nạp bắt đầu với <b>điểm 0</b>.",
+    d:[base, u("note",{t:"Trang mới nạp: điểm = 0",c:"warn"})]});
+
+  var fr = [], pts = {}, last = {}, faults = 0;
+  function infoOps(hl){
+    var o = [];
+    for (var j = 0; j < N; j++){
+      if (fr[j] === undefined) continue;
+      var v = pts[fr[j]];
+      o.push(u("fi"+j,{t:"điểm = "+v+"   ("+bin(v)+")", c: hl === j ? "bad" : "violet"}));
+    }
+    return o;
+  }
+  REF.forEach(function(p, i){
+    var ops = [u("tk"+i,{c:"warn"})], s = "Nhịp "+(i+1)+": CPU dùng <b>trang "+p+"</b>";
+    var idx = fr.indexOf(p);
+    for (var j = 0; j < fr.length; j++) ops.push(u("f"+j,{c:"gray"}));
+    if (idx >= 0){
+      s += ", đã có trong RAM nên <b>không lỗi</b>. Cuối nhịp trang "+p+" sẽ được cộng 128.";
+      ops.push(u("tk"+i,{c:"ok"}), u("f"+idx,{c:"ok"}), f("f"+idx), infoOps(-1), u("note",{t:"✔ Không lỗi",c:"ok"}));
+    } else {
+      faults++;
+      if (fr.length < N){
+        fr.push(p); pts[p] = 0; var k0 = fr.length - 1;
+        s += ", chưa có nên <b>lỗi trang</b>. Còn khung trống: nạp vào khung "+(k0+1)+", điểm bắt đầu bằng 0.";
+        ops.push(u("tk"+i,{c:"bad"}), u("f"+k0,{t:"trang "+p,c:"ok",dash:0}), f("f"+k0), infoOps(-1), u("note",{t:"✘ Lỗi trang · nạp vào khung trống",c:"bad"}));
+      } else {
+        var vi = 0; fr.forEach(function(q, j){ if (pts[q] < pts[fr[vi]]) vi = j; });
+        var lru = 0; fr.forEach(function(q, j){ if (last[q] < last[fr[lru]]) lru = j; });
+        var old = fr[vi], list = fr.map(function(q){ return "trang "+q+" = "+pts[q]; }).join(", ");
+        s += ", chưa có nên <b>lỗi trang</b>, RAM đầy. So điểm: "+list+". <b>Trang "+old+"</b> điểm thấp nhất, tức nguội nhất, nên bị bỏ."+
+             (lru === vi ? " LRU cũng bỏ trang "+old+" vì nó lâu nhất chưa được dùng." : " (LRU sẽ bỏ trang "+fr[lru]+".)");
+        ops.push(u("tk"+i,{c:"bad"}), infoOps(vi), u("f"+vi,{c:"bad"}), f("fi"+vi),
+          u("note",{t:"✘ Lỗi trang · RAM đầy\nbỏ trang "+old+" (điểm thấp nhất)",c:"bad"}));
+        sc.push({s:s, d:ops.concat([u("cnt",{t:"Lỗi trang: "+faults})])});
+        delete pts[old]; fr[vi] = p; pts[p] = 0;
+        ops = [u("f"+vi,{t:"trang "+p,c:"ok"}), f("f"+vi), infoOps(-1), u("note",{t:"Nạp trang "+p+" vào khung "+(vi+1)+"\nđiểm bắt đầu = 0",c:"warn"})];
+        s = "Nạp trang "+p+" vào khung "+(vi+1)+" vừa trống, điểm bắt đầu bằng 0.";
+      }
+    }
+    last[p] = i;
+    ops.push(u("cnt",{t:"Lỗi trang: "+faults}));
+    sc.push({s:s, d:ops});
+    /* cuối nhịp: chia đôi, trang vừa dùng + 128 */
+    var up = [];
+    fr.forEach(function(q, j){
+      var v = pts[q], h = Math.floor(v / 2), nv = h + (q === p ? 128 : 0);
+      up.push(u("fi"+j,{t: q === p ? v+" → "+h+" + 128 = "+nv : v+" → "+h, c: q === p ? "ok" : "cyan"}));
+      pts[q] = nv;
+    });
+    up.push(u("note",{t:"Cuối nhịp "+(i+1)+": chia đôi\ntrang "+p+" + 128",c:"cyan"}), f("rule"));
+    sc.push({s:"Cuối nhịp "+(i+1)+": điểm mọi trang chia đôi, riêng trang "+p+" vừa được dùng thì cộng thêm 128.", d:up});
+  });
+
+  /* --- Vì sao chỉ là xấp xỉ --- */
+  sc.push({s:"Ở ví dụ này Aging chọn trang bỏ <b>giống hệt LRU</b>, tổng cộng "+faults+" lỗi trang. Nhưng Aging chỉ là <b>xấp xỉ</b>: nếu trang 1 và trang 2 cùng được dùng trong một nhịp, cả hai đều chỉ được cộng 128 nên điểm bằng nhau. LRU biết trang nào dùng trước, Aging thì không. Ngoài ra, trang không dùng quá 8 nhịp thì điểm về 0, như chưa từng được dùng.",
+    d:[clr(), H("Vì sao Aging chỉ là “xấp xỉ” LRU?"),
+       b("res",280,90,400,90,faults+" lỗi trang · chọn giống LRU","ok",{fs:22}),
+       b("a1",120,230,320,90,"Trang 1","ok",{fs:20,s:"dùng ĐẦU nhịp → + 128"}),
+       b("a2",520,230,320,90,"Trang 2","ok",{fs:20,s:"dùng CUỐI nhịp → + 128"}),
+       t("a3",480,370,"Điểm bằng nhau → Aging không biết trang nào dùng trước (LRU thì biết)",{fs:17,c:"warn"}),
+       t("a4",480,425,"Chỉ nhớ 8 nhịp: không dùng quá 8 nhịp thì điểm về 0",{fs:16,c:"gray"})]});
+  sc.push({s:"Tóm lại: Aging giữ cho mỗi trang một điểm. Mỗi nhịp điểm chia đôi, trang vừa dùng cộng 128, cần chỗ thì bỏ trang điểm thấp nhất. Muốn xem ví dụ 6 trang trong giáo trình bằng bit, mở tab <b>Aging: ví dụ giáo trình</b>.",
+    d:[clr(), H("Aging trong 3 dòng"),
+       b("z1",110,110,740,80,"Mỗi trang có 1 điểm (bộ đếm 8 bit)","brand",{fs:20}),
+       b("z2",110,220,740,80,"Mỗi nhịp: chia đôi (dịch phải) · trang vừa dùng + 128 (bit R vào trái)","cyan",{fs:18}),
+       b("z3",110,330,740,80,"Cần bỏ trang → bỏ trang có điểm thấp nhất","bad",{fs:20})]});
+  return {title:"Thuật toán Aging từng bước", scenes:sc};
+};
+
+/* Aging bằng bit: lý do, NFU, ví dụ 6 trang × 5 nhịp trong giáo trình */
+V["s4-10~agingbit"] = function(){
   var sc = [], W = ["128","64","32","16","8","4","2","1"], AGE = ["vừa xong","trước 1","trước 2","trước 3","trước 4","trước 5","trước 6","trước 7"];
   function bits(v){ return ("00000000" + v.toString(2)).slice(-8).split(""); }
   function cellOps(prefix, v){ return bits(v).map(function(c, j){ return u(prefix + j, {t:c, c: c === "1" ? "ok" : "dark"}); }); }
@@ -282,5 +383,5 @@ V["s4-10~aging"] = function(){
     d:[clr(), H("Các thuật toán xấp xỉ LRU"), b("n1",40,110,420,150,"NRU","gray",{s:"4 lớp theo (R, M) · rất thô"}), b("n2",500,110,420,150,"NFU","warn",{s:"đếm số lần dùng · xấp xỉ LRU thô"}), b("n3",40,290,420,150,"Aging","ok",{s:"NFU + dịch phải · xấp xỉ LRU tốt"}), b("n4",500,290,420,150,"Working set / WSClock","violet",{s:"giữ tập trang đang dùng · WSClock tốt"})]});
   return {title:"Thuật toán Aging (xấp xỉ LRU)", scenes:sc};
 };
-Object.assign(window.VLABEL, {"s4-10":"FIFO","s4-10~lru":"LRU","s4-10~opt":"Optimal","s4-10~clock":"Clock / Second chance","s4-10~aging":"Aging"});
+Object.assign(window.VLABEL, {"s4-10":"FIFO","s4-10~lru":"LRU","s4-10~opt":"Optimal","s4-10~clock":"Clock / Second chance","s4-10~aging":"Aging","s4-10~agingbit":"Aging: ví dụ giáo trình (bit)"});
 })();
