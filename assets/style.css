@@ -372,6 +372,9 @@ ul.checklist li::before{content:"✓";position:absolute;left:0;top:1px;width:20p
 .v-tip{position:absolute;bottom:28px;transform:translateX(-50%);background:#111827;color:#e2e8f0;border:1px solid #334155;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:2}
 .v-vsel{background:#1e293b;color:#e2e8f0;border:0;border-radius:9px;height:34px;padding:0 6px;font-size:12.5px;font-weight:700;max-width:150px}
 .v-vsel:hover{background:#334155}
+.v-en{font-size:11.5px;letter-spacing:.5px;color:#94a3b8}
+.v-en.on{background:#4338ca;color:#fff}
+.v-en.on:hover{background:#4f46e5}
 .v-time{color:#94a3b8;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:74px;text-align:center}
 .vplayer:fullscreen{display:flex;flex-direction:column;justify-content:center;border-radius:0}
 .vplayer:fullscreen .v-stage{flex:1;aspect-ratio:auto}

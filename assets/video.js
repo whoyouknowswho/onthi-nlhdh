@@ -93,19 +93,40 @@ function voiceScore(v){
   var n = v.name || "";
   return (/Natural|Online|Neural/i.test(n) ? 40 : 0) + (/Microsoft/i.test(n) ? 20 : 0) + (/Google/i.test(n) ? 10 : 0) + (/HoaiMy/i.test(n) ? 2 : 0);
 }
+/* Giọng tiếng Anh cho thuật ngữ: ưu tiên giọng tự nhiên, cùng giới tính với giọng Việt đang dùng để nghe liền mạch. */
+var enVoices = [], enVoice = null, enOn = true, EKEY = "nlhdh_en";
+try { enOn = localStorage.getItem(EKEY) !== "0"; } catch (e){}
+var FEMALE = /Aria|Jenny|Zira|Ava|Emma|Michelle|Ana\b|Libby|Sonia|Natasha|Clara|Samantha|Hazel|Susan|Linda|Heera|Catherine|Google US English|Female/i;
+var MALE = /Guy|David|Mark|Andrew|Brian|Christopher|Eric|Roger|Steffan|Ryan|George|James|Richard|Male/i;
+function isMaleVi(v){ return !!v && /NamMinh|Male/i.test(v.name); }
+function pickEn(){
+  var male = isMaleVi(viVoice);
+  enVoice = enVoices.slice().sort(function(a, b){
+    function sc(v){ var n = v.name || ""; return voiceScore(v) + (/^en-US/i.test(v.lang) ? 6 : /^en-GB/i.test(v.lang) ? 3 : 0) + ((male ? MALE : FEMALE).test(n) ? 15 : 0); }
+    return sc(b) - sc(a);
+  })[0] || null;
+}
 function pickVoice(){
   if (!("speechSynthesis" in window)) return;
   var vs = speechSynthesis.getVoices() || [];
   viVoices = vs.filter(function(v){ return /^vi/i.test(v.lang); }).sort(function(a, b){ return voiceScore(b) - voiceScore(a); });
+  enVoices = vs.filter(function(v){ return /^en/i.test(v.lang); });
   var saved = null; try { saved = localStorage.getItem(VKEY); } catch (e){}
   viVoice = viVoices.filter(function(v){ return v.name === saved; })[0] || viVoices[0] || null;
+  pickEn();
   document.querySelectorAll(".vplayer").forEach(function(el){ if (el._p) el._p.refreshVoice(); });
 }
 function setVoice(name){
   var v = viVoices.filter(function(x){ return x.name === name; })[0]; if (!v) return;
   viVoice = v; try { localStorage.setItem(VKEY, name); } catch (e){}
+  pickEn();
   document.querySelectorAll(".vplayer").forEach(function(el){ if (el._p) el._p.refreshVoice(true); });
 }
+function setEn(on){
+  enOn = on; try { localStorage.setItem(EKEY, on ? "1" : "0"); } catch (e){}
+  document.querySelectorAll(".vplayer").forEach(function(el){ if (el._p) el._p.refreshVoice(true); });
+}
+function enActive(){ return !!(enOn && enVoice && viVoice); }
 if ("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function plain(h){ var d = document.createElement("div"); d.innerHTML = h; return d.textContent.replace(/\s+/g, " ").trim(); }
 
@@ -167,9 +188,13 @@ var EN = {
 };
 var CIRC = "①②③④⑤⑥⑦⑧⑨";
 function esc(s){ return s.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"); }
-var ABBR_RE = ABBR.map(function(p){ return [new RegExp("(?<![\\p{L}\\d])" + esc(p[0]) + "(?![\\p{L}])", "gu"), p[1]]; })
+/* Khi máy có giọng tiếng Anh: các thuật ngữ dưới đây do giọng tiếng Anh đọc (đúng phát âm gốc).
+   KEEP_VI: những từ đã Việt hóa quen thuộc, vẫn để giọng Việt đọc. EN_SAY: chữ đưa cho giọng Anh nếu khác chữ gốc. */
+var KEEP_VI = {"hđh":1,"bit":1,"bits":1,"byte":1,"bytes":1,"logic":1,"video":1,"chip":1,"slide":1,"cylinder":1,"disk":1,"abc":1,"xyz":1,"txt":1,"ast":1};
+var EN_SAY = {"usr":"user","mbox":"m box","opendir":"open dir","closedir":"close dir","readdir":"read dir","i-node":"I-node","i-nodes":"I-nodes","READY":"ready","IN":"in","OUT":"out"};
+var ABBR_RE = ABBR.map(function(p){ return [new RegExp("(?<![\\p{L}\\d])" + esc(p[0]) + "(?![\\p{L}])", "gu"), p[1], EN_SAY[p[0]] || null]; })
   .concat(Object.keys(EN).sort(function(a, b){ return b.length - a.length; }).map(function(k){
-    return [new RegExp("(?<![\\p{L}\\d])" + esc(k).replace(/[ -]/g, "[\\s_-]+") + "(?![\\p{L}\\d])", "giu"), EN[k]];
+    return [new RegExp("(?<![\\p{L}\\d])" + esc(k).replace(/[ -]/g, "[\\s_-]+") + "(?![\\p{L}\\d])", "giu"), EN[k], KEEP_VI[k] ? null : (EN_SAY[k] || "")];
   }));
 function spellCaps(w){ return w.split("").map(function(c){ return LETTER[c] || c; }).join(" "); }
 /* Mũi tên "→": trong một vế câu chỉ có 1 mũi tên thì là quan hệ nhân quả → đọc "nên";
@@ -178,7 +203,8 @@ function arrows(clause){
   var k = (clause.match(/→/g) || []).length;
   return k >= 2 ? clause.replace(/\s*→\s*/g, ", rồi ") : clause.replace(/[,\s]*→\s*/, " nên ");
 }
-function speakable(html){
+function speakable(html, en){
+  var segs = [];
   var h = String(html || "")
     .replace(/<sup>([^<]*)<\/sup>/g, " mũ $1 ")
     .replace(/<code>([^<]*)<\/code>/g, function(_, c){
@@ -203,7 +229,12 @@ function speakable(html){
     .replace(/([A-Za-z]+)\[([^\]]+)\]/g, "$1 của $2")
     .replace(/[−-](\d)/g, function(m, d, i, s){ return /[\dA-Za-z]$/.test(s.slice(0, i)) ? m : " trừ " + d; })
     .replace(/(\d)-(\d)/g, "$1 đến $2");
-  ABBR_RE.forEach(function(p){ t = t.replace(p[0], " " + p[1] + " "); });
+  ABBR_RE.forEach(function(p){
+    t = t.replace(p[0], function(m){
+      if (en && p[2] !== null){ segs.push(p[2] || m.replace(/[_-]+/g, " ")); return " " + String.fromCharCode(0xE000 + segs.length - 1) + " "; }
+      return " " + p[1] + " ";
+    });
+  });
   t = t.replace(/(\d)\s*KB\b/g, "$1 ki lô bai").replace(/(\d)\s*MB\b/g, "$1 mê ga bai").replace(/(\d)\s*GB\b/g, "$1 gi ga bai").replace(/(\d)\s*TB\b/g, "$1 tê ra bai")
     .replace(/\bKB\b/g, "ki lô bai").replace(/\bMB\b/g, "mê ga bai").replace(/\bGB\b/g, "gi ga bai").replace(/\bTB\b/g, "tê ra bai")
     .replace(/(\d)\s*K\b/g, "$1 ki lô bai")
@@ -215,7 +246,23 @@ function speakable(html){
     .replace(/%/g, " phần trăm ").replace(/#/g, " số ").replace(/[^.;:!?]*→[^.;:!?]*/g, arrows).replace(/[–—…·]/g, ", ")
     .replace(/[“”"‘’*_()\[\]]/g, " ").replace(/-/g, " ")
     .replace(/\s+([,.;:!?])/g, "$1").replace(/([,.;:])(\s*[,.;:])+/g, "$1").replace(/\s+/g, " ").replace(/^[,\s]+/, "").trim();
+  /* trả lại thuật ngữ tiếng Anh, đánh dấu \u0001…\u0002; các thuật ngữ đứng liền nhau gộp thành một đoạn */
+  t = t.replace(/[-]/g, function(c){ return "\u0001" + segs[c.charCodeAt(0) - 0xE000] + "\u0002"; })
+    .replace(/\u0002([,\s]*)\u0001/g, "$1");
   return t;
+}
+/* Tách lời đọc thành các đoạn Việt / Anh: {plain: chữ không dấu đánh dấu, segs: [{s, e, en}]} */
+function segment(str){
+  var plainS = "", segs = [], en = false, start = 0;
+  for (var k = 0; k < str.length; k++){
+    var ch = str[k];
+    if (ch === "\u0001" || ch === "\u0002"){
+      if (plainS.length > start) segs.push({s: start, e: plainS.length, en: en});
+      en = ch === "\u0001"; start = plainS.length;
+    } else plainS += ch;
+  }
+  if (plainS.length > start) segs.push({s: start, e: plainS.length, en: en});
+  return {plain: plainS, segs: segs};
 }
 
 /* ---------- Trình phát ----------
@@ -228,7 +275,8 @@ function sceneDur(sc){ var L = speakable(sc.s || "").length; return Math.max(sc.
 
 function Player(el, def){
   var self = this, scenes = def.scenes, n = scenes.length;
-  var texts = scenes.map(function(s){ return speakable(s.s || ""); });
+  var tcache = {};
+  function txtFor(k){ var m = enActive() ? "en" : "vi"; if (!tcache[m]) tcache[m] = scenes.map(function(s){ return segment(speakable(s.s || "", m === "en")); }); return tcache[m][k]; }
   var D = scenes.map(sceneDur), T0 = [], total = 0;
   D.forEach(function(d, j){ T0[j] = total; total += d; });
   var i = 0, shown = -1, pos = 0, playing = false, started = false, speed = 1, voiceOn = true, dragging = false;
@@ -243,7 +291,7 @@ function Player(el, def){
     '<div class="v-sub"></div>' +
     '<div class="v-ctl"><button class="v-btn v-play" title="Phát / Tạm dừng (Space)">▶</button><button class="v-btn v-prev" title="Về đầu cảnh / cảnh trước">⏮</button><button class="v-btn v-next" title="Cảnh sau">⏭</button>' +
     '<div class="v-tl" role="slider" aria-label="Thanh thời gian (← → tua 5 giây)" aria-valuemin="0" aria-valuemax="' + Math.round(total / 1000) + '" aria-valuenow="0"><div class="v-track"><div class="v-fill"></div>' + ticks + '<div class="v-knob"></div></div><div class="v-tip" hidden></div></div>' +
-    '<span class="v-time">0:00 / ' + fmt(total) + '</span><button class="v-btn v-speed" title="Tốc độ">1×</button><select class="v-vsel" title="Chọn giọng đọc" aria-label="Chọn giọng đọc" hidden></select><button class="v-btn v-voice" title="Thuyết minh bằng giọng đọc">🔊</button><button class="v-btn v-full" title="Toàn màn hình">⛶</button></div>';
+    '<span class="v-time">0:00 / ' + fmt(total) + '</span><button class="v-btn v-speed" title="Tốc độ">1×</button><select class="v-vsel" title="Chọn giọng đọc" aria-label="Chọn giọng đọc" hidden></select><button class="v-btn v-en" hidden>EN</button><button class="v-btn v-voice" title="Thuyết minh bằng giọng đọc">🔊</button><button class="v-btn v-full" title="Toàn màn hình">⛶</button></div>';
   var layer = el.querySelector(".v-layer"), sub = el.querySelector(".v-sub"), cover = el.querySelector(".v-cover"), end = el.querySelector(".v-end");
   var bPlay = el.querySelector(".v-play"), bVoice = el.querySelector(".v-voice"), tl = el.querySelector(".v-tl"), track = el.querySelector(".v-track");
   var fill = el.querySelector(".v-fill"), knob = el.querySelector(".v-knob"), tip = el.querySelector(".v-tip"), tm = el.querySelector(".v-time");
@@ -281,15 +329,22 @@ function Player(el, def){
   function startScene(){
     stopSpeech(); spoken = false; hasBnd = false; rush = 0; stall = 0; bTarget = pos;
     if (!playing || !voiceReady()) return;
-    var txt = texts[i], f = (pos - T0[i]) / D[i], c0 = 0;
+    var T = txtFor(i), txt = T.plain, f = (pos - T0[i]) / D[i], c0 = 0;
     if (f > 0.03){ c0 = Math.floor(f * txt.length); var sp = txt.lastIndexOf(" ", c0); c0 = sp < 0 ? 0 : sp + 1; }
-    var part = txt.slice(c0);
-    if (!part.trim()){ spoken = true; return; }
-    var my = uttId, u = new SpeechSynthesisUtterance(part);
-    u.voice = viVoice; u.lang = viVoice.lang; u.rate = Math.min(2, 1.05 * speed);
-    u.onboundary = function(e){ if (my !== uttId) return; hasBnd = true; stall = 0; var t = T0[i] + D[i] * Math.min(1, (c0 + e.charIndex) / txt.length); if (t > bTarget) bTarget = t; };
-    u.onend = u.onerror = function(){ if (my === uttId) spoken = true; };
-    speechSynthesis.cancel(); speechSynthesis.speak(u); utt = u;
+    /* Đọc nối tiếp từng đoạn: đoạn tiếng Việt bằng giọng Việt, thuật ngữ tiếng Anh bằng giọng Anh */
+    var parts = T.segs.filter(function(sg){ return sg.e > c0; }).map(function(sg){ return {s: Math.max(sg.s, c0), e: sg.e, en: sg.en && enActive()}; })
+      .filter(function(p){ return /[\p{L}\d]/u.test(txt.slice(p.s, p.e)); });
+    if (!parts.length){ spoken = true; return; }
+    var my = uttId; utt = [];
+    speechSynthesis.cancel();
+    parts.forEach(function(p, j){
+      var v = p.en ? enVoice : viVoice, u = new SpeechSynthesisUtterance(txt.slice(p.s, p.e).trim().replace(/^[,.;:]\s*/, ""));
+      u.voice = v; u.lang = v.lang; u.rate = Math.min(2, (p.en ? 0.95 : 1.05) * speed);
+      u.onstart = function(){ if (my === uttId) stall = 0; };
+      u.onboundary = function(e){ if (my !== uttId) return; hasBnd = true; stall = 0; var t = T0[i] + D[i] * Math.min(1, (p.s + e.charIndex) / txt.length); if (t > bTarget) bTarget = t; };
+      u.onend = u.onerror = function(){ if (my !== uttId) return; var t = T0[i] + D[i] * Math.min(1, p.e / txt.length); if (t > bTarget) bTarget = t; if (j === parts.length - 1) spoken = true; };
+      speechSynthesis.speak(u); utt.push(u);
+    });
   }
   function advance(){
     if (i < n - 1){ i++; pos = T0[i]; render(i); startScene(); }
@@ -343,6 +398,12 @@ function Player(el, def){
   this.refreshVoice = function(restart){
     vsel.hidden = viVoices.length < 2;
     vsel.innerHTML = viVoices.map(function(v){ return '<option value="' + v.name.replace(/"/g, "&quot;") + '"' + (v === viVoice ? " selected" : "") + ">" + shortName(v).replace(/</g, "&lt;") + "</option>"; }).join("");
+    var bEn = el.querySelector(".v-en");
+    bEn.hidden = !(enVoice && viVoice);
+    bEn.classList.toggle("on", enOn);
+    bEn.setAttribute("aria-pressed", enOn ? "true" : "false");
+    bEn.title = enOn ? "Thuật ngữ tiếng Anh đang được đọc bằng giọng Anh (" + (enVoice ? shortName(enVoice) : "") + "). Bấm để chuyển sang phiên âm tiếng Việt"
+                     : "Thuật ngữ tiếng Anh đang được phiên âm tiếng Việt. Bấm để đọc bằng giọng Anh";
     if (restart && playing) startScene();
     bVoice.disabled = !viVoice; bVoice.title = viVoice ? "Thuyết minh: " + viVoice.name : "Máy/trình duyệt này chưa có giọng đọc tiếng Việt – video vẫn chạy kèm phụ đề"; bVoice.textContent = (viVoice && voiceOn) ? "🔊" : "🔇"; };
   function jump(k){ k = Math.max(0, Math.min(n - 1, k)); seekTo(T0[k]); if (playing) startScene(); }
@@ -377,6 +438,7 @@ function Player(el, def){
     else if (b.classList.contains("v-prev")) jump(pos - T0[i] > 1500 ? i : i - 1);
     else if (b.classList.contains("v-next")) jump(i + 1);
     else if (b.classList.contains("v-speed")){ var sp = [0.75, 1, 1.25, 1.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length]; b.textContent = speed + "×"; if (playing) startScene(); }
+    else if (b.classList.contains("v-en")){ setEn(!enOn); }
     else if (b.classList.contains("v-voice")){ voiceOn = !voiceOn; self.refreshVoice(); if (playing) startScene(); }
     else if (b.classList.contains("v-full")){ var fs = document.fullscreenElement; if (fs) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); }
   };
