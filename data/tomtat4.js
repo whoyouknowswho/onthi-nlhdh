@@ -197,19 +197,78 @@ sections:[
  figs:[["c4-27","Slide 27 – Bảng trang 2 mức: PT1 10 bit, PT2 10 bit, Offset 12 bit"],["c4-29","Slide 29 – Phân trang với TLB (TLB hit / TLB miss)"],["c4-30","Slide 30 – Ví dụ nội dung TLB"]],
  yt:"two level page table TLB translation lookaside buffer",
  html:`
-<p><b>Bảng trang 2 mức</b> (địa chỉ 32 bit với 2 trường bảng trang):</p>
-<div class="addr"><div>PT1<small>10 bit</small></div><div>PT2<small>10 bit</small></div><div>Offset<small>12 bit</small></div></div>
-<ul><li>PT1 chọn entry trong <b>top-level page table</b> (1024 entry) → trỏ tới một <b>second-level page table</b>.</li>
-<li>Mỗi bảng mức 2 có 1024 entry × trang 4 KB = quản lý <b>4 MB</b>.</li>
-<li>Lợi ích: chỉ cần tạo bảng mức 2 cho vùng thực sự dùng → <b>tiết kiệm bộ nhớ</b> cho bảng trang.</li></ul>
-<div class="ex"><span class="xs">ví dụ ngoài slide</span> 0x00403004 → PT1 = 1, PT2 = 3, Offset = 4. &nbsp;32 bit, trang 4 KB (1 mức) → 2<sup>20</sup> entry.</div>
-<p><b>Thực hiện bảng trang:</b></p>
-<ul><li>Bảng trang được giữ <b>trong bộ nhớ</b>.</li>
-<li><b>PTBR</b> (Page-table base register) <b>trỏ đến</b> bảng trang; <b>PRLR</b> (Page-table length register) chỉ ra <b>kích thước</b> bảng trang.</li>
-<li>Mỗi lần truy cập data/instruction cần <b>2 lần truy cập bộ nhớ</b>: một lần đến bảng trang, một lần đến data/instruction.</li>
-<li>Giải pháp: cache phần cứng đặc biệt gọi là <b>bộ nhớ kết hợp (associative memory)</b> hay <b>TLB – Translation Look-aside Buffer</b>.</li></ul>
-<p><b>Phân trang với TLB:</b> CPU tách (p, d) → tra p trong TLB (so sánh song song mọi entry). <b>TLB hit</b> → có ngay f. <b>TLB miss</b> → tra page table để lấy f (và nạp vào TLB). Ghép f với d → địa chỉ vật lý.</p>
-<p><b>Entry TLB</b> (slide 30): Valid · Virtual page · Modified · Protection · Page frame. Ví dụ: trang 140 → khung 31 (RW, modified); các trang 19, 20, 21 có quyền <b>R X</b> (trang code) nên Modified = 0.</p>`},
+<p>Mục này có <b>2 ý</b>, giải quyết <b>2 vấn đề khác nhau</b> của bảng trang ở mục 7:</p>
+<table>
+<tr><th></th><th>Vấn đề</th><th>Cách giải</th></tr>
+<tr><td><b>Phần A</b></td><td>Bảng trang <b>quá to</b>, tốn RAM</td><td>Bảng trang <b>2 mức</b></td></tr>
+<tr><td><b>Phần B</b></td><td>Tra bảng trang <b>quá chậm</b>: mỗi truy cập phải vào RAM 2 lần</td><td><b>TLB</b>, một bộ nhớ đệm cho bảng trang</td></tr>
+</table>
+
+<h4 class="sub">A① Vấn đề: bảng trang 1 mức quá to</h4>
+<p>Địa chỉ <b>32 bit</b>, trang <b>4 KB = 2<sup>12</sup></b> → 12 bit thấp là offset, còn <b>20 bit</b> là số trang.</p>
+<div class="addr"><div style="flex:20">Số trang<small>20 bit → 2<sup>20</sup> ≈ 1 triệu trang</small></div><div style="flex:12">Offset<small>12 bit</small></div></div>
+<p>Vậy bảng trang 1 mức phải có <b>2<sup>20</sup> ≈ 1 triệu dòng</b>. Nếu mỗi dòng 4 byte thì mất <b>4 MB cho mỗi tiến trình</b> <span class="xs">ngoài slide</span>, chạy 100 tiến trình là mất 400 MB chỉ để chứa bảng trang.</p>
+<p>Điều phí nhất là chương trình thật chỉ dùng <b>hai đầu</b> không gian địa chỉ: code và dữ liệu ở dưới, stack ở trên. Phần giữa trống gần hết, nhưng bảng 1 mức vẫn phải có đủ 1 triệu dòng.</p>
+
+<h4 class="sub">A② Ý tưởng: cắt bảng dài thành nhiều bảng nhỏ, phần nào không dùng thì khỏi tạo</h4>
+<ol class="steps">
+<li>Cắt bảng 1 triệu dòng thành <b>1024 bảng nhỏ</b>, mỗi bảng <b>1024 dòng</b>, gọi là <b>bảng cấp 2</b> (second-level page table).</li>
+<li>Thêm một <b>bảng cấp 1</b> (top-level page table) cũng 1024 dòng, làm <b>mục lục</b>. Dòng thứ i cho biết bảng cấp 2 thứ i nằm ở đâu, hoặc ghi "không có".</li>
+<li>Bảng cấp 2 nào ứng với vùng nhớ <b>không dùng</b> thì <b>không cần tạo</b>. Đây chính là chỗ tiết kiệm.</li>
+</ol>
+<div class="tip"><b>Ví von:</b> một tòa nhà 1024 tầng, mỗi tầng 1024 phòng. Ở sảnh có <b>bảng chỉ dẫn</b> (bảng cấp 1) ghi sơ đồ phòng của từng tầng để ở đâu. Mỗi tầng có <b>sơ đồ phòng</b> riêng (bảng cấp 2). Tầng nào bỏ trống thì khỏi làm sơ đồ. Muốn tìm một chỗ: xem bảng chỉ dẫn để biết tầng (PT1), xem sơ đồ tầng để biết phòng (PT2), rồi tới đúng vị trí trong phòng (offset).</div>
+
+<h4 class="sub">A③ Tách địa chỉ thành 10 – 10 – 12</h4>
+<div class="addr"><div style="flex:10">PT1<small>10 bit · chọn dòng trong bảng cấp 1</small></div><div style="flex:10">PT2<small>10 bit · chọn dòng trong bảng cấp 2</small></div><div style="flex:12">Offset<small>12 bit · vị trí trong trang</small></div></div>
+<div class="ex"><b>Ví dụ</b> <span class="xs">ngoài slide</span>: địa chỉ <b>0x00403004</b>. Viết ra 32 bit rồi cắt:
+<div class="bits"><span class="b1">0000000001</span><span class="b2">0000000011</span><span class="b3">000000000100</span></div>
+→ <b>PT1 = 1</b>, <b>PT2 = 3</b>, <b>Offset = 4</b>.<br>
+Cách tra: vào <b>dòng 1</b> của bảng cấp 1 để tìm bảng cấp 2 cần dùng. Vào <b>dòng 3</b> của bảng cấp 2 đó để lấy số khung f. Địa chỉ vật lý = f × 4096 + 4.</div>
+<div class="formula"><b>Tính nhanh với số thập phân:</b> PT1 = địa chỉ ÷ 4 MB (4.194.304) · PT2 = (phần dư) ÷ 4 KB (4096) · Offset = địa chỉ mod 4096</div>
+
+<h4 class="sub">A④ Vì sao gọi là "mỗi bảng cấp 2 quản lý 4 MB"?</h4>
+<ul><li>Một bảng cấp 2 có 1024 dòng, mỗi dòng ứng với 1 trang 4 KB → phủ <b>1024 × 4 KB = 4 MB</b> bộ nhớ ảo. Hình slide 27 ghi "page table for the top 4M of memory".</li>
+<li>Bảng cấp 1 có 1024 dòng, mỗi dòng ứng với 1 bảng cấp 2 (4 MB) → phủ <b>1024 × 4 MB = 4 GB</b>, đúng bằng toàn bộ không gian 32 bit.</li>
+<li><b>Tiết kiệm</b> <span class="xs">ví dụ ngoài slide</span>: chương trình chỉ dùng 4 MB code ở dưới và 4 MB stack ở trên thì chỉ cần <b>1 bảng cấp 1 + 2 bảng cấp 2 = 3 × 1024 dòng</b>, thay vì 1.048.576 dòng.</li></ul>
+
+<h4 class="sub">B① Vấn đề: bảng trang nằm trong RAM nên tra rất chậm</h4>
+<p>Bảng trang lớn nên phải <b>giữ trong bộ nhớ (RAM)</b>. CPU dùng 2 thanh ghi để biết bảng trang ở đâu:</p>
+<table>
+<tr><th>Thanh ghi</th><th>Tên đầy đủ</th><th>Giữ gì</th></tr>
+<tr><td><b>PTBR</b></td><td>Page-Table Base Register</td><td><b>Địa chỉ đầu</b> của bảng trang (trỏ đến bảng trang)</td></tr>
+<tr><td><b>PRLR</b></td><td>Page-Table Length Register</td><td><b>Kích thước</b> bảng trang</td></tr>
+</table>
+<p>Hệ quả: mỗi lần cần 1 dữ liệu hay 1 lệnh, máy phải vào RAM <b>2 lần</b>:</p>
+<div class="flow"><span>① Vào RAM<small>đọc bảng trang → số khung</small></span><i>→</i><span>② Vào RAM<small>đọc dữ liệu / lệnh thật</small></span></div>
+<p>Tức là mọi truy cập bộ nhớ đều <b>chậm gấp đôi</b>.</p>
+
+<h4 class="sub">B② Ý tưởng: TLB, cuốn sổ tay nhỏ ngay trong MMU</h4>
+<p><b>TLB (Translation Look-aside Buffer)</b>, còn gọi là <b>bộ nhớ kết hợp (associative memory)</b>, là một bộ nhớ đệm phần cứng <b>rất nhỏ và rất nhanh</b>. Nó ghi sẵn một số cặp <b>trang → khung</b> vừa dùng, và so sánh số trang với <b>tất cả các dòng cùng một lúc</b> (song song), nên tra gần như tức thì.</p>
+<div class="tip"><b>Ví von:</b> danh bạ cả nước (bảng trang) để trong tủ, mở ra rất lâu. Bạn dán cạnh điện thoại một <b>tờ giấy ghi vài số hay gọi</b> (TLB). Số cần gọi có trên tờ giấy thì gọi ngay. Không có thì mới mở danh bạ, và chép thêm số đó lên tờ giấy cho lần sau.</div>
+<p><b>Cách tra (slide 29):</b> CPU phát địa chỉ logic (p, d), rồi:</p>
+<table>
+<tr><th></th><th>TLB hit ✔ (có p trong TLB)</th><th>TLB miss ✘ (không có p)</th></tr>
+<tr><td>Lấy số khung f</td><td>Lấy ngay từ TLB</td><td>Vào RAM tra <b>bảng trang</b>, rồi <b>nạp</b> cặp p → f vào TLB</td></tr>
+<tr><td>Ghép f với d</td><td colspan="2">Địa chỉ vật lý = (f, d), rồi vào RAM lấy dữ liệu</td></tr>
+<tr><td>Số lần vào RAM</td><td><b class="ok-t">1 lần</b></td><td><b class="bad-t">2 lần</b></td></tr>
+</table>
+<p>Chương trình hay dùng đi dùng lại một ít trang (vòng lặp, mảng, stack), nên phần lớn lần tra là <b>hit</b>. Vì thế dù bảng trang nằm trong RAM, máy gần như chỉ mất 1 lần vào RAM.</p>
+
+<h4 class="sub">B③ Một dòng TLB chứa gì? (slide 30)</h4>
+<table>
+<tr><th>Valid</th><th>Virtual page</th><th>Modified</th><th>Protection</th><th>Page frame</th></tr>
+<tr><td>1</td><td>140</td><td>1</td><td>RW</td><td>31</td></tr>
+<tr><td>1</td><td>20</td><td>0</td><td>R X</td><td>38</td></tr>
+<tr><td>1</td><td>130</td><td>1</td><td>RW</td><td>29</td></tr>
+<tr><td>1</td><td>129</td><td>1</td><td>RW</td><td>62</td></tr>
+<tr><td>1</td><td>19</td><td>0</td><td>R X</td><td>50</td></tr>
+<tr><td>1</td><td>21</td><td>0</td><td>R X</td><td>45</td></tr>
+<tr><td>1</td><td>860</td><td>1</td><td>RW</td><td>14</td></tr>
+<tr><td>1</td><td>861</td><td>1</td><td>RW</td><td>75</td></tr>
+</table>
+<ul><li><b>Valid</b>: dòng này có dùng được không. <b>Virtual page → Page frame</b>: cặp trang → khung. <b>Modified</b>: trang đã bị ghi chưa. <b>Protection</b>: quyền R (đọc), W (ghi), X (thực thi).</li>
+<li>Đọc bảng: trang 19, 20, 21 có quyền <b>R X</b> và Modified = 0, nên là các trang <b>code</b> (chỉ đọc và chạy, không ghi). Trang 129–130 và 860–861 có quyền <b>RW</b> và đã bị ghi, nên là <b>dữ liệu / stack</b>.</li></ul>
+<div class="ex"><b>Dạng bài hay gặp</b> <span class="xs">ngoài slide</span>: TLB tra mất 20 ns, mỗi lần vào RAM 100 ns, tỉ lệ hit 80%. Thời gian truy cập trung bình = 0,8 × (20 + 100) + 0,2 × (20 + 100 + 100) = 96 + 44 = <b>140 ns</b>. Nếu không có TLB thì mất 200 ns.</div>`},
 {id:"s4-9",title:"9. Lỗi trang & thay thế trang",
  figs:[["c4-32","Slide 32 – Các bước điều khiển lỗi trang"],["c4-35","Slide 35 – Thay thế trang: swap out victim, swap in trang mới"]],
  yt:"page fault handling steps operating system",
