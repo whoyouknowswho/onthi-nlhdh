@@ -7,7 +7,8 @@ Trang web tĩnh để ôn trắc nghiệm, có khóa mật khẩu.
 - `assets/style.css`, `assets/app.js` – giao diện & logic (làm bài, thi thử, chấm điểm, tổng hợp)
 - `assets/lock.js` – màn hình khóa (chỉ lưu mã băm SHA-256 có muối của mật khẩu)
 - `data/chuong4.js`, `data/chuong5.js`, `data/chuong6.js` + `data/chuong4b.js`, `data/chuong5b.js`, `data/chuong6b.js` – ngân hàng câu hỏi (100 câu/chương)
-- `data/tomtat.js` – tổng hợp kiến thức từng chương
+- `data/tomtat4.js`, `data/tomtat5.js`, `data/tomtat6.js` – tổng hợp kiến thức đầy đủ từng chương (kèm trình chiếu từng bước)
+- `assets/slides/` – ảnh các slide hình minh họa
 
 ## Thêm / sửa câu hỏi
 Mỗi câu trong `data/chuongX.js`:

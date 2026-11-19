@@ -328,11 +328,161 @@ function renderSummary(){
     '<input class="search" id="sumSearch" placeholder="Tìm trong chương… (vd: TLB, RAID)" value="'+esc(sumQuery)+'">'+
     '<nav class="toc">'+secs.map(function(sec){ return '<a href="#'+sec.id+'" data-toc="'+sec.id+'">'+esc(sec.title)+'</a>'; }).join("")+'</nav></div>'+
     '<div><div class="sum-head"><div class="kicker">Chương '+c.ch+' · '+esc(c.en)+'</div><h2>'+esc(c.title)+'</h2><p>'+c.intro+'</p></div>'+
-    (secs.length ? secs.map(function(sec){ return '<article class="sum-sec" id="'+sec.id+'"><h3>'+esc(sec.title)+'</h3>'+sec.html+'</article>'; }).join("") : '<div class="panel empty">Không tìm thấy nội dung phù hợp “'+esc(sumQuery)+'”.</div>')+
+    (secs.length ? secs.map(renderSec).join("") : '<div class="panel empty">Không tìm thấy nội dung phù hợp “'+esc(sumQuery)+'”.</div>')+
     '<div class="sum-cta"><button class="btn primary" data-start="c'+c.ch+'">'+ICON.play+'Luyện câu hỏi Chương '+c.ch+'</button>'+
     (c.ch<6?'<button class="btn" data-sumch="'+(c.ch+1)+'">Chương '+(c.ch+1)+ICON.right+'</button>':'')+'</div></div></div>';
-  if (sumQuery.trim()) highlight(root.querySelectorAll(".sum-sec"), sumQuery.trim());
+  if (sumQuery.trim()) highlight(root.querySelectorAll(".sum-body"), sumQuery.trim());
+  mountDemos(root);
 }
+function slideSrc(code){ return "assets/slides/"+code+".jpg"; }
+function renderSec(sec){
+  var figs = (sec.figs||[]).map(function(f){
+    return '<figure class="fig"><button class="fig-btn" data-zoom="'+f[0]+'" data-cap="'+esc(f[1])+'"><img loading="lazy" src="'+slideSrc(f[0])+'" alt="'+esc(f[1])+'"></button><figcaption>'+esc(f[1])+'</figcaption></figure>';
+  }).join("");
+  var yt = sec.yt ? '<a class="btn sm ghost yt" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query='+encodeURIComponent(sec.yt)+'">▶ Tìm video giảng giải trên YouTube</a>' : '';
+  return '<article class="sum-sec" id="'+sec.id+'"><div class="sec-head"><h3>'+esc(sec.title)+'</h3>'+yt+'</div>'+
+    (figs ? '<div class="figs">'+figs+'</div>' : '')+'<div class="sum-body">'+sec.html+'</div></article>';
+}
+
+/* ---------- Lightbox ---------- */
+function openLightbox(list, idx){
+  var lb = $("#lightbox");
+  if (!lb){ lb = document.createElement("div"); lb.id = "lightbox"; document.body.appendChild(lb); }
+  function show(){
+    var it = list[idx];
+    lb.innerHTML = '<div class="lb-in"><img src="'+slideSrc(it[0])+'" alt=""><div class="lb-cap">'+esc(it[1])+' <span>('+(idx+1)+'/'+list.length+')</span></div>'+
+      '<button class="lb-x" aria-label="Đóng">✕</button>'+(list.length>1?'<button class="lb-p" aria-label="Ảnh trước">‹</button><button class="lb-n" aria-label="Ảnh sau">›</button>':'')+'</div>';
+  }
+  lb.onclick = function(e){
+    if (e.target.closest(".lb-p")){ idx = (idx-1+list.length)%list.length; show(); return; }
+    if (e.target.closest(".lb-n")){ idx = (idx+1)%list.length; show(); return; }
+    if (e.target.closest(".lb-x") || e.target===lb || e.target.classList.contains("lb-in")) closeLb();
+  };
+  function key(e){ if (e.key==="Escape") closeLb(); else if (e.key==="ArrowRight" && list.length>1){ idx=(idx+1)%list.length; show(); } else if (e.key==="ArrowLeft" && list.length>1){ idx=(idx-1+list.length)%list.length; show(); } }
+  function closeLb(){ lb.classList.remove("show"); document.removeEventListener("keydown", key, true); }
+  document.addEventListener("keydown", key, true);
+  show(); lb.classList.add("show");
+}
+
+/* ---------- Mô phỏng tương tác ---------- */
+var stepTimers = [];
+function mountDemos(root){
+  stepTimers.forEach(clearInterval); stepTimers = [];
+  Array.prototype.forEach.call(root.querySelectorAll(".demo"), function(el){
+    var k = el.dataset.demo;
+    if (k==="steps") demoSteps(el, window.STEPS && window.STEPS[el.dataset.key]);
+    else if (DEMOS[k]) DEMOS[k](el);
+  });
+}
+function demoSteps(el, S){
+  if (!S) return;
+  var i = 0, playing = false, t = null;
+  el.classList.add("stepper");
+  function draw(){
+    var s = S.steps[i];
+    el.innerHTML = '<div class="demo-h">🎬 '+esc(S.title)+'</div><div class="st-grid">'+
+      (S.fig ? '<button class="fig-btn st-fig" data-zoom="'+S.fig+'" data-cap="'+esc(S.title)+'"><img loading="lazy" src="'+slideSrc(S.fig)+'" alt=""></button>' : '')+
+      '<div class="st-body"><div class="st-dots">'+S.steps.map(function(_,j){ return '<button class="st-dot '+(j<i?'done':j===i?'on':'')+'" data-go="'+j+'">'+(j+1)+'</button>'; }).join("")+'</div>'+
+      '<div class="st-card"><b>'+s.t+'</b><p>'+s.d+'</p></div>'+
+      '<div class="st-ctl"><button class="btn sm" data-a="prev" '+(i===0?'disabled':'')+'>‹ Trước</button><button class="btn sm primary" data-a="play">'+(playing?'❚❚ Tạm dừng':'▶ Tự chạy')+'</button><button class="btn sm" data-a="next" '+(i===S.steps.length-1?'disabled':'')+'>Sau ›</button></div></div></div>'+
+      '<div class="st-bar"><i style="width:'+((i+1)/S.steps.length*100)+'%"></i></div>';
+  }
+  function stop(){ playing=false; clearInterval(t); }
+  el.onclick = function(e){
+    var b = e.target.closest("button"); if (!b || b.dataset.zoom) return;
+    if (b.dataset.go){ stop(); i = +b.dataset.go; }
+    else if (b.dataset.a==="prev"){ stop(); i = Math.max(0,i-1); }
+    else if (b.dataset.a==="next"){ stop(); i = Math.min(S.steps.length-1,i+1); }
+    else if (b.dataset.a==="play"){
+      if (playing) stop();
+      else { playing = true; if (i===S.steps.length-1) i = 0;
+        t = setInterval(function(){ if (i < S.steps.length-1){ i++; draw(); } else { stop(); draw(); } }, 3200); stepTimers.push(t); }
+    }
+    draw();
+  };
+  draw();
+}
+function numList(s){ return String(s).split(/[\s,;]+/).filter(Boolean).map(Number).filter(function(x){ return !isNaN(x); }); }
+var DEMOS = {
+  reloc: function(el){
+    el.innerHTML = '<div class="demo-h">🧪 Thử tính: thanh ghi Base – Limit</div><div class="demo-row">'+
+      '<label>Base<input type="number" data-f="b" value="30000"></label><label>Limit<input type="number" data-f="l" value="12000"></label><label>Địa chỉ logic<input type="number" data-f="a" value="5000"></label></div><div class="demo-out"></div>';
+    function run(){
+      var b=+el.querySelector('[data-f=b]').value, l=+el.querySelector('[data-f=l]').value, a=+el.querySelector('[data-f=a]').value, o=el.querySelector(".demo-out");
+      o.innerHTML = (a>=0 && a<l) ? '<span class="ok-t">✔ Hợp lệ</span> vì '+a+' &lt; Limit '+l+' → địa chỉ vật lý = '+b+' + '+a+' = <b>'+(b+a)+'</b>'
+        : '<span class="bad-t">✘ Lỗi bảo vệ (trap)</span> vì địa chỉ logic '+a+(a<0?' &lt; 0':' ≥ Limit '+l)+' → HĐH báo addressing error';
+    }
+    el.oninput = run; run();
+  },
+  fit: function(el){
+    el.innerHTML = '<div class="demo-h">🧪 Mô phỏng First / Next / Best / Worst-fit</div><div class="demo-row">'+
+      '<label class="w">Các hole (K)<input data-f="h" value="100, 500, 200, 300, 600"></label><label class="w">Các yêu cầu (K)<input data-f="r" value="212, 417, 112, 426"></label></div><div class="demo-out"></div>';
+    function alloc(holes, reqs, alg){
+      holes = holes.slice(); var ptr = 0;
+      return reqs.map(function(r){
+        var idx = -1;
+        if (alg==="first"){ for (var i=0;i<holes.length;i++) if (holes[i]>=r){ idx=i; break; } }
+        else if (alg==="next"){ for (var k=0;k<holes.length;k++){ var j=(ptr+k)%holes.length; if (holes[j]>=r){ idx=j; break; } } }
+        else { holes.forEach(function(h,i){ if (h>=r && (idx<0 || (alg==="best" ? h<holes[idx] : h>holes[idx]))) idx=i; }); }
+        if (idx<0) return '<td class="bad-t">chờ</td>';
+        var before = holes[idx]; holes[idx] -= r; ptr = idx;
+        return '<td>hole '+(idx+1)+' ('+before+'K → còn '+holes[idx]+'K)</td>';
+      });
+    }
+    function run(){
+      var h=numList(el.querySelector('[data-f=h]').value), r=numList(el.querySelector('[data-f=r]').value);
+      var rows=[["first","First-fit"],["next","Next-fit"],["best","Best-fit"],["worst","Worst-fit"]].map(function(a){ return '<tr><th>'+a[1]+'</th>'+alloc(h,r,a[0]).join("")+'</tr>'; }).join("");
+      el.querySelector(".demo-out").innerHTML = '<div class="tbl-wrap"><table class="demo-t"><tr><th>Thuật toán</th>'+r.map(function(x){ return '<th>'+x+'K</th>'; }).join("")+'</tr>'+rows+'</table></div><small class="muted">Hole đánh số theo thứ tự nhập (1, 2, 3…). Phần dư của hole vẫn giữ tại chỗ.</small>';
+    }
+    el.oninput = run; run();
+  },
+  paging: function(el){
+    el.innerHTML = '<div class="demo-h">🧪 Dịch địa chỉ ảo → vật lý (phân trang)</div><div class="demo-row">'+
+      '<label>Kích thước trang<select data-f="s"><option value="1024">1 KB</option><option value="2048">2 KB</option><option value="4096" selected>4 KB</option><option value="8192">8 KB</option></select></label>'+
+      '<label>Địa chỉ ảo<input data-f="a" value="8196"></label><label class="w">Bảng trang: khung của trang 0, 1, 2… (x = không có)<input data-f="t" value="2, 1, 6, 0, 4, 3, x, x, x, 5, x, 7"></label></div><div class="demo-out"></div>';
+    function run(){
+      var s=+el.querySelector('[data-f=s]').value, raw=el.querySelector('[data-f=a]').value.trim(), a=/^0x/i.test(raw)?parseInt(raw,16):parseInt(raw,10);
+      var tbl=el.querySelector('[data-f=t]').value.split(/[\s,;]+/).filter(Boolean), o=el.querySelector(".demo-out");
+      if (isNaN(a) || a<0){ o.innerHTML='Nhập địa chỉ hợp lệ (thập phân hoặc 0x…).'; return; }
+      var p=Math.floor(a/s), d=a%s, nb=Math.log2(s), f=tbl[p];
+      var line='p = '+a+' ÷ '+s+' = <b>'+p+'</b>, d = '+a+' mod '+s+' = <b>'+d+'</b> (offset '+nb+' bit)<br>';
+      if (f===undefined || /^x$/i.test(f) || isNaN(+f)) o.innerHTML = line+'<span class="bad-t">Trang '+p+' không có trong RAM (present = 0) → LỖI TRANG</span>';
+      else o.innerHTML = line+'Bảng trang: trang '+p+' → khung <b>'+f+'</b><br>Địa chỉ vật lý = '+f+' × '+s+' + '+d+' = <b class="ok-t">'+(f*s+d)+'</b>';
+    }
+    el.oninput = run; run();
+  },
+  pagerep: function(el){
+    el.innerHTML = '<div class="demo-h">🧪 Mô phỏng thay thế trang (đếm lỗi trang)</div><div class="demo-row">'+
+      '<label class="w">Chuỗi tham chiếu<input data-f="r" value="7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1"></label><label>Số khung<input type="number" min="1" max="8" data-f="n" value="3"></label>'+
+      '<label>Thuật toán<select data-f="g"><option value="fifo">FIFO</option><option value="lru">LRU</option><option value="opt">Optimal</option></select></label></div><div class="demo-out"></div>';
+    function run(){
+      var r=numList(el.querySelector('[data-f=r]').value), n=Math.max(1,Math.min(8,+el.querySelector('[data-f=n]').value||3)), g=el.querySelector('[data-f=g]').value;
+      var fr=[], last={}, cols=[], faults=0;
+      r.forEach(function(p,i){
+        var hit = fr.indexOf(p)>=0, victim=null;
+        if (!hit){
+          faults++;
+          if (fr.length<n) fr.push(p);
+          else {
+            var vi=0;
+            if (g==="fifo") vi=0;
+            else if (g==="lru"){ fr.forEach(function(x,j){ if (last[x]<last[fr[vi]]) vi=j; }); }
+            else { var best=-1; fr.forEach(function(x,j){ var nx=r.indexOf(x,i+1); nx = nx<0?1e9:nx; if (nx>best){ best=nx; vi=j; } }); }
+            victim=fr[vi];
+            if (g==="fifo"){ fr.shift(); fr.push(p); } else fr[vi]=p;
+          }
+        }
+        last[p]=i;
+        cols.push({p:p, fr:fr.slice(), hit:hit, v:victim});
+      });
+      var head='<tr><th>Tham chiếu</th>'+cols.map(function(c){ return '<th>'+c.p+'</th>'; }).join("")+'</tr>';
+      var rows=''; for (var k=0;k<n;k++) rows+='<tr><th>Khung '+(k+1)+'</th>'+cols.map(function(c){ var v=c.fr[k]; return '<td class="'+(!c.hit && v===c.p?'new':'')+'">'+(v===undefined?'':v)+'</td>'; }).join("")+'</tr>';
+      rows+='<tr><th>Lỗi?</th>'+cols.map(function(c){ return '<td>'+(c.hit?'':'<span class="bad-t">F</span>')+'</td>'; }).join("")+'</tr>';
+      el.querySelector(".demo-out").innerHTML='<div class="tbl-wrap"><table class="demo-t pr">'+head+rows+'</table></div><div>Tổng số lỗi trang: <b class="bad-t">'+faults+'</b> / '+r.length+' tham chiếu'+(g==="fifo"?' <small class="muted">(FIFO: khung 1 luôn là trang vào sớm nhất)</small>':'')+'</div>';
+    }
+    el.oninput = run; run();
+  }
+};
 function highlight(nodes, term){
   var re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"), "gi");
   Array.prototype.forEach.call(nodes, function(n){
@@ -351,6 +501,14 @@ function bind(){
   document.addEventListener("click", function(e){
     var t = e.target.closest("button, a"); if (!t) return;
     var d = t.dataset;
+    if (d.zoom){
+      var sec = t.closest(".sum-sec"), list = [];
+      if (sec && !t.classList.contains("st-fig")) Array.prototype.forEach.call(sec.querySelectorAll(".figs .fig-btn"), function(b){ list.push([b.dataset.zoom, b.dataset.cap]); });
+      if (!list.length) list = [[d.zoom, d.cap]];
+      var idx = 0; list.forEach(function(x,i){ if (x[0]===d.zoom) idx=i; });
+      openLightbox(list, idx); return;
+    }
+    if (t.closest(".demo")) return;
     if (t.classList.contains("tab")){ var v=d.view; if (v==="quiz" && !cur()){ toast("Hãy chọn một bộ câu hỏi trước"); go("home"); return; } if (v==="quiz" && cur().submitted && state.view!=="result" && state.view!=="quiz"){ go("result"); return; } go(v); return; }
     if (d.viewGo){ go(d.viewGo); return; }
     if (d.start){ startSet(d.start); return; }

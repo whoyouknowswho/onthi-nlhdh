@@ -1,0 +1,278 @@
+/* Tổng hợp kiến thức – Chương 4: Quản lý Bộ nhớ (đầy đủ theo slide 1 → 56)
+   figs: [mã ảnh slide, chú thích]  → ảnh nằm ở assets/slides/<mã>.jpg
+   yt: từ khóa tìm video trên YouTube
+   <div class="demo" data-demo="..."> : mô phỏng tương tác do app.js dựng */
+window.SUMMARY = window.SUMMARY || [];
+window.STEPS = window.STEPS || {};
+
+window.STEPS.pagefault = {title:"Xử lý lỗi trang (6 bước – slide 31, 32)", fig:"c4-32", steps:[
+ {t:"① Tham chiếu (reference)", d:"Lệnh <b>load M</b> tham chiếu trang M. Tra bảng trang thấy bit <b>i (invalid)</b> → trang chưa có trong RAM."},
+ {t:"② Bẫy (trap) về HĐH", d:"Phần cứng phát sinh <b>lỗi trang</b> (page fault) và chuyển quyền điều khiển cho hệ điều hành."},
+ {t:"③ Trang nằm trên backing store", d:"HĐH xác định vị trí trang trên đĩa và tìm (hoặc tạo) một <b>khung trang trống</b> – nếu cần thì sao lưu trang cũ ra đĩa."},
+ {t:"④ Nạp trang thiếu (bring in missing page)", d:"Swap trang từ đĩa vào <b>free frame</b> vừa được giải phóng trong bộ nhớ vật lý."},
+ {t:"⑤ Cập nhật bảng trang (reset page table)", d:"Ghi số khung mới vào bảng trang, đặt bit = <b>v (valid)</b>."},
+ {t:"⑥ Khởi động lại lệnh (restart instruction)", d:"Lệnh gây lỗi được chạy lại – lần này trang đã có trong RAM nên truy cập thành công."}
+]};
+window.STEPS.replace = {title:"Thay thế trang khi không còn khung trống (slide 34, 35)", fig:"c4-35", steps:[
+ {t:"1. Tìm vị trí trang trên đĩa", d:"Xác định trang cần nạp đang nằm ở đâu trên đĩa."},
+ {t:"2. Tìm khung trang free", d:"Có khung free → dùng luôn. Không có → phải thay thế một trang."},
+ {t:"3. Chọn khung nạn nhân (victim)", d:"Thuật toán thay thế trang chọn victim. <b>①</b> swap out victim ra đĩa (nếu bị sửa) và <b>②</b> đổi entry của nó thành <b>invalid</b>."},
+ {t:"4. Nạp trang mới & cập nhật bảng trang", d:"<b>③</b> swap trang cần dùng vào khung vừa trống, <b>④</b> reset bảng trang cho trang mới (bit v)."},
+ {t:"5. Khởi động lại tiến trình", d:"Tiến trình tiếp tục chạy từ lệnh bị lỗi."}
+]};
+window.STEPS.fault10 = {title:"Điều khiển lỗi trang – 10 bước chi tiết (slide 38, 39)", steps:[
+ {t:"1. Phần cứng bẫy lỗi đến kernel", d:"Lưu PC (program counter) lên stack."},
+ {t:"2. Các thanh ghi được lưu lại", d:"Lưu trạng thái tiến trình để sau còn khôi phục."},
+ {t:"3. HĐH xác định trang lỗi", d:"Tìm xem địa chỉ ảo nào gây lỗi."},
+ {t:"4. HĐH kiểm tra các khung trang có thể thay thế", d:"Kiểm tra địa chỉ hợp lệ, chọn khung (free hoặc victim)."},
+ {t:"5. Khung bị sửa → ghi ra đĩa", d:"Nếu khung có chỉnh sửa (dirty) thì phải ghi trang đó ra đĩa để cập nhật dữ liệu."},
+ {t:"6. HĐH nạp trang mới từ đĩa vào", d:"Đọc trang cần dùng vào khung."},
+ {t:"7. Cập nhật lại bảng trang", d:"Đánh dấu trang đã có mặt (present)."},
+ {t:"8. Khởi động lại lệnh gây ra lỗi", d:"Đưa PC về lệnh gây lỗi."},
+ {t:"9. Tiến trình lỗi được lên lịch", d:"Bộ lập lịch cho tiến trình chạy lại."},
+ {t:"10. Phục hồi các thanh ghi, chương trình tiếp tục", d:"Tiến trình chạy tiếp như chưa có gì xảy ra."}
+]};
+window.STEPS.pentium = {title:"Dịch địa chỉ trên Pentium (slide 48 → 55)", fig:"c4-53", steps:[
+ {t:"1. Cặp (selector, offset)", d:"Chương trình phát ra địa chỉ gồm <b>selector 16 bit</b> và <b>offset</b>."},
+ {t:"2. Chọn bảng mô tả", d:"Bit TI của selector: <b>0 → GDT</b> (Global), <b>1 → LDT</b> (Local). Index 13 bit chọn descriptor."},
+ {t:"3. Lấy descriptor", d:"Descriptor chứa <b>Base</b> (32 bit), <b>Limit</b> (20 bit) và các cờ G, D, P, DPL, S, Type."},
+ {t:"4. Base + Offset = địa chỉ tuyến tính", d:"Kiểm tra offset ≤ Limit rồi cộng → <b>32-bit linear address</b> (không gian 4 GB)."},
+ {t:"5. Phân trang 2 mức", d:"Linear address = <b>Dir (10) | Page (10) | Offset (12)</b>. Dir chọn entry trong page directory (1024 entry) → trỏ tới page table."},
+ {t:"6. Địa chỉ vật lý", d:"Entry trong page table trỏ tới page frame; Offset chọn đúng word trong frame."}
+]};
+
+window.SUMMARY.push({
+ch:4, title:"Quản lý Bộ nhớ", en:"Memory Management",
+intro:"Nội dung: <b>4.1 Quản lý bộ nhớ cơ bản · 4.2 Swapping · 4.3 Bộ nhớ ảo · 4.4 Cách thực hiện · 4.5 Phân đoạn</b>. Câu hỏi xuyên suốt: HĐH chia RAM cho nhiều tiến trình thế nào để <b>an toàn</b> (không đè nhau), <b>tận dụng tối đa</b> và chạy được chương trình <b>lớn hơn cả RAM</b>.",
+sections:[
+{id:"s4-1",title:"1. Phân cấp bộ nhớ & hai loại địa chỉ",
+ figs:[],
+ yt:"memory hierarchy operating system logical vs physical address",
+ html:`
+<p>Người lập trình mong muốn bộ nhớ lý tưởng: <b>dung lượng lớn – nhanh – ổn định</b>. Không loại bộ nhớ nào đáp ứng đủ cả 3 → phải <b>phân cấp bộ nhớ</b>:</p>
+<div class="flow"><span>Cache<small>ít · nhanh · đắt</small></span><i>→</i><span>Bộ nhớ chính (RAM)<small>tốc độ & giá trung bình</small></span><i>→</i><span>Đĩa<small>hàng GB · chậm · rẻ</small></span></div>
+<p><b>Memory manager</b> (bộ quản lý bộ nhớ) là phần HĐH điều khiển phân cấp này.</p>
+<table><tr><th>Loại địa chỉ</th><th>Ai sinh ra / ai thấy</th><th>Ghi nhớ</th></tr>
+<tr><td><b>Logical address</b> (địa chỉ logic)</td><td>Do <b>CPU sinh ra</b>; cũng gọi là <b>địa chỉ ảo (virtual address)</b></td><td>“Địa chỉ chương trình nhìn thấy”</td></tr>
+<tr><td><b>Physical address</b> (địa chỉ vật lý)</td><td>Địa chỉ mà <b>bộ nhớ vật lý</b> nhìn thấy</td><td>“Địa chỉ thật trên RAM”</td></tr></table>
+<div class="tip"><b>Ý chính cả chương:</b> khái niệm không gian địa chỉ logic bị ràng buộc vào không gian địa chỉ vật lý là <b>vấn đề chính của quản lý bộ nhớ</b>. Base/limit, phân trang, phân đoạn… đều là các cách <b>ánh xạ logic → vật lý</b>.</div>`},
+{id:"s4-2",title:"2. Đơn nhiệm & đa nhiệm với phân vùng cố định",
+ figs:[["c4-05","Slide 5 – 3 cách tổ chức bộ nhớ đơn nhiệm"],["c4-06","Slide 6 – Phân vùng cố định: (a) nhiều hàng đợi, (b) một hàng đợi"]],
+ yt:"fixed partition memory management multiple input queues",
+ html:`
+<p><b>Đơn nhiệm (không Swapping/Paging)</b>: chỉ có <b>1 HĐH + 1 tiến trình user</b>. Ba cách bố trí:</p>
+<table><tr><th>Cách</th><th>Bố trí (từ địa chỉ 0 lên 0xFFF…)</th><th>Ví dụ thực tế</th></tr>
+<tr><td>(a)</td><td>HĐH ở RAM (dưới) – User program (trên)</td><td>Máy mainframe/mini đời đầu</td></tr>
+<tr><td>(b)</td><td>User program (dưới) – HĐH ở ROM (trên)</td><td>Máy cầm tay, hệ nhúng</td></tr>
+<tr><td>(c)</td><td>HĐH ở RAM (dưới) – User program – Device drivers ở ROM (trên)</td><td>PC thời MS-DOS (BIOS trong ROM)</td></tr></table>
+<p><b>Đa nhiệm với phân vùng cố định (Fixed Partitions)</b>: RAM chia sẵn thành các phân vùng kích thước cố định. Ví dụ slide: OS 0–100K · P1 100–200K · P2 200–400K · P3 400–700K · P4 700–800K.</p>
+<ul><li><b>(a) Nhiều hàng đợi vào</b>: mỗi phân vùng một hàng đợi → có lúc phân vùng lớn bỏ trống trong khi hàng đợi phân vùng nhỏ rất dài.</li>
+<li><b>(b) Một hàng đợi vào chung</b>: phân vùng nào trống thì lấy job phù hợp trong hàng đợi chung.</li>
+<li>Nhược điểm chung: <b>phân mảnh nội</b> (job nhỏ chiếm phân vùng lớn, phần dư bỏ phí).</li></ul>`},
+{id:"s4-3",title:"3. Tái cấp phát & bảo vệ (Relocation – Base/Limit)",
+ figs:[["c4-07","Slide 7 – Tái cấp phát động bằng thanh ghi relocation: 14000 + 346 = 14346"],["c4-10","Slide 10 – Bảo vệ địa chỉ bằng phần cứng base & limit"]],
+ yt:"base and limit registers relocation register MMU",
+ html:`
+<p><b>Vì sao cần?</b> Không chắc chắn chương trình được tải vào chỗ nào trong bộ nhớ:</p>
+<ul><li>Địa chỉ cấp phát cho các biến, cho đoạn code <b>có thể thay đổi</b> → cần <b>tái cấp phát (relocation)</b>.</li>
+<li>Cần giữ cho chương trình <b>nằm ngoài các phân vùng của tiến trình khác</b> → cần <b>bảo vệ (protection)</b>.</li></ul>
+<p><b>Giải pháp: dùng giá trị base và limit</b></p>
+<ul><li>Địa chỉ được <b>cộng với base</b> để ra địa chỉ vật lý.</li>
+<li>Địa chỉ <b>lớn hơn limit</b> là <b>lỗi</b>.</li>
+<li><b>Base register</b> chứa địa chỉ vật lý <b>nhỏ nhất</b>; <b>Limit register</b> chứa <b>phạm vi</b> địa chỉ logic – mỗi địa chỉ logic phải <b>nhỏ hơn limit</b>.</li>
+<li>Thanh ghi relocation bảo vệ các tiến trình user <b>khỏi nhau</b> và <b>khỏi việc sửa code/data của HĐH</b>.</li>
+<li><b>MMU</b> ánh xạ địa chỉ logic <b>một cách động</b> (lúc chạy).</li></ul>
+<div class="formula">Kiểm tra (slide 10): <b>base ≤ address &lt; base + limit</b> → cho truy cập bộ nhớ<br>Sai một trong hai điều kiện → <b>trap to operating system – addressing error</b></div>
+<div class="ex"><b>Ví dụ slide 7:</b> relocation register = 14000, CPU phát địa chỉ logic 346 → MMU cộng → địa chỉ vật lý <b>14346</b>.<br><b>Ví dụ tự luyện:</b> Base = 30000, Limit = 12000: logic 5000 → 35000 ✔; logic 13000 → lỗi vì 13000 ≥ 12000.</div>
+<div class="demo" data-demo="reloc"></div>`},
+{id:"s4-4",title:"4. Swapping & phân mảnh",
+ figs:[["c4-11","Slide 11 – Lược đồ swapping: ① swap out P1, ② swap in P2"],["c4-12","Slide 12 – Bộ nhớ thay đổi theo thời gian khi tiến trình đến/đi"],["c4-13","Slide 13 – Chừa chỗ cho data (a) và stack & data (b) phát triển"]],
+ yt:"swapping operating system external internal fragmentation",
+ html:`
+<p><b>Swapping</b>: đưa <b>toàn bộ</b> tiến trình từ bộ nhớ chính ra <b>backing store</b> (đĩa) – <b>swap out</b> – và nạp tiến trình khác vào – <b>swap in</b>.</p>
+<ul><li>Cấp phát bộ nhớ <b>thay đổi</b> khi tiến trình đến bộ nhớ và khi rời khỏi bộ nhớ (hình (a)→(g): A, B, C vào; A ra; D vào; B ra; A vào lại ở chỗ khác).</li>
+<li>Các vùng <b>gạch chéo</b> là chưa sử dụng.</li></ul>
+<table><tr><th>Loại phân mảnh</th><th>Định nghĩa (slide)</th><th>Hay gặp ở</th></tr>
+<tr><td><b>External Fragmentation</b> – phân mảnh ngoài</td><td>Tổng không gian trống <b>đủ</b> cấp cho một tiến trình nhưng lại nằm <b>rải rác, không liên tục</b></td><td>Phân vùng động, phân đoạn, cấp phát file liên tục</td></tr>
+<tr><td><b>Internal Fragmentation</b> – phân mảnh nội</td><td>Vùng nhớ cấp phát <b>lớn hơn</b> vùng nhớ yêu cầu (do kích thước phân vùng ≠ kích thước yêu cầu); free nhưng không được dùng</td><td>Phân vùng cố định, phân trang (trang cuối)</td></tr></table>
+<p><b>Chừa chỗ để phát triển</b> (slide 13): (a) cấp thêm vùng cho <b>đoạn data</b> tăng lên; (b) cấp vùng ở giữa để <b>stack</b> (tăng xuống) và <b>data</b> (tăng lên) cùng phát triển.</p>`},
+{id:"s4-5",title:"5. Phân vùng động: Bit Map, Linked List & thuật toán cấp phát",
+ figs:[["c4-15","Slide 15 – (a) bộ nhớ 5 tiến trình 3 hole, (b) bit map, (c) danh sách liên kết"]],
+ yt:"first fit best fit worst fit next fit memory allocation",
+ html:`
+<ul><li><b>Hole</b> – block trống của bộ nhớ; các hole có kích thước khác nhau, nằm rải rác khắp bộ nhớ.</li>
+<li>Khi tiến trình đến, nó được cấp phát từ một hole <b>đủ lớn</b> phù hợp.</li>
+<li>HĐH quản lý: (a) các phân vùng <b>đã cấp</b> (allocated partitions); (b) các phân vùng <b>free</b> (holes).</li>
+<li>Hai cách quản lý: <b>Bit Maps</b> và <b>Linked Lists</b>.</li></ul>
+<table><tr><th></th><th>Bit Map</th><th>Linked List</th></tr>
+<tr><td>Cách làm</td><td>Bộ nhớ chia thành các <b>allocation unit</b> (vạch chia trong hình); mỗi unit ↔ 1 bit (1 = đã dùng, 0 = trống)</td><td>Mỗi phần tử: <b>P</b> (process) hoặc <b>H</b> (hole) · địa chỉ bắt đầu · độ dài</td></tr>
+<tr><td>Ví dụ slide</td><td>Byte đầu <b>11111000</b>: unit 0–4 của A đã dùng, 5–7 trống</td><td>P0 5 → H5 3 → P8 6 → P14 4 → <b>H18 2</b> → P20 6 → P26 3 → H29 3</td></tr></table>
+<p><b>Làm thế nào thỏa mãn yêu cầu kích thước n từ danh sách vùng trống?</b></p>
+<table><tr><th>Thuật toán</th><th>Chọn hole nào?</th><th>Duyệt toàn bộ DS?</th></tr>
+<tr><td><b>First-fit</b></td><td>Vùng free <b>đầu tiên</b> đủ lớn</td><td>Không</td></tr>
+<tr><td><b>Next-fit</b></td><td>Bắt đầu tìm từ <b>vị trí con trỏ hiện hành</b>, lấy vùng đầu tiên đủ lớn</td><td>Không</td></tr>
+<tr><td><b>Best-fit</b></td><td>Vùng free <b>nhỏ nhất</b> nhưng đủ lớn</td><td><b>Có</b></td></tr>
+<tr><td><b>Worst-fit</b></td><td>Vùng free <b>lớn nhất</b></td><td><b>Có</b></td></tr></table>
+<div class="ex"><b>Ví dụ kinh điển:</b> hole 100K, 500K, 200K, 300K, 600K; yêu cầu lần lượt 212K, 417K, 112K, 426K.<br>First-fit: 212→500, 417→600, 112→288(còn lại), <b>426 phải chờ</b>. Best-fit: 212→300, 417→500, 112→200, 426→600 (<b>đủ cả 4</b>). Worst-fit: 212→600, 417→500, 112→388, <b>426 phải chờ</b>.</div>
+<div class="demo" data-demo="fit"></div>`},
+{id:"s4-6",title:"6. Bộ nhớ ảo & phân trang (Paging)",
+ figs:[["c4-20","Slide 20 – Bộ nhớ ảo lớn hơn bộ nhớ vật lý: memory map + đĩa"],["c4-21","Slide 21 – Ví dụ: không gian ảo 64K, bộ nhớ vật lý 32K, trang 4K"],["c4-22","Slide 22 – Vị trí và chức năng của MMU"]],
+ yt:"virtual memory paging explained pages frames",
+ html:`
+<p><b>Bộ nhớ ảo (Virtual memory)</b> – tách bộ nhớ logic của user khỏi bộ nhớ vật lý:</p>
+<ul><li>Chỉ <b>một phần</b> của chương trình được nạp vào bộ nhớ khi thực thi.</li>
+<li>Không gian địa chỉ logic có thể <b>lớn hơn nhiều</b> không gian vật lý.</li>
+<li>Cho phép không gian vật lý được <b>chia sẻ</b> cho nhiều tiến trình; cho phép tạo <b>nhiều tiến trình hơn</b>.</li>
+<li>Thực hiện qua: <b>Phân trang (paging)</b> và <b>Phân đoạn (segmentation)</b>.</li></ul>
+<p><b>Phân trang:</b></p>
+<ul><li>Không gian địa chỉ ảo của tiến trình có thể <b>không liên tục</b> trong bộ nhớ; tiến trình được cấp RAM ở bất kỳ đâu có vùng free.</li>
+<li>Bộ nhớ <b>logic</b> chia thành các block gọi là <b>trang (pages)</b>; bộ nhớ <b>vật lý</b> chia thành <b>khung trang (page frames)</b>.</li>
+<li><b>1 trang = 1 khung trang</b> (từ 512 bytes đến 8.192 bytes). HĐH theo dõi mọi khung free.</li>
+<li>Chạy chương trình <b>n trang</b> → tìm <b>n khung free</b> và tải chương trình vào.</li>
+<li>Thiết lập <b>bảng trang (page table)</b> để chuyển địa chỉ logic → vật lý.</li>
+<li>Chỉ có <b>phân mảnh nội</b> (trang cuối không dùng hết).</li></ul>
+<p><b>Ví dụ slide 21:</b> 16 trang ảo × 4K (0–64K) nhưng chỉ có 8 khung vật lý (0–32K). Trang 0 (0K–4K) → khung 2, trang 1 → khung 1, trang 2 → khung 6, trang 3 → khung 0, trang 4 → khung 4, trang 5 → khung 3, trang 9 → khung 5, trang 11 → khung 7; các trang đánh <b>X</b> chưa có trong RAM.</p>
+<p><b>MMU</b> (Memory Management Unit) nằm trong gói CPU: <b>CPU gửi địa chỉ ảo cho MMU → MMU gửi địa chỉ vật lý</b> ra bus tới bộ nhớ.</p>`},
+{id:"s4-7",title:"7. Chuyển đổi địa chỉ & bảng trang",
+ figs:[["c4-23","Slide 23 – Lược đồ chuyển đổi địa chỉ (p, d)"],["c4-24","Slide 24 – Một entry (hàng) của bảng trang"],["c4-25","Slide 25 – Paging hardware"],["c4-26","Slide 26 – Ví dụ 16 trang × 4KB: địa chỉ ảo 8196 → 24580"]],
+ yt:"paging address translation page number offset page table entry",
+ html:`
+<p>Địa chỉ do CPU sinh ra được chia thành:</p>
+<div class="addr"><div style="flex:2">p – page number<small>m − n bit</small></div><div style="flex:1.3">d – page offset<small>n bit</small></div></div>
+<ul><li><b>Số trang ảo (p)</b> – dùng làm chỉ số trong <b>bảng trang</b>, nơi chứa địa chỉ cơ sở (số khung f) của mỗi trang trong bộ nhớ vật lý.</li>
+<li><b>Page offset (d)</b> – địa chỉ tương đối tính từ đầu trang, ghép với địa chỉ cơ sở thành địa chỉ vật lý do MMU gửi đi.</li>
+<li>Không gian logic <b>2<sup>m</sup></b>, kích thước trang <b>2<sup>n</sup></b>.</li></ul>
+<div class="formula">p = địa chỉ ÷ kích thước trang · d = địa chỉ mod kích thước trang<br><b>Địa chỉ vật lý = f × kích thước trang + d</b> &nbsp;(trong hệ nhị phân: ghép f và d)</div>
+<p><b>Một entry bảng trang</b>: <span class="chip">Caching disabled</span> <span class="chip">Referenced</span> <span class="chip">Modified</span> <span class="chip">Protection</span> <span class="chip">Present/absent</span> <span class="chip">Page frame number</span></p>
+<table><tr><th>Trường</th><th>Ý nghĩa</th></tr>
+<tr><td>Page frame number</td><td>Số khung chứa trang – mục đích chính của entry</td></tr>
+<tr><td>Present/absent</td><td>1 = trang đang ở RAM; 0 = không có → truy cập gây <b>lỗi trang</b></td></tr>
+<tr><td>Protection</td><td>Quyền truy cập (đọc / ghi / thực thi)</td></tr>
+<tr><td>Modified (dirty)</td><td>Trang đã bị ghi → khi thay thế phải ghi ra đĩa</td></tr>
+<tr><td>Referenced</td><td>Trang vừa được truy cập → hỗ trợ thuật toán thay thế trang</td></tr>
+<tr><td>Caching disabled</td><td>Không cache trang này (dùng cho thanh ghi thiết bị ánh xạ bộ nhớ)</td></tr></table>
+<div class="ex"><b>Ví dụ slide 26</b> (16 trang × 4 KB, địa chỉ 16 bit = 4 bit trang + 12 bit offset): địa chỉ ảo <b>8196</b> = 0010 000000000100 → trang <b>2</b>, offset 4 → bảng trang: trang 2 → khung <b>110</b> (= 6), present = 1 → địa chỉ vật lý 110 000000000100 = <b>24580</b>. 12 bit offset được chép thẳng.</div>
+<div class="demo" data-demo="paging"></div>`},
+{id:"s4-8",title:"8. Bảng trang 2 mức, PTBR/PRLR & TLB",
+ figs:[["c4-27","Slide 27 – Bảng trang 2 mức: PT1 10 bit, PT2 10 bit, Offset 12 bit"],["c4-29","Slide 29 – Phân trang với TLB (TLB hit / TLB miss)"],["c4-30","Slide 30 – Ví dụ nội dung TLB"]],
+ yt:"two level page table TLB translation lookaside buffer",
+ html:`
+<p><b>Bảng trang 2 mức</b> (địa chỉ 32 bit với 2 trường bảng trang):</p>
+<div class="addr"><div>PT1<small>10 bit</small></div><div>PT2<small>10 bit</small></div><div>Offset<small>12 bit</small></div></div>
+<ul><li>PT1 chọn entry trong <b>top-level page table</b> (1024 entry) → trỏ tới một <b>second-level page table</b>.</li>
+<li>Mỗi bảng mức 2 có 1024 entry × trang 4 KB = quản lý <b>4 MB</b>.</li>
+<li>Lợi ích: chỉ cần tạo bảng mức 2 cho vùng thực sự dùng → <b>tiết kiệm bộ nhớ</b> cho bảng trang.</li></ul>
+<div class="ex">0x00403004 → PT1 = 1, PT2 = 3, Offset = 4. &nbsp;32 bit, trang 4 KB (1 mức) → 2<sup>20</sup> entry.</div>
+<p><b>Thực hiện bảng trang:</b></p>
+<ul><li>Bảng trang được giữ <b>trong bộ nhớ</b>.</li>
+<li><b>PTBR</b> (Page-table base register) <b>trỏ đến</b> bảng trang; <b>PRLR</b> (Page-table length register) chỉ ra <b>kích thước</b> bảng trang.</li>
+<li>Mỗi lần truy cập data/instruction cần <b>2 lần truy cập bộ nhớ</b>: một lần đến bảng trang, một lần đến data/instruction.</li>
+<li>Giải pháp: cache phần cứng đặc biệt gọi là <b>bộ nhớ kết hợp (associative memory)</b> hay <b>TLB – Translation Look-aside Buffer</b>.</li></ul>
+<p><b>Phân trang với TLB:</b> CPU tách (p, d) → tra p trong TLB (so sánh song song mọi entry). <b>TLB hit</b> → có ngay f. <b>TLB miss</b> → tra page table để lấy f (và nạp vào TLB). Ghép f với d → địa chỉ vật lý.</p>
+<p><b>Entry TLB</b> (slide 30): Valid · Virtual page · Modified · Protection · Page frame. Ví dụ: trang 140 → khung 31 (RW, modified); các trang 19, 20, 21 có quyền <b>R X</b> (trang code) nên Modified = 0.</p>`},
+{id:"s4-9",title:"9. Lỗi trang & thay thế trang",
+ figs:[["c4-32","Slide 32 – Các bước điều khiển lỗi trang"],["c4-35","Slide 35 – Thay thế trang: swap out victim, swap in trang mới"]],
+ yt:"page fault handling steps operating system",
+ html:`
+<p><b>Lỗi trang (page fault)</b>: tham chiếu đến một trang chưa được nạp vào bộ nhớ.</p>
+<ol class="steps"><li>Tham chiếu trang chưa nạp → <b>lỗi trang</b></li><li><b>Bẫy (trap)</b> đến hệ điều hành</li><li>Tạo một khung trang trống, sao lưu trang</li><li>Swap trang từ đĩa vào khung vừa được tự do</li><li>Chỉnh sửa bảng trang, thiết lập bit = <b>v</b></li><li>Khởi động lại lệnh gây ra lỗi trang</li></ol>
+<div class="demo" data-demo="steps" data-key="pagefault"></div>
+<p><b>Thay thế trang</b> – điều gì xảy ra nếu không có khung trang free? Tìm trang trong bộ nhớ <b>thực sự chưa cần dùng</b>, swap nó ra đĩa.</p>
+<ul><li>Cần một <b>thuật toán</b>; thuật toán hiệu quả là thuật toán làm cho <b>số lần lỗi trang càng ít càng tốt</b>.</li>
+<li>Cùng một trang có thể bị mang vào bộ nhớ <b>nhiều lần</b>.</li></ul>
+<p><b>Các bước thay thế trang:</b> 1. Tìm vị trí trang trên đĩa → 2. Tìm khung free (có thì dùng, không có thì thay thế) → 3. Thuật toán chọn <b>khung nạn nhân (victim)</b> → 4. Mang trang vào khung free, cập nhật bảng trang → 5. Khởi động lại tiến trình.</p>
+<div class="demo" data-demo="steps" data-key="replace"></div>`},
+{id:"s4-10",title:"10. Các thuật toán thay thế trang",
+ figs:[["c4-36","Slide 36 – Bảng tổng kết các thuật toán thay thế trang"]],
+ yt:"page replacement algorithms FIFO LRU optimal example",
+ html:`
+<table><tr><th>Thuật toán</th><th>Ý tưởng</th><th>Nhận xét (slide)</th></tr>
+<tr><td><b>Optimal</b></td><td>Thay trang sẽ <b>lâu nhất mới được dùng lại</b> (nhìn tương lai)</td><td>Không cài đặt được, dùng làm <b>chuẩn so sánh</b></td></tr>
+<tr><td><b>NRU</b> (Not Recently Used)</td><td>Chia trang theo bit R, M thành 4 lớp; bỏ trang ở lớp thấp nhất</td><td>Rất thô (very crude)</td></tr>
+<tr><td><b>FIFO</b></td><td>Bỏ trang <b>vào sớm nhất</b></td><td>Có thể loại bỏ trang quan trọng</td></tr>
+<tr><td><b>Second chance</b></td><td>FIFO nhưng trang có R = 1 được “cơ hội thứ hai” (xóa R, đưa xuống cuối)</td><td>Cải tiến lớn so với FIFO</td></tr>
+<tr><td><b>Clock</b></td><td>Second chance cài bằng danh sách vòng + kim đồng hồ</td><td>Thực tế (realistic)</td></tr>
+<tr><td><b>LRU</b> (Least Recently Used)</td><td>Bỏ trang <b>lâu nhất chưa được dùng</b> (nhìn quá khứ)</td><td>Rất tốt nhưng <b>khó cài đặt chính xác</b></td></tr>
+<tr><td><b>NFU</b> (Not Frequently Used)</td><td>Đếm số lần được tham chiếu, bỏ trang đếm ít nhất</td><td>Xấp xỉ LRU khá thô</td></tr>
+<tr><td><b>Aging</b></td><td>NFU có “lão hóa”: dịch phải bộ đếm rồi thêm bit R vào bên trái</td><td><b>Xấp xỉ LRU tốt</b>, hiệu quả</td></tr>
+<tr><td><b>Working set</b></td><td>Giữ tập trang tiến trình đang dùng gần đây</td><td>Hơi tốn kém để cài đặt</td></tr>
+<tr><td><b>WSClock</b></td><td>Working set + Clock</td><td>Thuật toán hiệu quả tốt</td></tr></table>
+<div class="ex"><b>Bài tập kinh điển</b> – chuỗi 7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1:<br>3 khung: FIFO <b>15</b> · LRU <b>12</b> · Optimal <b>9</b> lỗi trang. &nbsp;4 khung: FIFO 10 · LRU 8 · Optimal 8.<br><b>Nghịch lý Belady</b> (chỉ ở FIFO): chuỗi 1 2 3 4 1 2 5 1 2 3 4 5 → 3 khung 9 lỗi, 4 khung lại <b>10</b> lỗi.</div>
+<div class="tip"><b>Mẹo làm bài:</b> FIFO bỏ trang <i>vào sớm nhất</i> · LRU bỏ trang <i>lâu nhất chưa dùng</i> (nhìn sang trái) · OPT bỏ trang <i>lâu nhất mới dùng lại</i> (nhìn sang phải, trang không bao giờ dùng lại thì bỏ trước).</div>
+<div class="demo" data-demo="pagerep"></div>`},
+{id:"s4-11",title:"11. Cách thực hiện phân trang trong HĐH",
+ figs:[["c4-41","Slide 41 – Backing store: (a) vùng swap tĩnh, (b) sao lưu trang động"],["c4-42","Slide 42 – Tách biệt chính sách và cơ chế: external pager"]],
+ yt:"operating system involvement with paging page fault handling",
+ html:`
+<table><tr><th>4 thời điểm HĐH tham gia vào phân trang</th><th>Việc phải làm</th></tr>
+<tr><td>1. Khởi tạo tiến trình</td><td>Xác định kích thước (chương trình, trang); khởi tạo bảng trang</td></tr>
+<tr><td>2. Tiến trình thực thi</td><td>MMU thiết lập lại cho tiến trình mới; <b>giải phóng (flush) TLB</b></td></tr>
+<tr><td>3. Thời điểm lỗi trang</td><td>Xác định địa chỉ ảo gây lỗi; thay thế trang</td></tr>
+<tr><td>4. Tiến trình kết thúc</td><td>Giải phóng page table, pages</td></tr></table>
+<div class="demo" data-demo="steps" data-key="fault10"></div>
+<p><b>Khóa các trang trong bộ nhớ (pinning):</b> đôi khi có tương tác giữa bộ nhớ ảo và I/O. Tiến trình yêu cầu đọc từ thiết bị vào <b>buffer</b>; trong khi chờ I/O, tiến trình khác chạy và gây lỗi trang → buffer của tiến trình thứ nhất <b>có thể bị chọn để đưa ra</b>. Vì vậy phải chỉ rõ một số trang để <b>khóa</b> – được miễn khỏi việc chọn làm trang đích.</p>
+<p><b>Kho sao lưu (Backing Store):</b></p>
+<ul><li>(a) <b>Phân trang đến vùng swap tĩnh</b>: mỗi trang có chỗ cố định trong swap area (bảng trang trỏ thẳng tới vị trí trên đĩa).</li>
+<li>(b) <b>Sao lưu các trang động</b>: trang chỉ được cấp chỗ trên đĩa khi bị swap ra; cần thêm <b>disk map</b> để biết trang nằm đâu.</li></ul>
+<p><b>Tách biệt chính sách và cơ chế</b> – điều khiển lỗi trang với <b>external pager</b> (chạy ở user space):</p>
+<ol class="steps"><li>User process gây <b>page fault</b> (vào kernel)</li><li>Fault handler báo <b>needed page</b> cho external pager</li><li>External pager <b>request page</b> từ đĩa</li><li><b>Page arrives</b></li><li>External pager trả về: <b>here is page</b></li><li>Fault handler bảo MMU handler <b>map page in</b></li></ol>
+<p>→ <b>Cơ chế</b> (MMU handler, fault handler) nằm trong kernel; <b>chính sách</b> (chọn trang nào…) đặt ở external pager.</p>`},
+{id:"s4-12",title:"12. Phân đoạn (Segmentation)",
+ figs:[["c4-44","Slide 44 – Không gian 1 chiều: symbol table đụng vào source text"],["c4-45","Slide 45 – Mỗi segment tăng/co độc lập"],["c4-46","Slide 46 – So sánh phân trang và phân đoạn"],["c4-47","Slide 47 – Checkerboarding và nén (compaction)"]],
+ yt:"segmentation vs paging operating system checkerboarding",
+ html:`
+<p><b>Vấn đề:</b> trong không gian địa chỉ <b>một chiều</b>, các bảng của trình biên dịch (symbol table, source text, constant table, parse tree, call stack) cùng phát triển → <b>một bảng có thể chạm đến bảng khác</b> (symbol table đụng source text) dù chỗ khác còn trống.</p>
+<p><b>Phân đoạn</b>: mỗi bảng là một <b>segment</b> – một không gian địa chỉ độc lập (0 → kích thước riêng), <b>tăng lên hoặc co lại độc lập</b>. Địa chỉ = (số segment, offset).</p>
+<table><tr><th>Tiêu chí</th><th>Phân trang</th><th>Phân đoạn</th></tr>
+<tr><td>Lập trình viên cần biết kỹ thuật này?</td><td>Không</td><td>Có</td></tr>
+<tr><td>Số không gian địa chỉ tuyến tính</td><td>1</td><td>Nhiều</td></tr>
+<tr><td>Tổng không gian vượt bộ nhớ vật lý?</td><td>Có</td><td>Có</td></tr>
+<tr><td>Thủ tục & dữ liệu tách và bảo vệ riêng?</td><td>Không</td><td>Có</td></tr>
+<tr><td>Dễ chứa bảng có kích thước thay đổi?</td><td>Không</td><td>Có</td></tr>
+<tr><td>Dễ chia sẻ thủ tục giữa người dùng?</td><td>Không</td><td>Có</td></tr>
+<tr><td>Mục đích ra đời</td><td>Có không gian tuyến tính lớn mà <b>không phải mua thêm RAM</b></td><td>Chia chương trình & dữ liệu thành các không gian <b>logic độc lập</b>, hỗ trợ <b>chia sẻ và bảo vệ</b></td></tr></table>
+<p><b>Thực hiện phân đoạn thuần túy:</b> (a)–(d) các segment kích thước khác nhau vào/ra để lại các lỗ trống xen kẽ → <b>checkerboarding</b> (thực chất là phân mảnh ngoài). (e) Loại bỏ bằng cách <b>nén (compaction)</b>: hole 3K + 4K + 3K gom thành một vùng trống <b>10K</b>.</p>`},
+{id:"s4-13",title:"13. Phân đoạn kết hợp phân trang: Pentium",
+ figs:[["c4-48","Slide 48 – Selector + Offset → Segmentation → Linear → Paging → Physical"],["c4-49","Slide 49 – Pentium selector"],["c4-50","Slide 50 – Chọn LDT hoặc GDT theo bit selector"],["c4-51","Slide 51 – Bộ mô tả đoạn code (descriptor)"],["c4-54","Slide 54 – Ánh xạ địa chỉ tuyến tính thành địa chỉ vật lý"],["c4-56","Slide 56 – 4 mức bảo vệ trên Pentium"]],
+ yt:"intel pentium segmentation paging GDT LDT selector descriptor",
+ html:`
+<div class="flow"><span>Selector + Offset</span><i>→</i><span>Segmentation mechanism</span><i>→</i><span>Linear address</span><i>→</i><span>Paging mechanism</span><i>→</i><span>Physical address</span></div>
+<p><b>Selector (16 bit):</b></p>
+<div class="addr"><div style="flex:6">Index<small>13 bit</small></div><div style="flex:2">TI<small>1 bit: 0 = GDT / 1 = LDT</small></div><div style="flex:2.5">RPL<small>2 bit: mức 0–3</small></div></div>
+<ul><li><b>GDT</b> (Global Descriptor Table) – dùng chung cho cả hệ thống (thanh ghi <b>GDTR</b>); <b>LDT</b> (Local Descriptor Table) – riêng từng chương trình (thanh ghi <b>LDTR</b>).</li>
+<li>Index 13 bit → mỗi bảng tối đa <b>8192</b> descriptor.</li></ul>
+<p><b>Descriptor (8 byte)</b> – mô tả đoạn code (đoạn data hơi khác):</p>
+<table><tr><th>Trường</th><th>Ý nghĩa</th></tr>
+<tr><td>Base 0–15, 16–23, 24–31</td><td>Địa chỉ cơ sở <b>32 bit</b> của segment</td></tr>
+<tr><td>Limit 0–15, 16–19</td><td>Giới hạn <b>20 bit</b></td></tr>
+<tr><td>G</td><td>0: Limit tính theo <b>byte</b>; 1: Limit tính theo <b>trang</b></td></tr>
+<tr><td>D</td><td>0: segment <b>16 bit</b>; 1: segment <b>32 bit</b></td></tr>
+<tr><td>P</td><td>0: segment <b>không có</b> trong bộ nhớ; 1: có trong bộ nhớ</td></tr>
+<tr><td>DPL</td><td>Privilege level (0–3)</td></tr>
+<tr><td>S</td><td>0: System; 1: Application</td></tr>
+<tr><td>Type</td><td>Loại segment và bảo vệ</td></tr></table>
+<p><b>(selector, offset) → linear:</b> selector chọn descriptor → <b>Base address + Offset</b> = <b>32-bit linear address</b> (không gian tuyến tính 0 → 4 GB).</p>
+<p><b>Linear → physical:</b> phân trang 2 mức <b>Dir (10) · Page (10) · Offset (12)</b>. Dir chọn entry trong <b>page directory</b> (1024 entry) → trỏ tới <b>page table</b>; Page chọn entry → trỏ tới <b>page frame</b>; Offset chọn word.</p>
+<div class="demo" data-demo="steps" data-key="pentium"></div>
+<table><tr><th>Mức bảo vệ</th><th>Dùng cho</th></tr>
+<tr><td>0 (trong cùng, quyền cao nhất)</td><td>Kernel</td></tr><tr><td>1</td><td>System calls</td></tr><tr><td>2</td><td>Shared libraries</td></tr><tr><td>3 (ngoài cùng)</td><td>User programs</td></tr></table>`},
+{id:"s4-14",title:"✔ Ghi nhớ nhanh Chương 4",
+ figs:[], yt:"",
+ html:`
+<ul class="checklist">
+<li>Logical (CPU sinh ra, = virtual) vs Physical (RAM thấy). MMU ánh xạ động.</li>
+<li>Base = địa chỉ vật lý nhỏ nhất; Limit = phạm vi; hợp lệ khi logic &lt; limit; vật lý = base + logic.</li>
+<li>Phân mảnh ngoài: trống đủ nhưng rời rạc. Phân mảnh nội: cấp nhiều hơn cần. Paging chỉ có phân mảnh nội.</li>
+<li>First-fit (đầu tiên) · Next-fit (từ con trỏ) · Best-fit (nhỏ nhất đủ) · Worst-fit (lớn nhất) – Best & Worst duyệt hết danh sách.</li>
+<li>Trang (logic) = khung (vật lý), 512 B – 8 KB. Địa chỉ = p (m−n bit) | d (n bit).</li>
+<li>PTE: Caching disabled, Referenced, Modified, Protection, Present/absent, Page frame number.</li>
+<li>PTBR trỏ bảng trang, PRLR = kích thước; 2 lần truy cập bộ nhớ → TLB (associative memory).</li>
+<li>Bảng trang 2 mức 10/10/12; mỗi bảng mức 2 quản lý 4 MB.</li>
+<li>Lỗi trang 6 bước; thay thế trang 5 bước; điều khiển lỗi trang 10 bước.</li>
+<li>Optimal = benchmark; LRU tốt nhưng khó cài; Aging xấp xỉ LRU tốt; FIFO có nghịch lý Belady.</li>
+<li>4 thời điểm HĐH tham gia phân trang: khởi tạo – thực thi (flush TLB) – lỗi trang – kết thúc.</li>
+<li>Khóa trang buffer I/O; backing store tĩnh/động; external pager tách chính sách–cơ chế.</li>
+<li>Segmentation: nhiều không gian, tăng/co độc lập, checkerboarding → nén.</li>
+<li>Pentium: selector 13+1+2 bit, GDT/LDT, descriptor Base 32 / Limit 20, linear 10/10/12, 4 mức bảo vệ (0 = kernel).</li>
+</ul>`}
+]});
