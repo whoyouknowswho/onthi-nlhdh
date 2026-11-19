@@ -187,21 +187,98 @@ function simulateClock0(){
 }
 
 V["s4-10~aging"] = function(){
-  var T=[[1,0,1,0,1,1],[1,1,0,0,1,0],[1,1,0,1,0,1],[1,0,0,0,1,0],[0,1,1,0,0,0]], C=[0,0,0,0,0,0], sc=[], base=[H("Thuật toán Aging (lão hóa) · 6 trang, bộ đếm 8 bit")];
-  function bin(v){ return ("00000000"+v.toString(2)).slice(-8); }
-  for (var p=0;p<6;p++) base.push(t("pn"+p,110,150+p*55,"Trang "+p,{a:"end",fs:16}), b("rr"+p,140,128+p*55,70,44,"R = 0","gray",{fs:14}), b("cc"+p,240,128+p*55,220,44,"00000000","dark",{fs:18}));
-  base.push(t("th",175,105,"bit R",{fs:13,c:"gray"}), t("tc",350,105,"bộ đếm (counter)",{fs:13,c:"gray"}), b("rule",520,140,400,170,"Mỗi nhịp đồng hồ (clock tick):\n① dịch phải bộ đếm 1 bit\n② chép bit R vào bit TRÁI nhất\n③ xóa R về 0","violet",{fs:16}));
-  sc.push({s:"<b>Aging</b> là cách xấp xỉ LRU bằng phần mềm. Mỗi trang có một <b>bộ đếm 8 bit</b>. Sau mỗi nhịp đồng hồ: dịch phải bộ đếm, rồi đưa bit R (trang có được dùng trong nhịp vừa qua không) vào bit <b>bên trái</b> nhất.", d:[base]});
-  T.forEach(function(row,k){
-    var ops=[], hot=[];
-    row.forEach(function(r,p){ C[p]=(r<<7)|(C[p]>>1); ops.push(u("rr"+p,{t:"R = "+r,c:r?"ok":"gray"}), u("cc"+p,{t:bin(C[p])})); if (r) hot.push("cc"+p); });
-    ops.push(f.apply(null,hot));
-    sc.push({s:"Nhịp "+k+": bit R của trang 0 đến 5 là "+row.join(" ")+". Trang vừa được dùng có bit <b>1 ở bên trái</b> nên bộ đếm lớn; trang lâu không dùng thì bộ đếm <b>nhỏ dần</b> vì cứ bị dịch phải.", d:ops, t:7000});
+  var sc = [], W = ["128","64","32","16","8","4","2","1"], AGE = ["vừa xong","trước 1","trước 2","trước 3","trước 4","trước 5","trước 6","trước 7"];
+  function bits(v){ return ("00000000" + v.toString(2)).slice(-8).split(""); }
+  function cellOps(prefix, v){ return bits(v).map(function(c, j){ return u(prefix + j, {t:c, c: c === "1" ? "ok" : "dark"}); }); }
+
+  /* --- Vì sao cần Aging --- */
+  sc.push({s:"LRU cần biết thời điểm của <b>mọi</b> lần truy cập, phần cứng không làm nổi. Phần cứng chỉ cho mỗi trang một bit <b>R</b>: trang được dùng thì R = 1. Sau mỗi nhịp đồng hồ, HĐH xem bit R rồi xóa về 0. Chỉ với bit R, làm sao đoán trang nào lâu nhất chưa dùng?",
+    d:[H("Vì sao cần Aging?"),
+       b("l1",80,100,380,120,"LRU chính xác","ok",{fs:20,s:"phải ghi thời điểm MỌI lần truy cập → quá tốn"}),
+       b("l2",500,100,380,120,"Phần cứng chỉ cho","warn",{fs:20,s:"mỗi trang 1 bit R: = 1 khi trang được dùng"}),
+       t("l3",480,290,"HĐH xem bit R ở mỗi nhịp đồng hồ (clock tick), rồi xóa R về 0",{fs:17,c:"gray"}),
+       t("l4",480,360,"→ Chỉ với bit R, đoán trang nào lâu nhất chưa dùng?",{fs:20,c:"brand"})]});
+
+  /* --- NFU và lỗi "không bao giờ quên" --- */
+  var A = [1,1,1,1,1,0,0,0], B = [0,0,0,0,0,0,1,1], nfu = [clr(), H("Cách thô: NFU – đếm số nhịp được dùng")];
+  for (var j = 0; j < 8; j++){
+    nfu.push(t("tk"+j,225+60*j,135,"nhịp "+(j+1),{fs:12,c:"gray"}),
+      b("na"+j,200+60*j,160,50,44,String(A[j]),A[j]?"ok":"dark",{fs:18,r:6}),
+      b("nb"+j,200+60*j,230,50,44,String(B[j]),B[j]?"ok":"dark",{fs:18,r:6}));
+  }
+  nfu.push(t("la",170,182,"Trang A",{a:"end",fs:16}), t("lb",170,252,"Trang B",{a:"end",fs:16}),
+    b("ca",720,160,200,44,"NFU đếm = 5","warn",{fs:17}), b("cb",720,230,200,44,"NFU đếm = 2","warn",{fs:17}),
+    t("tm",440,310,"thời gian →   (nhịp 8 là vừa xong)",{fs:14,c:"gray"}));
+  sc.push({s:"Cách đơn giản là <b>NFU</b>: mỗi nhịp, cộng bit R vào bộ đếm của trang. Trang A được dùng 5 nhịp đầu rồi bỏ không, nên đếm = 5. Trang B vừa được dùng ở 2 nhịp gần nhất, nên đếm = 2.",
+    d:nfu});
+  sc.push({s:"NFU sẽ bỏ <b>B</b> vì đếm nhỏ hơn. Nhưng B mới là trang đang được dùng, còn A đã lâu không ai đụng tới. Lỗi của NFU là <b>không bao giờ quên</b>: dùng nhiều từ lâu vẫn được tính như mới.",
+    d:[u("cb",{c:"bad",t:"→ NFU bỏ B ✘"}), f("cb"), t("w",480,390,"B đang được dùng mà lại bị bỏ!\nNFU không bao giờ “quên” quá khứ.",{fs:18,c:"bad"})]});
+
+  /* --- Ý tưởng Aging: trọng số theo độ gần --- */
+  var idea = [clr(), H("Aging: lần dùng gần đây đáng giá hơn")];
+  for (var k = 0; k < 8; k++) idea.push(t("wt"+k,195+80*k,145,W[k],{fs:15,c:"warn"}), b("g"+k,160+80*k,165,70,60,"0","dark",{fs:24,r:8}), t("ag"+k,195+80*k,245,AGE[k],{fs:12,c:"gray"}));
+  idea.push(t("wl",120,195,"Bộ đếm",{a:"end",fs:15}), t("wtl",120,145,"giá trị",{a:"end",fs:13,c:"warn"}),
+    t("ex",480,310,"Bit 1 càng nằm bên TRÁI → trang được dùng càng GẦN đây → bộ đếm càng LỚN",{fs:17,c:"warn"}),
+    t("ex2",480,360,"Cần bỏ trang thì bỏ trang có bộ đếm NHỎ NHẤT",{fs:17,c:"bad"}));
+  sc.push({s:"Aging sửa lỗi đó bằng cách cho lần dùng <b>gần đây</b> giá trị lớn hơn. Mỗi trang có bộ đếm 8 bit. Bit trái nhất ứng với nhịp vừa xong, đáng 128. Bit kế ứng với 1 nhịp trước, đáng 64. Cứ thế giảm một nửa. Bit 1 càng nằm bên trái thì bộ đếm càng lớn.",
+    d:idea});
+
+  /* --- Cơ chế từng bước trên một bộ đếm --- */
+  sc.push({s:"Mỗi nhịp đồng hồ, HĐH làm đúng 2 việc với bộ đếm. Xem ví dụ một trang đang có bộ đếm 1 0 1 0 0 0 0 0: được dùng ở nhịp vừa xong và 2 nhịp trước.",
+    d:[x("ex","ex2"), cellOps("g", 160), t("st",480,320,"Bộ đếm hiện tại: 1 0 1 0 0 0 0 0  = 128 + 32 = 160",{fs:17})]});
+  sc.push({s:"Việc ①: <b>dịch phải</b> 1 bit. Mọi lần dùng cũ lùi về quá khứ thêm một nhịp nên giá trị giảm một nửa. Bit phải nhất rơi mất, tức lần dùng quá 8 nhịp thì quên luôn.",
+    d:[cellOps("g", 80), u("g0",{t:"?",c:"warn"}), f("g1","g2","g3"),
+       u("st",{t:"① Dịch phải: 0 1 0 1 0 0 0 0  (bit trái nhất đang chờ)",c:"cyan"})]});
+  sc.push({s:"Việc ②: chép bit <b>R</b> của nhịp vừa xong vào bit <b>trái nhất</b>, rồi xóa R về 0. Trang này vừa được dùng nên R = 1, bộ đếm thành 1 1 0 1 0 0 0 0, lớn lên ngay.",
+    d:[cellOps("g", 208), f("g0"),
+       u("st",{t:"② R = 1 vào bit trái: 1 1 0 1 0 0 0 0  = 208",c:"ok"}),
+       t("st2",480,370,"Nếu nhịp này trang KHÔNG được dùng (R = 0): 0 1 0 1 0 0 0 0 = 80, bộ đếm nhỏ đi",{fs:15,c:"gray"})]});
+
+  /* --- Quay lại A và B --- */
+  var ab = [clr(), H("Quay lại ví dụ A và B với Aging")];
+  var va = 0, vb = 0; for (var q = 0; q < 8; q++){ va = (A[q] << 7) | (va >> 1); vb = (B[q] << 7) | (vb >> 1); }
+  for (var m = 0; m < 8; m++) ab.push(t("hw"+m,204+56*m,140,W[m],{fs:12,c:"warn"}), b("xa"+m,180+56*m,160,48,48,"0","dark",{fs:20,r:6}), b("xb"+m,180+56*m,240,48,48,"0","dark",{fs:20,r:6}));
+  ab.push(t("ya",160,184,"Trang A",{a:"end",fs:16}), t("yb",160,264,"Trang B",{a:"end",fs:16}), cellOps("xa", va), cellOps("xb", vb),
+    b("za",680,160,240,48,"= "+va,"bad",{fs:20}), b("zb",680,240,240,48,"= "+vb,"ok",{fs:20}),
+    t("tip",480,340,"Mẹo so sánh: đọc từ trái sang, trang nào gặp bit 1 trước thì lớn hơn",{fs:16,c:"warn"}),
+    t("vd",480,400,"Aging bỏ A ("+va+" < "+vb+") ✔  đúng: A đã lâu không dùng",{fs:19,c:"ok"}));
+  sc.push({s:"Với Aging, các lần dùng của A đều đã cũ nên bộ đếm của A chỉ là 0 0 0 1 1 1 1 1, bằng "+va+". B vừa được dùng nên bộ đếm là 1 1 0 0 0 0 0 0, bằng "+vb+". Aging bỏ <b>A</b>, đúng như mong muốn.",
+    d:ab});
+
+  /* --- Ví dụ giáo trình: 6 trang, 5 nhịp --- */
+  var T = [[1,0,1,0,1,1],[1,1,0,0,1,0],[1,1,0,1,0,1],[1,0,0,0,1,0],[0,1,1,0,0,0]], C = [0,0,0,0,0,0];
+  var ex = [clr(), H("Ví dụ: 6 trang, 5 nhịp đồng hồ"),
+    t("hR",140,115,"bit R",{fs:12,c:"gray"}), t("hc",406,115,"bộ đếm 8 bit (cột trái = nhịp gần nhất)",{fs:12,c:"gray"})];
+  for (var p = 0; p < 6; p++){
+    ex.push(t("pn"+p,95,162+p*55,"Trang "+p,{a:"end",fs:15}), b("rr"+p,110,140+p*55,62,44,"R = 0","gray",{fs:13}));
+    for (var c = 0; c < 8; c++) ex.push(b("e"+p+"_"+c,200+c*52,140+p*55,46,44,"0","dark",{fs:18,r:6}));
+  }
+  ex.push(b("side",650,140,280,180,"Mỗi nhịp:\n① cột cũ lùi sang phải\n② cột R mới chèn vào\nbên trái","violet",{fs:16}));
+  sc.push({s:"Giờ làm ví dụ trong giáo trình: 6 trang, 5 nhịp đồng hồ. Mỗi hàng là bộ đếm của một trang, ban đầu đều bằng 0. Hãy nhìn cột bit R mới được chèn vào bên trái ở mỗi nhịp.", d:ex});
+  T.forEach(function(row, k){
+    var ops = [], hot = [];
+    row.forEach(function(r, p){
+      C[p] = (r << 7) | (C[p] >> 1);
+      ops.push(u("rr"+p,{t:"R = "+r, c: r ? "ok" : "gray"}));
+      bits(C[p]).forEach(function(bt, c){ ops.push(u("e"+p+"_"+c,{t:bt, c: bt === "1" ? "ok" : "dark"})); });
+      hot.push("e"+p+"_0");
+    });
+    ops.push(f.apply(null, hot));
+    sc.push({s:"Nhịp "+k+": bit R của trang 0 đến 5 là "+row.join(" ")+". Cột này chèn vào bên trái, các cột cũ lùi sang phải một ô.", d:ops});
   });
-  var mn=0; C.forEach(function(v,p){ if (v<C[mn]) mn=p; });
-  sc.push({s:"Khi cần bỏ trang, chọn trang có <b>bộ đếm nhỏ nhất</b> – ở đây là <b>trang "+mn+"</b> ("+bin(C[mn])+"). Bit bên trái có “trọng số” lớn nên lần dùng <b>gần đây</b> quan trọng hơn lần dùng xa. Đó là lý do Aging <b>xấp xỉ LRU rất tốt</b> mà vẫn chạy hiệu quả.",
-    d:[u("cc"+mn,{c:"bad"}), u("rr"+mn,{c:"bad"}), f("cc"+mn), u("rule",{t:"Bỏ trang có bộ đếm NHỎ NHẤT\n→ trang "+mn+" ("+bin(C[mn])+")\n\nKhác NFU: NFU chỉ cộng dồn,\nkhông “quên” quá khứ",c:"bad"})]});
-  sc.push({s:"Tóm tắt nhóm thuật toán xấp xỉ LRU: <b>NRU</b> chia trang thành 4 lớp theo bit R, M (rất thô) · <b>NFU</b> đếm số lần dùng (xấp xỉ LRU khá thô) · <b>Aging</b> = NFU có lão hóa (xấp xỉ LRU tốt) · <b>Working set / WSClock</b> giữ tập trang tiến trình đang dùng.",
+  var mn = 0; C.forEach(function(v, p){ if (v < C[mn]) mn = p; });
+  var rowsTxt = C.map(function(v, p){ return "trang "+p+": "+bits(v).join(""); }).join("\n");
+  sc.push({s:"Cần bỏ trang thì chọn bộ đếm <b>nhỏ nhất</b>. So từ trái sang: trang 3 và trang 5 cùng bắt đầu bằng 0 0 1, nhưng trang 5 còn một bit 1 phía sau. Vậy <b>trang 3</b>, bộ đếm 0 0 1 0 0 0 0 0, nhỏ nhất và bị bỏ.",
+    d:[u("side",{t:"Bộ đếm nhỏ nhất:\ntrang "+mn+" = "+bits(C[mn]).join("")+"\n→ bỏ trang "+mn,c:"bad",fs:17}),
+       u("rr"+mn,{c:"bad"}), f("e"+mn+"_0","e"+mn+"_1","e"+mn+"_2")].concat(bits(C[mn]).map(function(bt, c){ return u("e"+mn+"_"+c,{c: bt === "1" ? "bad" : "dark"}); }))});
+
+  /* --- Tổng kết --- */
+  sc.push({s:"Tóm lại: NFU chỉ cộng dồn nên không bao giờ quên. Aging dịch phải rồi đưa R vào bên trái, nên lần dùng gần đây đáng giá hơn và lần dùng quá 8 nhịp thì bị quên. Vì vậy Aging <b>xấp xỉ LRU tốt</b>. Nhược điểm nhỏ: chỉ nhớ 8 nhịp, và hai trang dùng trong cùng một nhịp thì không phân biệt được trang nào dùng sau.",
+    d:[clr(), H("NFU và Aging"),
+       b("s1",60,100,400,150,"NFU","warn",{fs:22,s:"bộ đếm += R mỗi nhịp\nkhông bao giờ quên → xấp xỉ LRU thô"}),
+       b("s2",500,100,400,150,"Aging","ok",{fs:22,s:"dịch phải, R vào bit trái\ngần đây đáng giá hơn → xấp xỉ LRU tốt"}),
+       t("s3",480,320,"Giới hạn của Aging: chỉ nhớ 8 nhịp gần nhất;\n2 trang dùng trong cùng 1 nhịp thì không biết trang nào dùng sau",{fs:16,c:"gray"})]});
+  sc.push({s:"Toàn cảnh nhóm thuật toán xấp xỉ LRU: <b>NRU</b> chia trang thành 4 lớp theo bit R, M (rất thô) · <b>NFU</b> đếm số lần dùng (thô) · <b>Aging</b> là NFU có lão hóa (tốt) · <b>Working set / WSClock</b> giữ tập trang tiến trình đang dùng.",
     d:[clr(), H("Các thuật toán xấp xỉ LRU"), b("n1",40,110,420,150,"NRU","gray",{s:"4 lớp theo (R, M) · rất thô"}), b("n2",500,110,420,150,"NFU","warn",{s:"đếm số lần dùng · xấp xỉ LRU thô"}), b("n3",40,290,420,150,"Aging","ok",{s:"NFU + dịch phải · xấp xỉ LRU tốt"}), b("n4",500,290,420,150,"Working set / WSClock","violet",{s:"giữ tập trang đang dùng · WSClock tốt"})]});
   return {title:"Thuật toán Aging (xấp xỉ LRU)", scenes:sc};
 };

@@ -299,6 +299,11 @@ Cách tra: vào <b>dòng 1</b> của bảng cấp 1 để tìm bảng cấp 2 c�
 <tr><td><b>Aging</b></td><td>NFU có “lão hóa”: dịch phải bộ đếm rồi thêm bit R vào bên trái</td><td><b>Xấp xỉ LRU tốt</b>, hiệu quả</td></tr>
 <tr><td><b>Working set</b></td><td>Giữ tập trang tiến trình đang dùng gần đây</td><td>Hơi tốn kém để cài đặt</td></tr>
 <tr><td><b>WSClock</b></td><td>Working set + Clock</td><td>Thuật toán hiệu quả tốt</td></tr></table>
+<div class="tip"><b>Hiểu nhanh NFU và Aging</b> <span class="xs">ngoài slide</span>: phần cứng chỉ cho mỗi trang 1 bit R (= 1 khi trang được dùng); mỗi nhịp đồng hồ HĐH đọc R rồi xóa về 0.<br>
+• <b>NFU</b>: mỗi nhịp cộng R vào bộ đếm, bỏ trang đếm nhỏ nhất. Nhược điểm: <b>không bao giờ quên</b>, trang dùng nhiều từ lâu vẫn có bộ đếm lớn.<br>
+• <b>Aging</b>: bộ đếm 8 bit như <b>nhật ký 8 nhịp gần nhất</b>. Bit trái nhất là nhịp vừa xong (đáng 128), bit kế là 1 nhịp trước (64)… Mỗi nhịp: <b>① dịch phải 1 bit</b> (lần dùng cũ mất giá một nửa, quá 8 nhịp thì quên) rồi <b>② chép R vào bit trái nhất</b>. Bỏ trang có bộ đếm <b>nhỏ nhất</b>.<br>
+• Ví dụ: bộ đếm 1 0 1 0 0 0 0 0 (= 160), nhịp này R = 1 → dịch phải thành 0 1 0 1 0 0 0 0 → chèn 1 vào trái → <b>1 1 0 1 0 0 0 0</b> (= 208).<br>
+• So sánh nhanh: đọc từ trái sang, trang nào gặp bit 1 trước thì lớn hơn (được dùng gần hơn).</div>
 <div class="ex"><b>Bài tập kinh điển</b> <span class="xs">ngoài slide</span> – chuỗi 7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1:<br>3 khung: FIFO <b>15</b> · LRU <b>12</b> · Clock <b>14</b> (trang mới nạp có R = 1; nếu quy ước R = 0 thì 11) · Optimal <b>9</b> lỗi trang. Xem từng bước trong các video FIFO / LRU / Optimal / Clock / Aging ở trên. &nbsp;4 khung: FIFO 10 · LRU 8 · Optimal 8.<br><b>Nghịch lý Belady</b> (chỉ ở FIFO): chuỗi 1 2 3 4 1 2 5 1 2 3 4 5 → 3 khung 9 lỗi, 4 khung lại <b>10</b> lỗi.</div>
 <div class="tip"><b>Mẹo làm bài:</b> FIFO bỏ trang <i>vào sớm nhất</i> · LRU bỏ trang <i>lâu nhất chưa dùng</i> (nhìn sang trái) · OPT bỏ trang <i>lâu nhất mới dùng lại</i> (nhìn sang phải, trang không bao giờ dùng lại thì bỏ trước).</div>
 <div class="demo" data-demo="pagerep"></div>`},
