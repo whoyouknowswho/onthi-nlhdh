@@ -8,6 +8,9 @@ var CHAPS = [
   {ch:5, key:"c5", name:"Chương 5 – Vào/Ra", short:"Vào/Ra (Input/Output)", cls:"c5"},
   {ch:6, key:"c6", name:"Chương 6 – Hệ thống File", short:"Hệ thống File", cls:"c6"}
 ];
+var QSETS = window.QSETS || [];
+function setOf(key){ return QSETS.filter(function(x){ return x.key===key; })[0]; }
+function chName(ch){ return ch ? "Chương "+ch : "Ngoài chương 4–6"; }
 var TYPE_LABEL = {single:"Một đáp án", multi:"Nhiều đáp án", order:"Sắp xếp"};
 var LETTERS = "ABCDEFGHIJ";
 var LS = "nlhdh_state_v1";
@@ -43,10 +46,10 @@ function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.
   // bỏ các câu không còn tồn tại
   Object.keys(state.sessions).forEach(function(k){ var s=state.sessions[k]; s.ids = s.ids.filter(function(id){ return BYID[id]; }); if (!s.ids.length) delete state.sessions[k]; });
   // bổ sung câu hỏi mới vào các bộ theo chương đã lưu từ trước
-  ["c4","c5","c6","all"].forEach(function(k){
+  ["c4","c5","c6","all"].concat(QSETS.map(function(x){ return x.key; })).forEach(function(k){
     var s = state.sessions[k]; if (!s) return;
     var have = {}; s.ids.forEach(function(id){ have[id]=1; });
-    idsOfChapter(k==="all" ? "all" : +k.slice(1)).forEach(function(id){
+    (setOf(k) ? setOf(k).ids : idsOfChapter(k==="all" ? "all" : +k.slice(1))).forEach(function(id){
       if (!have[id]){ s.ids.push(id); s.opt[id] = shuffle(range(BYID[id].opts.length)); if (s.submitted) s.submitted = false; }
     });
   });
@@ -61,7 +64,7 @@ function newSession(key, name, ids, mode, extra){
     cur:0, submitted:false, instant: mode==="practice", filter:"all", created:Date.now(), duration:0, start:Date.now() }, extra||{});
   state.sessions[key] = s; state.active = key; save(); return s;
 }
-function idsOfChapter(ch){ return QS.filter(function(q){ return ch==="all" || q.ch===ch; }).map(function(q){ return q.id; }); }
+function idsOfChapter(ch){ return QS.filter(function(q){ return !q.set && (ch==="all" || q.ch===ch); }).map(function(q){ return q.id; }); }
 
 function isCorrect(q, sel){ return !!sel && sel.length>0 && sameSet(sel, q.ans); }
 function recordGrade(id, ok){ state.stats = state.stats || {}; var r = state.stats[id] || (state.stats[id] = {w:0, r:0}); if (ok) r.r++; else r.w++; r.t = Date.now(); }
@@ -102,13 +105,13 @@ function setCard(o){
   var types = {single:0,multi:0,order:0}; o.ids.forEach(function(id){ types[BYID[id].type]++; });
   var started = s && c.answered>0 && !s.submitted;
   return '<div class="set">'+
-    '<div class="set-head"><div class="set-num '+o.cls+'">'+o.badge+'</div><div><h3>'+esc(o.title)+'</h3><small>'+total+' câu · '+types.single+' một đáp án · '+types.multi+' nhiều đáp án · '+types.order+' sắp xếp</small></div></div>'+
+    '<div class="set-head"><div class="set-num '+o.cls+'">'+o.badge+'</div><div><h3>'+esc(o.title)+'</h3><small>'+total+' câu · '+types.single+' một đáp án · '+types.multi+' nhiều đáp án · '+types.order+' sắp xếp</small>'+(o.sub?'<small class="set-sub">'+o.sub+'</small>':'')+'</div></div>'+
     '<div class="meter"><i class="g" style="width:'+gw+'%"></i><i class="r" style="width:'+rw+'%"></i></div>'+
     '<div class="set-meta"><span>Đã làm <b>'+c.answered+'/'+total+'</b></span><span>Đúng <b class="g">'+c.g+'</b></span><span>Sai <b class="r">'+c.r+'</b></span>'+(s&&s.submitted?'<span>· Đã nộp</span>':'')+'</div>'+
     '<div class="set-actions">'+
       '<button class="btn primary" data-start="'+o.key+'">'+ICON.play+(started?'Làm tiếp (Câu '+(s.cur+1)+')':(s&&s.submitted?'Xem lại bài':'Vào làm bài'))+'</button>'+
       (s?'<button class="btn danger" data-reset="'+o.key+'" title="Làm lại từ đầu">'+ICON.reset+'</button>':'')+
-      (o.ch!=="all"?'<button class="btn" data-sum="'+o.ch+'" title="Xem tổng hợp kiến thức">'+ICON.book+'</button>':'')+
+      (typeof o.ch==="number"?'<button class="btn" data-sum="'+o.ch+'" title="Xem tổng hợp kiến thức">'+ICON.book+'</button>':'')+
     '</div></div>';
 }
 function renderHome(){
@@ -121,8 +124,13 @@ function renderHome(){
   $("#view-home").innerHTML =
   '<div class="hero"><div class="hero-main"><h2>Ôn thi Nguyên lý Hệ điều hành</h2><p>Ngân hàng câu hỏi trắc nghiệm soạn từ slide bài giảng Chương 4, 5, 6 – có giải thích từng câu, chấm điểm ngay, thi thử có giờ và phần tổng hợp kiến thức dễ hiểu.</p>'+
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="goExam">'+ICON.shuffle+'Tạo đề thi thử</button><button class="btn" data-view-go="summary">'+ICON.book+'Đọc tổng hợp kiến thức</button>'+exBtn+'</div></div>'+
-  '<div class="stats"><div class="stat"><b>'+QS.length+'</b><span>câu hỏi</span></div><div class="stat"><b>3</b><span>chương</span></div><div class="stat"><b>'+(allGraded?Math.round(allG/allGraded*100)+'%':'—')+'</b><span>tỉ lệ đúng</span></div></div></div>'+
-  '<div class="section-h">Bộ câu hỏi theo chương</div><div class="sets">'+sets.map(setCard).join("")+'</div>'+weakPanel()+
+  '<div class="stats"><div class="stat"><b>'+idsOfChapter("all").length+'</b><span>câu hỏi</span></div><div class="stat"><b>3</b><span>chương</span></div><div class="stat"><b>'+(allGraded?Math.round(allG/allGraded*100)+'%':'—')+'</b><span>tỉ lệ đúng</span></div></div></div>'+
+  '<div class="section-h">Bộ câu hỏi theo chương</div><div class="sets">'+sets.map(setCard).join("")+'</div>'+
+  (QSETS.length ? '<div class="section-h">📝 Đề ôn tập</div><div class="sets">'+QSETS.map(function(x){
+    var by = {}; x.ids.forEach(function(id){ var c = BYID[id].ch; by[c] = (by[c]||0) + 1; });
+    var sub = [4,5,6,0].filter(function(c){ return by[c]; }).map(function(c){ return '<span class="chip">'+(c ? 'Ch'+c : 'Ngoài 4–6')+': <b>'+by[c]+'</b></span>'; }).join(" ");
+    return setCard({key:x.key, ch:"set", ids:x.ids, title:x.name, badge:x.badge, cls:"ot", sub:sub+(x.note?'<br><span class="muted">'+esc(x.note)+'</span>':'')});
+  }).join("")+'</div>' : '')+weakPanel()+
   '<div class="section-h" id="examSetup">Tạo đề thi thử ngẫu nhiên</div>'+
   '<div class="panel"><div class="exam-grid">'+
    '<div><span class="lbl">Chương</span><div class="chk-row">'+CHAPS.map(function(c){ return '<label class="chk"><input type="checkbox" name="exch" value="'+c.ch+'" checked> Chương '+c.ch+'</label>'; }).join("")+'</div></div>'+
@@ -133,7 +141,7 @@ function renderHome(){
 }
 function weakPanel(){
   var w = weakIds(), st = state.stats || {}, topics = {};
-  w.forEach(function(id){ var q = BYID[id], k = "Ch"+q.ch+" · "+q.topic; topics[k] = (topics[k]||0) + st[id].w; });
+  w.forEach(function(id){ var q = BYID[id], k = (q.ch?"Ch"+q.ch:"Ngoài 4–6")+" · "+q.topic; topics[k] = (topics[k]||0) + st[id].w; });
   var top = Object.keys(topics).sort(function(a,b){ return topics[b]-topics[a]; }).slice(0,6);
   var done = Object.keys(st).length;
   return '<div class="section-h">🎯 Ôn câu hay sai</div><div class="panel weak">'+
@@ -144,6 +152,7 @@ function weakPanel(){
 function startSet(key){
   if (key==="weak"){ var w = weakIds(); if (!w.length){ toast("Chưa có câu nào hay sai – cứ làm bài trước đã!"); return; } newSession("weak", "Ôn câu hay sai ("+w.length+" câu)", w, "practice"); go("quiz"); return; }
   if (key==="exam"){ if (state.sessions.exam){ state.active="exam"; save(); go(state.sessions.exam.submitted?"result":"quiz"); } return; }
+  if (!state.sessions[key] && setOf(key)){ newSession(key, setOf(key).name, setOf(key).ids, "practice"); }
   if (!state.sessions[key]){
     var o = key==="all" ? {ch:"all", name:"Tất cả 3 chương"} : CHAPS.filter(function(c){ return c.key===key; })[0];
     if (key==="wrong") return;
@@ -155,7 +164,7 @@ function resetSet(key, silent){
   var s = state.sessions[key]; if (!s) return;
   if (!silent && !confirm("Làm lại từ đầu bộ \""+s.name+"\"? Toàn bộ đáp án đã chọn sẽ bị xóa.")) return;
   var keepInstant = s.instant;
-  var ids = s.mode==="exam" ? shuffle(s.ids) : ((key==="wrong"||key==="weak") ? s.ids : idsOfChapter(key==="all"?"all":+key.slice(1)));
+  var ids = s.mode==="exam" ? shuffle(s.ids) : setOf(key) ? setOf(key).ids : ((key==="wrong"||key==="weak") ? s.ids : idsOfChapter(key==="all"?"all":+key.slice(1)));
   var n = newSession(key, s.name, ids, s.mode, {duration:s.duration, chapters:s.chapters});
   n.instant = keepInstant; save();
 }
@@ -163,7 +172,7 @@ function makeExam(){
   var chs = Array.prototype.map.call(document.querySelectorAll('input[name="exch"]:checked'), function(i){ return +i.value; });
   if (!chs.length){ toast("Hãy chọn ít nhất 1 chương"); return; }
   var onlySlide = $("#exXS") && $("#exXS").checked;
-  var pool = QS.filter(function(q){ return chs.indexOf(q.ch)>=0 && !(onlySlide && XS[q.id]); }).map(function(q){ return q.id; });
+  var pool = QS.filter(function(q){ return !q.set && chs.indexOf(q.ch)>=0 && !(onlySlide && XS[q.id]); }).map(function(q){ return q.id; });
   var n = +$("#exN").value || pool.length; n = Math.min(n, pool.length);
   var mins = +$("#exT").value;
   if (state.sessions.exam && !state.sessions.exam.submitted && !confirm("Bạn đang có một đề thi thử chưa nộp. Tạo đề mới sẽ xóa đề cũ?")) return;
@@ -227,14 +236,14 @@ function renderQuiz(){
       var st = status(s,id);
       var letters = perm.map(function(oi,di){ return q.ans.indexOf(oi)>=0 ? LETTERS[di] : null; }).filter(Boolean).join(", ");
       var head = st==="g" ? ICON.check+"Chính xác!" : st==="r" ? ICON.x+"Chưa chính xác!" : "Bạn chưa trả lời câu này";
-      fb = '<div class="feedback '+(st==="g"?"ok":st==="r"?"bad":"na")+'"><h4>'+head+'</h4><div class="ansline">Đáp án đúng: '+letters+'</div><p>'+esc(q.exp)+'</p>'+
-           '<div class="more"><button class="btn sm ghost" data-sum="'+q.ch+'" data-topic="'+esc(q.topic)+'">'+ICON.book+'Ôn lý thuyết Chương '+q.ch+'</button></div></div>';
+      fb = '<div class="feedback '+(st==="g"?"ok":st==="r"?"bad":"na")+'"><h4>'+head+'</h4><div class="ansline">Đáp án đúng: '+letters+'</div>'+(q.expH ? '<div class="exp-h">'+q.expH+'</div>' : '<p>'+esc(q.exp)+'</p>')+
+           (q.ch>=4 && q.ch<=6 ? '<div class="more"><button class="btn sm ghost" data-sum="'+q.ch+'" data-topic="'+esc(q.topic)+'"'+(q.sec?' data-sec="'+q.sec+'"':'')+'>'+ICON.book+'Ôn lý thuyết '+chName(q.ch)+(q.sec?' (mục '+q.sec.split("-")[1]+')':'')+'</button></div>' : '')+'</div>';
     }
     var prevI = pos>0 ? vis[pos-1] : (pos<0 ? vis.filter(function(i){return i<s.cur;}).pop() : undefined);
     var nextI = pos>=0 ? vis[pos+1] : vis.filter(function(i){return i>s.cur;})[0];
     var checkBtn = (!isG && !exam && s.instant && q.type==="multi") ? '<button class="btn ok" id="checkBtn" '+(sel.length?'':'disabled')+'>'+ICON.check+'Kiểm tra</button>' : '';
     var redoBtn = (isG && !s.submitted) ? '<button class="btn" id="redoBtn">'+ICON.reset+'Làm lại câu</button>' : '';
-    card = '<div class="qcard"><div class="qhead"><span class="badge no">Câu '+(s.cur+1)+'</span><span class="badge '+q.type+'">'+TYPE_LABEL[q.type]+'</span><span class="badge">Chương '+q.ch+'</span><span class="badge">'+esc(q.topic)+'</span>'+((state.stats||{})[id]&&state.stats[id].w?'<span class="badge wr">Đã sai '+state.stats[id].w+' lần</span>':'')+(XS[id]?'<span class="badge xsb" title="'+esc(XS[id])+'">Mở rộng ngoài slide</span>':'')+
+    card = '<div class="qcard"><div class="qhead"><span class="badge no">Câu '+(s.cur+1)+'</span><span class="badge '+q.type+'">'+TYPE_LABEL[q.type]+'</span><span class="badge'+(q.set?' chb':'')+'">'+chName(q.ch)+'</span><span class="badge">'+esc(q.topic)+'</span>'+((state.stats||{})[id]&&state.stats[id].w?'<span class="badge wr">Đã sai '+state.stats[id].w+' lần</span>':'')+(XS[id]?'<span class="badge xsb" title="'+esc(XS[id])+'">Mở rộng ngoài slide</span>':'')+
       '<button class="flagbtn '+(s.flags[id]?'on':'')+'" id="flagBtn" title="Đánh dấu để xem lại (phím F)">'+ICON.flag+(s.flags[id]?'Đã đánh dấu':'Đánh dấu')+'</button></div>'+
       '<p class="qtext">'+esc(q.q)+'</p><p class="qhint">'+hint+'</p>'+steps+'<div class="opts">'+opts+'</div>'+fb+
       '<div class="qactions sticky"><button class="btn" id="prevBtn" '+(prevI===undefined?'disabled':'')+' data-i="'+prevI+'">'+ICON.left+'Câu trước</button>'+
@@ -304,7 +313,7 @@ function renderResult(){
   var by = {};
   s.ids.forEach(function(id){ var ch=BYID[id].ch; by[ch]=by[ch]||{g:0,t:0}; by[ch].t++; if (status(s,id)==="g") by[ch].g++; });
   var rows = Object.keys(by).sort().map(function(ch){ var b=by[ch], p=Math.round(b.g/b.t*100);
-    return '<div class="row"><b>Chương '+ch+'</b><div class="meter"><i class="g" style="width:'+p+'%"></i></div><span>'+b.g+'/'+b.t+'</span></div>'; }).join("");
+    return '<div class="row"><b>'+chName(+ch)+'</b><div class="meter"><i class="g" style="width:'+p+'%"></i></div><span>'+b.g+'/'+b.t+'</span></div>'; }).join("");
   var used = s.finished && s.start ? Math.round((s.finished - s.start)/1000) : null;
   root.innerHTML = '<div class="result"><div class="panel"><div class="trophy">'+ICON.trophy+'</div><h2 style="margin:0">Kết quả bài làm</h2><div style="color:var(--muted);font-size:14px;margin-top:2px">'+esc(s.name)+(used&&s.mode==="exam"?' · thời gian làm '+fmtTime(used):'')+'</div>'+
     '<div class="score">'+score.toFixed(1).replace(".",",")+'<small> / 10 điểm</small></div><p class="grade">'+grade+'</p>'+
@@ -868,7 +877,7 @@ function bind(){
     if (d.reset){ resetSet(d.reset); renderHome(); return; }
     if (d.clearstats){ if (confirm("Xóa toàn bộ thống kê đúng/sai?")){ state.stats = {}; save(); renderHome(); } return; }
     if (d.resetCur){ var s0=cur(); if (!s0) return; if (confirm("Làm lại toàn bộ \""+s0.name+"\"?")){ resetSet(s0.key, true); go("quiz"); } return; }
-    if (d.sum){ state.sumCh = +d.sum; sumQuery=""; go("summary"); return; }
+    if (d.sum){ state.sumCh = +d.sum; sumQuery=""; go("summary"); if (d.sec){ var se = document.getElementById(d.sec); if (se) setTimeout(function(){ se.scrollIntoView({block:"start"}); }, 60); } return; }
     if (d.sumch){ state.sumCh = +d.sumch; sumQuery=""; save(); renderSummary(); window.scrollTo({top:0}); return; }
     if (d.toc){ e.preventDefault(); var el=document.getElementById(d.toc); if (el){
       setTocOn(d.toc); tocLock = Date.now() + 900;

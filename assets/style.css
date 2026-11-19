@@ -524,3 +524,14 @@ main:has(.sum-layout.has-gl){max-width:1720px}
 .pent-steps li.bad{border-left-color:var(--bad,#dc2626);background:var(--bad-soft,rgba(220,38,38,.1))}
 .pent-steps .bits{margin:2px 4px;font-size:13.5px;vertical-align:middle}
 .pent-steps .bits span{padding:2px 6px}
+/* Đề ôn tập */
+.set-num.ot{background:var(--bad-soft);color:var(--bad-text);font-size:15px}
+.set-sub{display:block;margin-top:6px;line-height:1.9}
+.set-sub .chip{font-size:12px}
+.badge.chb{background:var(--brand-soft);color:var(--brand-text);border-color:transparent}
+.exp-h{line-height:1.65}
+.exp-h p{margin:6px 0}
+.exp-h ul,.exp-h ol{margin:6px 0;padding-left:22px}
+.exp-h table{border-collapse:collapse;margin:8px 0;font-size:14px;display:block;overflow-x:auto;max-width:100%}
+.exp-h th,.exp-h td{border:1px solid var(--line,rgba(127,127,127,.3));padding:4px 8px;text-align:left;white-space:nowrap}
+.exp-h code{font-family:ui-monospace,Consolas,monospace;font-size:13.5px;word-break:break-all;white-space:normal}
