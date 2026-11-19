@@ -535,3 +535,9 @@ main:has(.sum-layout.has-gl){max-width:1720px}
 .exp-h table{border-collapse:collapse;margin:8px 0;font-size:14px;display:block;overflow-x:auto;max-width:100%}
 .exp-h th,.exp-h td{border:1px solid var(--line,rgba(127,127,127,.3));padding:4px 8px;text-align:left;white-space:nowrap}
 .exp-h code{font-family:ui-monospace,Consolas,monospace;font-size:13.5px;word-break:break-all;white-space:normal}
+.qtext{white-space:pre-line}
+.q-fig{margin:4px 0 12px;overflow-x:auto}
+.q-pre{margin:0;padding:12px 14px;border-radius:10px;background:var(--card2);border:1px solid var(--line2);font-family:ui-monospace,Consolas,monospace;font-size:14px;line-height:1.5;white-space:pre;overflow-x:auto}
+.q-tbl{border-collapse:collapse;font-size:14px}
+.q-tbl th,.q-tbl td{border:1px solid var(--line2);padding:3px 10px;text-align:center}
+.q-tbl th{background:var(--card2)}

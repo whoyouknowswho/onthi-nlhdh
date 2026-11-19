@@ -245,7 +245,7 @@ function renderQuiz(){
     var redoBtn = (isG && !s.submitted) ? '<button class="btn" id="redoBtn">'+ICON.reset+'Làm lại câu</button>' : '';
     card = '<div class="qcard"><div class="qhead"><span class="badge no">Câu '+(s.cur+1)+'</span><span class="badge '+q.type+'">'+TYPE_LABEL[q.type]+'</span><span class="badge'+(q.set?' chb':'')+'">'+chName(q.ch)+'</span><span class="badge">'+esc(q.topic)+'</span>'+((state.stats||{})[id]&&state.stats[id].w?'<span class="badge wr">Đã sai '+state.stats[id].w+' lần</span>':'')+(XS[id]?'<span class="badge xsb" title="'+esc(XS[id])+'">Mở rộng ngoài slide</span>':'')+
       '<button class="flagbtn '+(s.flags[id]?'on':'')+'" id="flagBtn" title="Đánh dấu để xem lại (phím F)">'+ICON.flag+(s.flags[id]?'Đã đánh dấu':'Đánh dấu')+'</button></div>'+
-      '<p class="qtext">'+esc(q.q)+'</p><p class="qhint">'+hint+'</p>'+steps+'<div class="opts">'+opts+'</div>'+fb+
+      '<p class="qtext">'+esc(q.q)+'</p>'+(q.figH?'<div class="q-fig">'+q.figH+'</div>':'')+'<p class="qhint">'+hint+'</p>'+steps+'<div class="opts">'+opts+'</div>'+fb+
       '<div class="qactions sticky"><button class="btn" id="prevBtn" '+(prevI===undefined?'disabled':'')+' data-i="'+prevI+'">'+ICON.left+'Câu trước</button>'+
       '<span class="grow"></span>'+redoBtn+checkBtn+
       '<button class="btn primary" id="nextBtn" '+(nextI===undefined?'disabled':'')+' data-i="'+nextI+'">Câu tiếp'+ICON.right+'</button></div></div>';
