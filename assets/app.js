@@ -350,7 +350,33 @@ function renderSummary(){
     (c.ch<6?'<button class="btn" data-sumch="'+(c.ch+1)+'">Chương '+(c.ch+1)+ICON.right+'</button>':'')+'</div></div></div>';
   if (sumQuery.trim()) highlight(root.querySelectorAll(".sum-body"), sumQuery.trim());
   mountDemos(root);
+  tocLock = 0; spyToc();
 }
+/* Mục lục bên cạnh: tô nổi mục đang chọn / đang đọc */
+var tocLock = 0, spyRaf = 0;
+function setTocOn(id){
+  var toc = document.querySelector("#view-summary .toc"); if (!toc) return;
+  var on = null;
+  Array.prototype.forEach.call(toc.querySelectorAll("a[data-toc]"), function(a){ var m = a.dataset.toc === id; a.classList.toggle("on", m); if (m){ on = a; a.setAttribute("aria-current", "true"); } else a.removeAttribute("aria-current"); });
+  /* giữ mục đang tô luôn nhìn thấy trong khung mục lục (chỉ cuộn khung mục lục, không cuộn trang) */
+  if (on && toc.scrollHeight > toc.clientHeight){
+    var top = on.offsetTop - toc.offsetTop, bot = top + on.offsetHeight;
+    if (top < toc.scrollTop + 8) toc.scrollTop = Math.max(0, top - 40);
+    else if (bot > toc.scrollTop + toc.clientHeight - 8) toc.scrollTop = bot - toc.clientHeight + 40;
+  }
+}
+function spyToc(){
+  if (state.view !== "summary") return;
+  /* vừa bấm mục lục: giữ nguyên mục đã chọn cho tới khi trang cuộn xong */
+  if (Date.now() < tocLock){ tocLock = Date.now() + 200; return; }
+  var secs = document.querySelectorAll("#view-summary .sum-sec[id]"); if (!secs.length) return;
+  var id = secs[0].id, line = 140;
+  for (var k = 0; k < secs.length; k++){ if (secs[k].getBoundingClientRect().top <= line) id = secs[k].id; else break; }
+  /* cuộn tới cuối trang thì tô mục cuối */
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) id = secs[secs.length - 1].id;
+  setTocOn(id);
+}
+window.addEventListener("scroll", function(){ if (spyRaf) return; spyRaf = requestAnimationFrame(function(){ spyRaf = 0; spyToc(); }); }, {passive: true});
 function slideSrc(code){ return "assets/slides/"+code+".jpg"; }
 function renderSec(sec){
   var figs = (sec.figs||[]).map(function(f){
@@ -612,7 +638,12 @@ function bind(){
     if (d.resetCur){ var s0=cur(); if (!s0) return; if (confirm("Làm lại toàn bộ \""+s0.name+"\"?")){ resetSet(s0.key, true); go("quiz"); } return; }
     if (d.sum){ state.sumCh = +d.sum; sumQuery=""; go("summary"); return; }
     if (d.sumch){ state.sumCh = +d.sumch; sumQuery=""; save(); renderSummary(); window.scrollTo({top:0}); return; }
-    if (d.toc){ e.preventDefault(); var el=document.getElementById(d.toc); if (el) el.scrollIntoView({behavior:"smooth"}); return; }
+    if (d.toc){ e.preventDefault(); var el=document.getElementById(d.toc); if (el){
+      setTocOn(d.toc); tocLock = Date.now() + 900;
+      el.scrollIntoView({behavior:"smooth"});
+      el.classList.remove("sec-flash"); void el.offsetWidth; el.classList.add("sec-flash");
+      setTimeout(function(){ el.classList.remove("sec-flash"); }, 1600);
+    } return; }
     if (t.id==="goExam"){ $("#examSetup").scrollIntoView({behavior:"smooth"}); return; }
     if (t.id==="mkExam"){ makeExam(); return; }
     var s = cur(); if (!s) return;
