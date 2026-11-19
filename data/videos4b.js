@@ -108,7 +108,7 @@ V["s4-10~aging"] = function(){
     var ops=[], hot=[];
     row.forEach(function(r,p){ C[p]=(r<<7)|(C[p]>>1); ops.push(u("rr"+p,{t:"R = "+r,c:r?"ok":"gray"}), u("cc"+p,{t:bin(C[p])})); if (r) hot.push("cc"+p); });
     ops.push(f.apply(null,hot));
-    sc.push({s:"Nhịp "+k+": bit R của trang 0 → 5 là "+row.join(" ")+". Trang vừa được dùng có bit <b>1 ở bên trái</b> nên bộ đếm lớn; trang lâu không dùng thì bộ đếm <b>nhỏ dần</b> vì cứ bị dịch phải.", d:ops, t:7000});
+    sc.push({s:"Nhịp "+k+": bit R của trang 0 đến 5 là "+row.join(" ")+". Trang vừa được dùng có bit <b>1 ở bên trái</b> nên bộ đếm lớn; trang lâu không dùng thì bộ đếm <b>nhỏ dần</b> vì cứ bị dịch phải.", d:ops, t:7000});
   });
   var mn=0; C.forEach(function(v,p){ if (v<C[mn]) mn=p; });
   sc.push({s:"Khi cần bỏ trang, chọn trang có <b>bộ đếm nhỏ nhất</b> – ở đây là <b>trang "+mn+"</b> ("+bin(C[mn])+"). Bit bên trái có “trọng số” lớn nên lần dùng <b>gần đây</b> quan trọng hơn lần dùng xa. Đó là lý do Aging <b>xấp xỉ LRU rất tốt</b> mà vẫn chạy hiệu quả.",

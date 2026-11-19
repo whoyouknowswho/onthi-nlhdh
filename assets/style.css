@@ -362,17 +362,19 @@ ul.checklist li::before{content:"✓";position:absolute;left:0;top:1px;width:20p
 .v-btn{border:0;background:#1e293b;color:#e2e8f0;min-width:36px;height:34px;border-radius:9px;font-size:14px;font-weight:800;padding:0 8px}
 .v-btn:hover:not(:disabled){background:#334155}
 .v-btn:disabled{opacity:.4;cursor:not-allowed}
-.v-prog{flex:1;display:flex;gap:3px;min-width:60px}
-.v-seg{flex:1;height:8px;border:0;border-radius:5px;background:#1e293b;padding:0;overflow:hidden;position:relative}
-.v-seg i{position:absolute;inset:0;width:0;background:#818cf8}
-.v-seg.done i{width:100%;animation:none!important}
-.v-seg.on{background:#334155}
-@keyframes vfill{from{width:0}to{width:100%}}
-.v-count{color:#94a3b8;font-size:12.5px;font-weight:700;min-width:38px;text-align:center}
+.v-tl{flex:1;position:relative;height:30px;display:flex;align-items:center;cursor:pointer;touch-action:none;min-width:80px;-webkit-user-select:none;user-select:none}
+.v-track{position:relative;width:100%;height:6px;border-radius:4px;background:#1e293b;transition:height .12s}
+.v-tl:hover .v-track,.v-drag .v-track{height:9px}
+.v-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#6366f1,#818cf8);border-radius:4px}
+.v-tick{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#0b1120;opacity:.85;pointer-events:none}
+.v-knob{position:absolute;top:50%;left:0;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#e0e7ff;box-shadow:0 0 0 3px rgba(129,140,248,.35);transform:scale(.75);transition:transform .12s;pointer-events:none}
+.v-tl:hover .v-knob,.v-drag .v-knob{transform:scale(1.1)}
+.v-tip{position:absolute;bottom:28px;transform:translateX(-50%);background:#111827;color:#e2e8f0;border:1px solid #334155;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;z-index:2}
+.v-time{color:#94a3b8;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:74px;text-align:center}
 .vplayer:fullscreen{display:flex;flex-direction:column;justify-content:center;border-radius:0}
 .vplayer:fullscreen .v-stage{flex:1;aspect-ratio:auto}
 .vplayer:fullscreen .v-sub{font-size:20px}
-@media (max-width:640px){.v-sub{font-size:14px;min-height:76px}.v-btn{min-width:30px;height:30px;font-size:12.5px;padding:0 6px}.v-prev,.v-full{display:none}.v-count{display:none}}
+@media (max-width:640px){.v-sub{font-size:14px;min-height:76px}.v-btn{min-width:30px;height:30px;font-size:12.5px;padding:0 6px}.v-prev,.v-full{display:none}.v-time{min-width:0;font-size:11.5px}}
 
 /* ---------- Toast ---------- */
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:all .25s;z-index:200;max-width:calc(100% - 32px);text-align:center}

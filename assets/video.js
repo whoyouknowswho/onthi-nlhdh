@@ -96,14 +96,76 @@ function pickVoice(){
 if ("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function plain(h){ var d = document.createElement("div"); d.innerHTML = h; return d.textContent.replace(/\s+/g, " ").trim(); }
 
-/* ---------- Trình phát ---------- */
+/* ---------- Chuẩn hóa lời đọc: viết tắt, ký hiệu, tiếng Anh → cách đọc tiếng Việt ----------
+   Chỉ ảnh hưởng giọng đọc; phụ đề trên màn hình giữ nguyên. */
+var LETTER = {A:"a",B:"bê",C:"xê",D:"đê",E:"e",F:"ép",G:"gờ",H:"hát",I:"i",J:"gi",K:"ca",L:"eo",M:"em",N:"en",O:"ô",P:"pê",Q:"qui",R:"e rờ",S:"ét",T:"tê",U:"u",V:"vê",W:"vê kép",X:"ích",Y:"i dài",Z:"dét"};
+var ABBR = [
+  ["MS-DOS","em ét đốt"],["CD-ROM","xê đê rom"],["RS-232","e rờ ét hai ba hai"],["WSClock","vê kép ét clốc"],
+  ["HĐH","hệ điều hành"],["hđh","hệ điều hành"],["CPU","xê pê u"],["RAM","ram"],["ROM","rom"],["MMU","em em u"],["TLB","tê eo bê"],
+  ["DMA","đê em a"],["FAT","phát"],["LRU","eo e rờ u"],["FIFO","phi phô"],["NFU","en ép u"],["NRU","en e rờ u"],["OPT","óp"],
+  ["RAID","rết"],["MBR","em bê e rờ"],["BIOS","bai ốt"],["DOS","đốt"],["UNIX","iu níc"],["PC","pê xê"],["CD","xê đê"],
+  ["SCSI","ét xê ét i"],["USB","u ét bê"],["PCI","pê xê i"],["IDE","i đê e"],["UART","u a rờ tê"],["IRQ","i e rờ qui"],
+  ["ISO","i ét ô"],["READY","rét đi"],["IN","in"],["OUT","ao"],["COM","com"],
+  ["i-nodes","ai nốt"],["i-node","ai nốt"],["I-nodes","ai nốt"],["I-node","ai nốt"],["usr","u ét e rờ"],
+  ["bytes","bai"],["byte","bai"],["file","phai"],["files","phai"],["cache","cát"],["kernel","cơ nồ"],["driver","đrai vơ"],["drivers","đrai vơ"],
+  ["controller","công trô lơ"],["buffer","bắp phơ"],["entry","en tri"],["block","blốc"],["node","nốt"],["offset","óp xét"],
+  ["hole","hâu"],["track","trắc"],["sector","séc tơ"],["parity","pa ri ti"],["user","diu dơ"],["job","gióp"],["stack","xtắc"],
+  ["heap","híp"],["swap","xoáp"],["segment","xéc mần"],["table","tê bồ"],["page","pết"],["base","bây"],["limit","li mít"],
+  ["fit","phít"],["handler","hen đờ lơ"],["interrupt","in tơ rắp"],["bus","bớt"],["timer","tai mơ"],["copy","cóp pi"]
+];
+var CIRC = "①②③④⑤⑥⑦⑧⑨";
+function esc(s){ return s.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"); }
+/* viết tắt viết hoa: phân biệt hoa thường; từ tiếng Anh viết thường: không phân biệt (Block, File…) */
+var ABBR_RE = ABBR.map(function(p){ return [new RegExp("(?<![\\p{L}\\d])" + esc(p[0]) + "(?![\\p{L}])", /^[a-zđ]/.test(p[0]) ? "giu" : "gu"), p[1]]; });
+function spellCaps(w){ return w.split("").map(function(c){ return LETTER[c] || c; }).join(" "); }
+function speakable(html){
+  var h = String(html || "")
+    .replace(/<sup>([^<]*)<\/sup>/g, " mũ $1 ")
+    .replace(/<code>([^<]*)<\/code>/g, function(_, c){
+      return " " + c.replace(/(\w)\([^)]*\)/g, "$1").replace(/!=/g, " khác ").replace(/=/g, " gán ").replace(/\[([^\]]*)\]/g, " $1 ").replace(/[_*();,]/g, " ") + " ";
+    });
+  var t = plain(h);
+  t = t.replace(/(Vào\/Ra|vào\/ra)\s*\(I\/O port\)/g, "vào ra").replace(/\bI\/O\b|Vào\/Ra|vào\/ra/g, "vào ra")
+    .replace(/(\d)\s*[–→]\s*(\d)/g, function(m, a, b){ return /→/.test(m) && /\s/.test(m) ? m : a + " đến " + b; })
+    .replace(/0x([0-9A-Fa-f]+)/g, function(_, h){ return " hếch " + h.split("").join(" ") + " "; })
+    .replace(/\.txt\b/g, " chấm tê ích tê")
+    .replace(/(?<![\p{L}\d.])(\.\.)?(\/[A-Za-z]+)+\/?|“\/”/gu, function(m){ return " " + m.replace(/[“”]/g, "").replace(/\.\./g, " chấm chấm ").replace(/\//g, " gạch chéo ") + " "; })
+    .replace(/(\d)\s*\/\s*giây/g, "$1 trên giây").replace(/\/giây/g, " trên giây")
+    .replace(/(\d)\s+\/\s+(\d)/g, "$1 chia $2").replace(/\s\/\s/g, " hoặc ").replace(/(\d)\/(\d)/g, "$1 hoặc $2").replace(/\//g, " ")
+    .replace(/([A-Za-z]+)\[([^\]]+)\]/g, "$1 của $2")
+    .replace(/[−-](\d)/g, function(m, d, i, s){ return /[\dA-Za-z]$/.test(s.slice(0, i)) ? m : " trừ " + d; })
+    .replace(/(\d)-(\d)/g, "$1 đến $2");
+  ABBR_RE.forEach(function(p){ t = t.replace(p[0], " " + p[1] + " "); });
+  t = t.replace(/(\d)\s*KB\b/g, "$1 ki lô bai").replace(/(\d)\s*MB\b/g, "$1 mê ga bai").replace(/(\d)\s*GB\b/g, "$1 gi ga bai").replace(/(\d)\s*TB\b/g, "$1 tê ra bai")
+    .replace(/\bKB\b/g, "ki lô bai").replace(/\bMB\b/g, "mê ga bai").replace(/\bGB\b/g, "gi ga bai").replace(/\bTB\b/g, "tê ra bai")
+    .replace(/(\d)\s*K\b/g, "$1 ki lô bai")
+    .replace(/(?<![\p{L}\d])([A-Z]{1,8})(\d*)(?![\p{L}])/gu, function(_, w, d){ return " " + spellCaps(w) + (d ? " " + d : "") + " "; })
+    .replace(/(?<![\p{L}\d])([pdfkcbvx])(?![\p{L}\d])/gu, function(_, c){ return LETTER[c.toUpperCase()]; })
+    .replace(/[①-⑨]/g, function(c){ return " " + (CIRC.indexOf(c) + 1) + " "; })
+    .replace(/×/g, " nhân ").replace(/≈/g, " xấp xỉ ").replace(/≥/g, " lớn hơn hoặc bằng ").replace(/≤/g, " nhỏ hơn hoặc bằng ")
+    .replace(/!=/g, " khác ").replace(/</g, " nhỏ hơn ").replace(/>/g, " lớn hơn ").replace(/=/g, " bằng ").replace(/\+/g, " cộng ")
+    .replace(/%/g, " phần trăm ").replace(/#/g, " số ").replace(/→/g, ", rồi ").replace(/[–—…·]/g, ", ")
+    .replace(/[“”"‘’*_()\[\]]/g, " ").replace(/-/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1").replace(/([,.;:])(\s*[,.;:])+/g, "$1").replace(/\s+/g, " ").replace(/^[,\s]+/, "").trim();
+  return t;
+}
+
+/* ---------- Trình phát ----------
+   Dòng thời gian liền mạch: mỗi cảnh chiếm một khoảng [T0, T0 + D) trên trục thời gian.
+   Có thể tua tới bất kỳ thời điểm nào; giọng đọc nói tiếp từ đúng chữ tương ứng với chỗ tua tới. */
 var players = [], current = null;
-function fmt(ms){ var s = Math.round(ms / 1000); return Math.floor(s / 60) + ":" + ("0" + s % 60).slice(-2); }
-function sceneDur(sc, speed){ return (sc.t || Math.max(2600, Math.min(11000, plain(sc.s || "").length * 62))) / speed; }
+function fmt(ms){ var s = Math.floor(Math.max(0, ms) / 1000); return Math.floor(s / 60) + ":" + ("0" + s % 60).slice(-2); }
+var MS_PER_CHAR = 66;   /* ước lượng tốc độ giọng đọc ở 1× (ms cho mỗi ký tự lời đọc) */
+function sceneDur(sc){ var L = speakable(sc.s || "").length; return Math.max(sc.t || 0, 2600, L * MS_PER_CHAR + 700); }
 
 function Player(el, def){
-  var self = this, scenes = def.scenes, n = scenes.length, i = 0, playing = false, timer = null, fallback = null, speed = 1, voiceOn = true, started = false;
-  var total = scenes.reduce(function(a, s){ return a + sceneDur(s, 1); }, 0);
+  var self = this, scenes = def.scenes, n = scenes.length;
+  var texts = scenes.map(function(s){ return speakable(s.s || ""); });
+  var D = scenes.map(sceneDur), T0 = [], total = 0;
+  D.forEach(function(d, j){ T0[j] = total; total += d; });
+  var i = 0, shown = -1, pos = 0, playing = false, started = false, speed = 1, voiceOn = true, dragging = false;
+  var ticker = null, last = 0, uttId = 0, spoken = false, hasBnd = false, bTarget = 0, rush = 0, stall = 0, utt = null;
+  var ticks = T0.slice(1).map(function(t){ return '<i class="v-tick" style="left:' + (t / total * 100).toFixed(3) + '%"></i>'; }).join("");
   el.innerHTML =
     '<div class="v-stage"><svg viewBox="0 0 960 540" preserveAspectRatio="xMidYMid meet"><defs>' +
       Object.keys(C).map(function(k){ return '<marker id="vm-' + k + '" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="' + C[k][1] + '"/></marker>'; }).join("") +
@@ -111,14 +173,16 @@ function Player(el, def){
     '<div class="v-cover"><div class="v-badge">🎬 VIDEO HOẠT HÌNH</div><div class="v-ctitle">' + def.title + '</div><button class="v-big" aria-label="Phát">▶</button><div class="v-cmeta">' + n + ' cảnh · khoảng ' + fmt(total) + '</div></div>' +
     '<div class="v-end" hidden><button class="v-big v-replay" aria-label="Xem lại">↻</button><div class="v-cmeta">Xem lại từ đầu</div></div></div>' +
     '<div class="v-sub"></div>' +
-    '<div class="v-ctl"><button class="v-btn v-play" title="Phát / Tạm dừng (Space)">▶</button><button class="v-btn v-prev" title="Cảnh trước">⏮</button><button class="v-btn v-next" title="Cảnh sau">⏭</button>' +
-    '<div class="v-prog">' + scenes.map(function(_, j){ return '<button class="v-seg" data-j="' + j + '" title="Cảnh ' + (j + 1) + '"><i></i></button>'; }).join("") + '</div>' +
-    '<span class="v-count">1/' + n + '</span><button class="v-btn v-speed" title="Tốc độ">1×</button><button class="v-btn v-voice" title="Thuyết minh bằng giọng đọc">🔊</button><button class="v-btn v-full" title="Toàn màn hình">⛶</button></div>';
+    '<div class="v-ctl"><button class="v-btn v-play" title="Phát / Tạm dừng (Space)">▶</button><button class="v-btn v-prev" title="Về đầu cảnh / cảnh trước">⏮</button><button class="v-btn v-next" title="Cảnh sau">⏭</button>' +
+    '<div class="v-tl" role="slider" aria-label="Thanh thời gian (← → tua 5 giây)" aria-valuemin="0" aria-valuemax="' + Math.round(total / 1000) + '" aria-valuenow="0"><div class="v-track"><div class="v-fill"></div>' + ticks + '<div class="v-knob"></div></div><div class="v-tip" hidden></div></div>' +
+    '<span class="v-time">0:00 / ' + fmt(total) + '</span><button class="v-btn v-speed" title="Tốc độ">1×</button><button class="v-btn v-voice" title="Thuyết minh bằng giọng đọc">🔊</button><button class="v-btn v-full" title="Toàn màn hình">⛶</button></div>';
   var layer = el.querySelector(".v-layer"), sub = el.querySelector(".v-sub"), cover = el.querySelector(".v-cover"), end = el.querySelector(".v-end");
-  var bPlay = el.querySelector(".v-play"), bVoice = el.querySelector(".v-voice"), bSpeed = el.querySelector(".v-speed"), cnt = el.querySelector(".v-count"), segs = el.querySelectorAll(".v-seg");
+  var bPlay = el.querySelector(".v-play"), bVoice = el.querySelector(".v-voice"), tl = el.querySelector(".v-tl"), track = el.querySelector(".v-track");
+  var fill = el.querySelector(".v-fill"), knob = el.querySelector(".v-knob"), tip = el.querySelector(".v-tip"), tm = el.querySelector(".v-time");
   var live = {};
 
   function render(k){
+    shown = k;
     var S = stateAt(scenes, k);
     Object.keys(live).forEach(function(id){
       if (!S.st[id] || S.st[id].type !== live[id].type){ var g = live[id].g; delete live[id]; g.style.opacity = 0; g.setAttribute("data-dead", "1"); setTimeout(function(){ if (g.parentNode) g.parentNode.removeChild(g); }, 450); }
@@ -129,60 +193,125 @@ function Player(el, def){
         var g = build(it.type); g.dataset.id = id; g.style.opacity = 0;
         if (it.p.back) layer.insertBefore(g, layer.firstChild); else layer.appendChild(g);
         live[id] = L = {g: g, type: it.type};
-        var p0 = Object.assign({}, it.p); var o = p0.o; p0.o = 0; update(g, it.type, p0);
+        var p0 = Object.assign({}, it.p); p0.o = 0; update(g, it.type, p0);
         g.getBoundingClientRect();
         (function(g, it){ requestAnimationFrame(function(){ update(g, it.type, it.p); }); })(g, it);
       } else update(L.g, it.type, it.p);
     });
     S.flashes.forEach(function(id){ var L = live[id]; if (!L) return; L.g.classList.remove("vflash"); L.g.getBoundingClientRect(); L.g.classList.add("vflash"); });
     sub.innerHTML = '<span class="v-scn">' + (k + 1) + '/' + n + '</span>' + (scenes[k].s || "");
-    cnt.textContent = (k + 1) + "/" + n;
-    segs.forEach(function(s, j){ s.classList.toggle("done", j < k); s.classList.toggle("on", j === k); s.querySelector("i").style.animation = "none"; });
   }
-  function clearT(){ clearTimeout(timer); clearTimeout(fallback); timer = fallback = null; if (current === self && "speechSynthesis" in window) speechSynthesis.cancel(); }
-  function schedule(){
-    clearT();
-    var d = sceneDur(scenes[i], speed), seg = segs[i].querySelector("i");
-    function go(){ clearT(); if (!playing) return; if (i < n - 1){ i++; render(i); schedule(); } else finish(); }
-    if (voiceOn && viVoice){
-      var u = new SpeechSynthesisUtterance(plain(scenes[i].s || "")); u.voice = viVoice; u.lang = viVoice.lang; u.rate = Math.min(2, 1.05 * speed);
-      var done = false; u.onend = function(){ if (done) return; done = true; timer = setTimeout(go, 450); };
-      speechSynthesis.cancel(); speechSynthesis.speak(u);
-      var fb = plain(scenes[i].s || "").length * 110 / speed + 4000;
-      fallback = setTimeout(function(){ if (!done){ done = true; go(); } }, fb);
-      seg.style.animation = "vfill " + (fb / 1000 * 0.55) + "s linear forwards";
+  function sceneAt(p){ var k = 0; while (k < n - 1 && T0[k + 1] <= p) k++; return k; }
+  function paint(){
+    var f = total ? Math.min(1, pos / total) * 100 : 0;
+    fill.style.width = f + "%"; knob.style.left = f + "%";
+    tm.textContent = fmt(pos) + " / " + fmt(total); tl.setAttribute("aria-valuenow", Math.round(pos / 1000));
+  }
+  function voiceReady(){ return voiceOn && viVoice && ("speechSynthesis" in window); }
+  function stopSpeech(){ uttId++; if (current === self && "speechSynthesis" in window) speechSynthesis.cancel(); }
+  /* Bắt đầu (lại) cảnh i tại vị trí pos: đọc từ chữ tương ứng */
+  function startScene(){
+    stopSpeech(); spoken = false; hasBnd = false; rush = 0; stall = 0; bTarget = pos;
+    if (!playing || !voiceReady()) return;
+    var txt = texts[i], f = (pos - T0[i]) / D[i], c0 = 0;
+    if (f > 0.03){ c0 = Math.floor(f * txt.length); var sp = txt.lastIndexOf(" ", c0); c0 = sp < 0 ? 0 : sp + 1; }
+    var part = txt.slice(c0);
+    if (!part.trim()){ spoken = true; return; }
+    var my = uttId, u = new SpeechSynthesisUtterance(part);
+    u.voice = viVoice; u.lang = viVoice.lang; u.rate = Math.min(2, 1.05 * speed);
+    u.onboundary = function(e){ if (my !== uttId) return; hasBnd = true; stall = 0; var t = T0[i] + D[i] * Math.min(1, (c0 + e.charIndex) / txt.length); if (t > bTarget) bTarget = t; };
+    u.onend = u.onerror = function(){ if (my === uttId) spoken = true; };
+    speechSynthesis.cancel(); speechSynthesis.speak(u); utt = u;
+  }
+  function advance(){
+    if (i < n - 1){ i++; pos = T0[i]; render(i); startScene(); }
+    else { pos = total; paint(); finish(); }
+  }
+  function tick(){
+    var now = performance.now(), dt = Math.min(250, now - last); last = now;
+    if (!playing || dragging) return;
+    var endT = T0[i] + D[i];
+    if (voiceReady() && !spoken){
+      /* đang đọc: đồng hồ chạy theo giọng, không vượt quá cuối cảnh khi giọng chưa đọc xong */
+      var lim = endT - 1; if (hasBnd) lim = Math.min(lim, bTarget + 1200);
+      var np = Math.min(pos + dt * speed, lim);
+      if (hasBnd && bTarget > np) np = Math.min(bTarget, endT - 1);
+      if (np <= pos + 0.01){ stall += dt; if (stall > 6000 + D[i] * 0.5) spoken = true; } else if (!hasBnd) stall = 0;
+      pos = Math.max(pos, np);
+    } else if (voiceReady()){
+      /* đọc xong: chạy nốt phần còn lại của cảnh trong khoảng 0,4 giây */
+      if (!rush) rush = Math.max(speed, (endT - pos) / 400);
+      pos += dt * rush; if (pos >= endT) advance();
     } else {
-      timer = setTimeout(go, d);
-      seg.style.animation = "vfill " + d / 1000 + "s linear forwards";
+      pos += dt * speed; if (pos >= endT) advance();
     }
+    paint();
   }
-  function finish(){ playing = false; bPlay.textContent = "▶"; end.hidden = false; segs.forEach(function(s){ s.classList.add("done"); }); }
+  function seekTo(p){
+    pos = Math.max(0, Math.min(total - 1, p)); started = true; cover.hidden = true; end.hidden = true;
+    var k = sceneAt(pos); i = k; if (shown !== k) render(k);
+    paint();
+  }
+  function finish(){ playing = false; clearInterval(ticker); bPlay.textContent = "▶"; end.hidden = false; }
   function play(){
     if (current && current !== self) current.pause();
     current = self; cover.hidden = true; end.hidden = true;
-    if (!started){ started = true; i = 0; render(0); }
-    playing = true; bPlay.textContent = "❚❚"; schedule();
+    if (!started || pos >= total - 1){ started = true; pos = 0; i = 0; }
+    if (shown !== i) render(i);
+    playing = true; bPlay.textContent = "❚❚";
+    last = performance.now(); clearInterval(ticker); ticker = setInterval(tick, 50);
+    startScene(); paint();
   }
-  this.pause = function(){ playing = false; clearT(); bPlay.textContent = "▶"; segs.forEach(function(s){ s.querySelector("i").style.animation = "none"; }); };
+  this.pause = function(){ playing = false; clearInterval(ticker); stopSpeech(); bPlay.textContent = "▶"; };
   this.destroy = function(){ this.pause(); };
   this.show = function(k){ jump(k); };
   this.count = n;
+  this.total = total;
+  this.seek = function(ms){ seekTo(ms); if (playing) startScene(); };
+  this.state = function(){ return {pos: pos, scene: i, playing: playing, total: total}; };
   this.refreshVoice = function(){ bVoice.disabled = !viVoice; bVoice.title = viVoice ? "Thuyết minh: " + viVoice.name : "Máy/trình duyệt này chưa có giọng đọc tiếng Việt – video vẫn chạy kèm phụ đề"; bVoice.textContent = (viVoice && voiceOn) ? "🔊" : "🔇"; };
-  function jump(k){ started = true; cover.hidden = true; end.hidden = true; i = Math.max(0, Math.min(n - 1, k)); render(i); if (playing) schedule(); }
+  function jump(k){ k = Math.max(0, Math.min(n - 1, k)); seekTo(T0[k]); if (playing) startScene(); }
+
+  /* Thanh thời gian: nhấp hoặc kéo để tua tới bất kỳ đâu */
+  function posFromX(x){ var r = track.getBoundingClientRect(); return Math.max(0, Math.min(1, (x - r.left) / (r.width || 1))) * total; }
+  function showTip(x){
+    var r = track.getBoundingClientRect(), p = posFromX(x);
+    tip.hidden = false; tip.textContent = "Cảnh " + (sceneAt(p) + 1) + " · " + fmt(p);
+    tip.style.left = Math.max(34, Math.min(r.width - 34, x - r.left)) + "px";
+  }
+  tl.onpointerdown = function(e){
+    if (e.button) return; e.preventDefault();
+    dragging = true; el.classList.add("v-drag");
+    try { tl.setPointerCapture(e.pointerId); } catch (err){}
+    stopSpeech(); seekTo(posFromX(e.clientX)); showTip(e.clientX);
+  };
+  tl.onpointermove = function(e){ if (e.pointerType === "mouse" || dragging) showTip(e.clientX); if (dragging) seekTo(posFromX(e.clientX)); };
+  tl.onpointerup = tl.onpointercancel = function(){
+    if (!dragging) return; dragging = false; el.classList.remove("v-drag");
+    if (playing){ last = performance.now(); startScene(); }
+    if (!tl.matches(":hover")) tip.hidden = true;
+  };
+  tl.onpointerleave = function(){ if (!dragging) tip.hidden = true; };
+
   el.onclick = function(e){
     var b = e.target.closest("button"); if (!b) return;
     if (b.classList.contains("v-big") || b.classList.contains("v-play")){
       if (b.classList.contains("v-replay")){ started = false; }
       if (playing) self.pause(); else play();
     }
-    else if (b.classList.contains("v-prev")) jump(i - 1);
+    else if (b.classList.contains("v-prev")) jump(pos - T0[i] > 1500 ? i : i - 1);
     else if (b.classList.contains("v-next")) jump(i + 1);
-    else if (b.classList.contains("v-seg")) jump(+b.dataset.j);
-    else if (b.classList.contains("v-speed")){ var sp = [0.75, 1, 1.25, 1.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length]; b.textContent = speed + "×"; if (playing) schedule(); }
-    else if (b.classList.contains("v-voice")){ voiceOn = !voiceOn; self.refreshVoice(); if (playing) schedule(); }
+    else if (b.classList.contains("v-speed")){ var sp = [0.75, 1, 1.25, 1.5]; speed = sp[(sp.indexOf(speed) + 1) % sp.length]; b.textContent = speed + "×"; if (playing) startScene(); }
+    else if (b.classList.contains("v-voice")){ voiceOn = !voiceOn; self.refreshVoice(); if (playing) startScene(); }
     else if (b.classList.contains("v-full")){ var fs = document.fullscreenElement; if (fs) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen(); }
   };
-  el.onkeydown = function(e){ if (e.key === " "){ e.preventDefault(); if (playing) self.pause(); else play(); } };
+  el.onkeydown = function(e){
+    if (e.target.closest && e.target.closest("button") && (e.key === " " || e.key === "Enter")) return;
+    if (e.key === " " || e.key === "k"){ e.preventDefault(); if (playing) self.pause(); else play(); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowRight"){ e.preventDefault(); self.seek(pos + (e.key === "ArrowLeft" ? -5000 : 5000)); }
+    else if (e.key === "Home"){ e.preventDefault(); self.seek(0); }
+    else if (e.key === "End"){ e.preventDefault(); jump(n - 1); }
+  };
   el.tabIndex = 0;
   this.refreshVoice();
 }
@@ -203,7 +332,8 @@ window.VideoPlayer = {
     if (!cache[id]) cache[id] = typeof f === "function" ? f() : f;
     var p = new Player(el, cache[id]); el._p = p; players.push(p);
   },
-  has: function(id){ return !!(window.VIDEOS && window.VIDEOS[id]); }
+  has: function(id){ return !!(window.VIDEOS && window.VIDEOS[id]); },
+  speakable: speakable
 };
 
 /* Bộ hàm viết tắt để soạn video */
