@@ -94,9 +94,97 @@ V["s4-10~lru"] = function(){ return repVideo("lru","Thuật toán LRU · 3 khung
 V["s4-10~opt"] = function(){ return repVideo("opt","Thuật toán Optimal · 3 khung trang",
   "<b>Optimal</b>: bỏ trang mà <b>lâu nhất nữa mới được dùng lại</b> – nhìn về <b>tương lai</b>. Bên phải mỗi khung ghi bước sắp tới trang đó được dùng lại.",
   "Optimal gây <b>{F}</b> lỗi trang – <b>ít nhất có thể</b>. Nhưng HĐH không biết trước tương lai nên <b>không cài đặt được</b>; Optimal chỉ dùng làm <b>chuẩn để so sánh</b> các thuật toán khác."); };
-V["s4-10~clock"] = function(){ return repVideo("clock","Second chance / Clock · 3 khung trang",
-  "<b>Clock</b> là cách cài đặt <b>Second chance</b>: các khung xếp thành vòng tròn, có <b>kim</b> chỉ vào trang cũ nhất. Mỗi trang có bit <b>R</b>: được tham chiếu thì R = 1 (ở đây trang vừa nạp cũng có R = 1). Khi cần bỏ trang: gặp R = 1 thì xóa R, cho <b>cơ hội thứ hai</b> và quay kim tiếp; gặp R = 0 thì bỏ trang đó.",
-  "Clock gây <b>{F}</b> lỗi trang với chuỗi này. Second chance là <b>cải tiến lớn so với FIFO</b> vì không vứt trang vừa được dùng; Clock cài đặt nó bằng danh sách vòng và một con kim nên <b>thực tế</b>, không phải dời trang trong danh sách. Lưu ý: nếu đề quy ước trang mới nạp có R = 0 thì kết quả có thể khác – hãy dùng công cụ tính thử bên dưới."); };
+/* Clock / Second chance: dựng riêng để thấy rõ vòng tròn, con kim và từng bước kim quay */
+V["s4-10~clock"] = function(){
+  var R = R0, N = 3, sc = [];
+  var FR = [{x:225,y:165},{x:345,y:365},{x:105,y:365}];          /* khung 1 trên, khung 2 phải dưới, khung 3 trái dưới (theo chiều kim đồng hồ) */
+  var HAND = [{x:300,y:250},{x:352,y:362},{x:248,y:362}];         /* đầu kim chỉ vào từng khung */
+  var LAB = [{x:300,y:150},{x:420,y:462},{x:180,y:462}];
+  var RULE = "Khi cần bỏ trang, nhìn trang kim chỉ:\n• R = 1 → xóa thành 0, tha, quay kim tiếp\n• R = 0 → bỏ trang này, nạp trang mới\nTrang được dùng lại (không lỗi) → R = 1";
+
+  /* --- Phần 1: hiểu ý tưởng bằng hàng đợi --- */
+  sc.push({s:"Nhắc lại <b>FIFO</b>: hết chỗ thì bỏ trang <b>vào sớm nhất</b>. Nhưng trang vào sớm nhất có thể vẫn đang được dùng liên tục. Bỏ nó đi thì lát nữa lại lỗi trang để nạp về, rất phí.",
+    d:[H("Vấn đề của FIFO"),
+       b("qa",110,190,220,90,"Trang A","bad",{fs:20,s:"vào sớm nhất"}), b("qb",370,190,220,90,"Trang B","gray",{fs:20,s:"vào sau"}), b("qc",630,190,220,90,"Trang C","gray",{fs:20,s:"vào sau cùng"}),
+       t("qh",480,140,"Hàng đợi FIFO: bên trái là trang cũ nhất",{fs:15,c:"gray"}),
+       t("q1",220,320,"nhưng A đang được dùng liên tục!",{fs:15,c:"warn"}),
+       t("q2",480,410,"FIFO vẫn bỏ A → lát nữa lại lỗi trang để nạp A về",{fs:18,c:"bad"})]});
+  sc.push({s:"<b>Second chance</b> (cơ hội thứ hai) thêm cho mỗi trang một bit <b>R</b>: trang vừa được dùng thì R = 1. Trước khi bỏ trang cũ nhất, xem bit R của nó. R = 1 nghĩa là trang vẫn đang được dùng, nên <b>tha cho một lần</b>.",
+    d:[H("Ý tưởng Second chance: tha cho trang vừa được dùng"), x("q1","q2"),
+       u("qa",{c:"ok",s:"R = 1 · vừa được dùng"}), u("qb",{s:"R = 0"}), u("qc",{s:"R = 1"}),
+       t("q3",480,380,"Trước khi bỏ: xem bit R của trang cũ nhất",{fs:18,c:"warn"})]});
+  sc.push({s:"Tha nghĩa là: <b>xóa R của A về 0</b> rồi đưa A xuống cuối hàng như trang mới vào. Xét tiếp trang B: R = 0, tức lâu rồi không ai dùng, nên <b>bỏ B</b>.",
+    d:[x("q3"), u("qb",{x:110,c:"bad",s:"R = 0 → BỊ BỎ"}), u("qc",{x:370,c:"gray"}), u("qa",{x:630,c:"gray",s:"R = 0 · được tha, xuống cuối"}),
+       t("q4",480,380,"R = 1 → xóa R, tha  ·  R = 0 → bỏ",{fs:20,c:"warn"})]});
+
+  /* --- Phần 2: Clock = Second chance xếp thành vòng tròn --- */
+  var base = [clr(), H("Clock: Second chance xếp thành vòng tròn"), b("ring",165,195,270,270,"","gray",{r:135,dash:1})];
+  R.forEach(function(p,i){ base.push(b("c"+i,60+i*42,58,38,40,String(p),"gray",{fs:17,r:6}), t("ci"+i,79+i*42,110,String(i+1),{fs:11,c:"gray"})); });
+  for (var k=0;k<N;k++) base.push(b("f"+k,FR[k].x,FR[k].y,150,80,"trống","none",{dash:1,fs:20}), t("fl"+k,LAB[k].x,LAB[k].y,"Khung "+(k+1),{fs:14,c:"gray"}));
+  base.push(a("hand",300,330,HAND[0].x,HAND[0].y,{c:"violet",sw:5}), d("hub",300,330,{r:9,c:"violet"}),
+    b("cnt",600,150,300,60,"Lỗi trang: 0","bad",{fs:22}), t("note",750,262,"",{fs:16}),
+    b("rule",560,330,370,140,RULE,"violet",{fs:14}));
+  sc.push({s:"Đưa trang xuống cuối hàng thì tốn công. <b>Clock</b> làm y hệt Second chance nhưng xếp các khung thành <b>vòng tròn</b> với một <b>kim</b> chỉ vào trang cũ nhất. Tha một trang chỉ cần <b>quay kim</b> sang khung kế, không phải dời trang nào.",
+    d:[base, u("note",{t:"Kim (mũi tên tím) chỉ trang cũ nhất",c:"violet"})]});
+  sc.push({s:"Giờ chạy chuỗi 20 tham chiếu ở trên với <b>3 khung</b>. Quy ước của video này: trang <b>vừa nạp có R = 1</b>. Khung xanh là R = 1, khung xám là R = 0.",
+    d:[u("note",{t:"Quy ước: trang vừa nạp có R = 1\nxanh = R 1 · xám = R 0",c:"warn"}), f("rule")]});
+
+  /* --- Phần 3: chạy từng bước --- */
+  var fr = [], rb = [], hand = 0, faults = 0;
+  function frameOps(){ var o=[]; for (var j=0;j<N;j++) if (fr[j]!==undefined) o.push(u("f"+j,{t:"trang "+fr[j], s:"R = "+rb[j], c: rb[j] ? "ok" : "gray", dash:0, fs:20})); return o; }
+  function handOps(){ return [u("hand",{x2:HAND[hand].x, y2:HAND[hand].y})]; }
+  R.forEach(function(p,i){
+    var pre = [u("c"+i,{c:"warn"})], idx = fr.indexOf(p), head = "Bước "+(i+1)+", tham chiếu <b>"+p+"</b>: ";
+    if (idx >= 0){
+      rb[idx] = 1;
+      sc.push({s: head+"trang "+p+" <b>đã có</b> trong RAM, không lỗi. Bật R của nó lên 1. Kim đứng yên.",
+        d:[pre, u("c"+i,{c:"ok"}), frameOps(), f("f"+idx), u("note",{t:"✔ Không lỗi (hit)\ntrang "+p+": R = 1",c:"ok"})]});
+      return;
+    }
+    faults++;
+    if (fr.length < N){
+      fr.push(p); rb.push(1); var k0 = fr.length - 1;
+      sc.push({s: head+"chưa có, <b>lỗi trang</b>. Còn khung trống nên nạp trang "+p+" vào khung "+(k0+1)+", R = 1.",
+        d:[pre, u("c"+i,{c:"bad"}), frameOps(), f("f"+k0), u("cnt",{t:"Lỗi trang: "+faults}), u("note",{t:"✘ Lỗi trang\nnạp vào khung trống "+(k0+1),c:"bad"})]});
+      return;
+    }
+    /* RAM đầy: kim quay từng khung một */
+    var first = true;
+    while (rb[hand] === 1){
+      var q = fr[hand], from = hand;
+      rb[hand] = 0; hand = (hand + 1) % N;
+      sc.push({s:(first ? head+"chưa có, <b>lỗi trang</b>, RAM đầy nên phải bỏ một trang. " : "")+
+          "Kim chỉ khung "+(from+1)+", đang chứa trang "+q+", có <b>R = 1</b>: xóa thành 0, tha, quay kim sang khung "+(hand+1)+".",
+        d:[first ? [pre, u("c"+i,{c:"bad"}), u("cnt",{t:"Lỗi trang: "+faults})] : [], frameOps(), handOps(), f("f"+from),
+           u("note",{t:(first ? "✘ Lỗi trang · RAM đầy\n" : "")+"Khung "+(from+1)+": R = 1 → tha\nquay kim tiếp",c:"warn"})]});
+      first = false;
+    }
+    var v = hand, old = fr[v];
+    fr[v] = p; rb[v] = 1; hand = (v + 1) % N;
+    sc.push({s:(first ? head+"chưa có, <b>lỗi trang</b>, RAM đầy. " : "")+
+        "Kim chỉ khung "+(v+1)+", đang chứa trang "+old+", có <b>R = 0</b>: <b>bỏ trang "+old+"</b>, nạp trang "+p+" vào đó với R = 1, rồi kim sang khung "+(hand+1)+".",
+      d:[first ? [pre, u("c"+i,{c:"bad"}), u("cnt",{t:"Lỗi trang: "+faults})] : [], frameOps(), handOps(), f("f"+v),
+         u("note",{t:(first ? "✘ Lỗi trang · RAM đầy\n" : "")+"Khung "+(v+1)+": R = 0 → bỏ trang "+old+"\nnạp trang "+p,c:"bad"})]});
+  });
+
+  sc.push({s:"Clock gây <b>"+faults+" lỗi trang</b> với chuỗi này, ít hơn FIFO (15) vì không vứt trang vừa được dùng. Clock chỉ cần một con kim quay vòng nên rất <b>thực tế</b>. Lưu ý: nếu đề quy ước trang vừa nạp có <b>R = 0</b> thì chỉ còn "+simulateClock0()+" lỗi, hãy dùng công cụ tính thử bên dưới.",
+    d:[clr(), H("Clock / Second chance – kết quả"), b("res",280,140,400,140,faults+" lỗi trang","bad",{fs:34,s:"chuỗi 20 tham chiếu · 3 khung · trang vừa nạp R = 1"}),
+       t("cmp",480,340,CMP,{fs:17,c:"warn"}), t("cv",480,400,"Nếu quy ước trang vừa nạp có R = 0: "+simulateClock0()+" lỗi trang",{fs:16,c:"gray"})]});
+  return {title:"Clock / Second chance · 3 khung trang", scenes:sc};
+};
+/* Clock với quy ước trang vừa nạp có R = 0 (chỉ để báo con số so sánh) */
+function simulateClock0(){
+  var fr=[], rb=[], hand=0, faults=0;
+  R0.forEach(function(p){
+    var idx=fr.indexOf(p);
+    if (idx>=0){ rb[idx]=1; return; }
+    faults++;
+    if (fr.length<3){ fr.push(p); rb.push(0); return; }
+    while (rb[hand]===1){ rb[hand]=0; hand=(hand+1)%3; }
+    fr[hand]=p; rb[hand]=0; hand=(hand+1)%3;
+  });
+  return faults;
+}
 
 V["s4-10~aging"] = function(){
   var T=[[1,0,1,0,1,1],[1,1,0,0,1,0],[1,1,0,1,0,1],[1,0,0,0,1,0],[0,1,1,0,0,0]], C=[0,0,0,0,0,0], sc=[], base=[H("Thuật toán Aging (lão hóa) · 6 trang, bộ đếm 8 bit")];
