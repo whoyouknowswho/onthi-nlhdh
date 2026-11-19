@@ -518,3 +518,9 @@ main:has(.sum-layout.has-gl){max-width:1720px}
 .gl-panel .gl-go{font-size:13.5px}
 @media (max-width:1279px){ .gl-panel{width:min(440px,94vw)} .sum-layout.has-gl{grid-template-columns:240px minmax(0,1fr)} }
 @media (max-width:1023px){ .sum-layout.has-gl{grid-template-columns:1fr} }
+/* Công cụ dịch địa chỉ Pentium (mục 13 chương 4) */
+.pent-steps{margin:8px 0 0;padding-left:0;list-style:none;display:grid;gap:6px}
+.pent-steps li{padding:8px 12px;border-radius:10px;background:var(--soft,rgba(127,127,127,.08));border-left:4px solid var(--brand)}
+.pent-steps li.bad{border-left-color:var(--bad,#dc2626);background:var(--bad-soft,rgba(220,38,38,.1))}
+.pent-steps .bits{margin:2px 4px;font-size:13.5px;vertical-align:middle}
+.pent-steps .bits span{padding:2px 6px}

@@ -706,6 +706,62 @@ var DEMOS = {
     el.onclick = function(e){ var b = e.target.closest("button[data-v]"); if (b){ inp.value = b.dataset.v; run(); } };
     run();
   },
+  /* Pentium: (selector, offset) → descriptor → tuyến tính → 10/10/12 → vật lý */
+  pent: function(el){
+    var HS = function(v){ return "0x" + v.toString(16).toUpperCase(); };
+    var H = function(v, w){ return "0x" + ("00000000" + v.toString(16).toUpperCase()).slice(-(w || 8)); };
+    var DT = {
+      G: [null, {nm:"Code của kernel", base:0xC0000000, lim:0xFFFFF, g:1, dpl:0, p:1}],
+      L: [{nm:"Code của chương trình", base:0x00100000, lim:0xFFFF, g:0, dpl:3, p:1},
+          {nm:"Data của chương trình", base:0x00400000, lim:0xFFFF, g:0, dpl:3, p:1},
+          {nm:"Stack của chương trình", base:0x00800000, lim:0x1FFF, g:0, dpl:3, p:0}]
+    };
+    var MAP = {"0,256":5, "0,257":9, "1,3":7, "1,4":2, "768,0":1};
+    var EX = [["Đi trọn (data)","0x000F","0x3004"],["Code","0x0007","0x1A20"],["Kernel tự dùng","0x0008","0x0"],
+              ["Vượt Limit","0x000F","0x12000"],["Đoạn chưa có (P = 0)","0x0017","0x10"],["User đụng kernel","0x000B","0x0"],["Lỗi trang","0x000F","0x5000"]];
+    function rows(k){ return DT[k].map(function(d, i){ return '<tr><td>' + i + '</td><td>' + (d ? d.nm : '<span class="muted">(trống)</span>') + '</td><td>' + (d ? H(d.base) : '') + '</td><td>' + (d ? HS(d.lim) + (d.g ? ' trang' : ' byte') : '') + '</td><td>' + (d ? d.dpl : '') + '</td><td>' + (d ? d.p : '') + '</td></tr>'; }).join(""); }
+    el.innerHTML = '<div class="demo-h">🧪 Tự dịch địa chỉ Pentium: (selector, offset) → địa chỉ vật lý</div>' +
+      '<div class="demo-row"><label>Selector (16 bit)<input data-f="s" value="0x000F"></label><label>Offset<input data-f="o" value="0x3004"></label></div>' +
+      '<div class="demo-row">' + EX.map(function(e){ return '<button class="btn sm" data-s="' + e[1] + '" data-o="' + e[2] + '">' + e[0] + '</button>'; }).join("") + '</div>' +
+      '<details class="slide-note"><summary>Bảng mẫu dùng trong công cụ</summary><div class="tbl-wrap"><table class="demo-t"><tr><th colspan="6">GDT (chung)</th></tr><tr><th>Dòng</th><th>Đoạn</th><th>Base</th><th>Limit</th><th>DPL</th><th>P</th></tr>' + rows("G") +
+      '<tr><th colspan="6">LDT (của chương trình)</th></tr>' + rows("L") + '</table></div>' +
+      '<small class="muted">Trang đã nạp (Dir, Page → khung): (0, 256) → 5 · (0, 257) → 9 · (1, 3) → 7 · (1, 4) → 2 · (768, 0) → 1. Trang khác coi như chưa có trong RAM.</small></details>' +
+      '<div class="demo-out"></div>';
+    var o = el.querySelector(".demo-out");
+    function num(x){ x = String(x).trim(); return /^0x[0-9a-f]+$/i.test(x) ? parseInt(x, 16) : /^\d+$/.test(x) ? parseInt(x, 10) : NaN; }
+    function run(){
+      var s = num(el.querySelector('[data-f=s]').value), off = num(el.querySelector('[data-f=o]').value), out = [], stop = null;
+      if (isNaN(s) || s < 0 || s > 0xFFFF){ o.innerHTML = 'Selector là số 16 bit: từ 0x0000 đến 0xFFFF.'; return; }
+      if (isNaN(off) || off < 0 || off > 0xFFFFFFFF){ o.innerHTML = 'Offset là số từ 0 đến 0xFFFFFFFF (thập phân hoặc 0x…).'; return; }
+      var idx = s >> 3, ti = (s >> 2) & 1, rpl = s & 3, bin = ("0000000000000000" + s.toString(2)).slice(-16), tb = ti ? "L" : "G", nm = ti ? "LDT" : "GDT";
+      out.push('<b>① Tách selector</b> ' + H(s, 4) + ' = <span class="bits" style="display:inline-flex"><span class="b1">' + bin.slice(0, 13) + '</span><span class="b2">' + bin[13] + '</span><span class="b3">' + bin.slice(14) + '</span></span> → Index = <b>' + idx + '</b>, TI = <b>' + ti + '</b> (tra ' + nm + '), RPL = <b>' + rpl + '</b>');
+      var d = DT[tb][idx];
+      if (!d){ stop = 'Dòng ' + idx + ' của ' + nm + ' không có đoạn nào' + (idx === 0 && !ti ? ' (dòng 0 của GDT luôn để trống <span class="xs">ngoài slide</span>)' : '') + ' → <b>lỗi bảo vệ</b>, dừng.'; }
+      else {
+        out.push('<b>② Đọc descriptor</b> ' + nm + ' dòng ' + idx + ' (' + d.nm + '): Base = <b>' + H(d.base) + '</b>, Limit = ' + HS(d.lim) + ' (G = ' + d.g + ' → tính theo ' + (d.g ? 'trang' : 'byte') + '), DPL = ' + d.dpl + ', P = ' + d.p);
+        var lim = d.g ? d.lim * 4096 + 4095 : d.lim;
+        if (rpl > d.dpl) stop = 'Bên yêu cầu ở mức <b>' + rpl + '</b> nhưng đoạn có DPL = <b>' + d.dpl + '</b> (quyền cao hơn) → <b>bị chặn, lỗi bảo vệ</b>. Muốn nhờ kernel phải đi qua system call. <small class="muted">(Mô phỏng đơn giản hóa luật kiểm tra quyền.)</small>';
+        else if (!d.p) stop = 'P = 0: đoạn <b>không có trong bộ nhớ</b> → báo lỗi cho HĐH nạp đoạn vào rồi chạy lại.';
+        else if (off > lim) stop = 'Offset ' + HS(off) + ' &gt; Limit ' + HS(lim) + ' → <b>vượt quá chiều dài đoạn, lỗi</b>, dừng.';
+        else {
+          var lin = (d.base + off) % 4294967296;
+          out.push('<b>③ Base + Offset</b>: ' + HS(off) + ' ≤ ' + HS(lim) + ' ✔ → ' + H(d.base) + ' + ' + HS(off) + ' = <b>' + H(lin) + '</b> (địa chỉ tuyến tính)');
+          var dir = Math.floor(lin / 4194304), pg = Math.floor(lin / 4096) % 1024, po = lin % 4096, lb = ("0".repeat(32) + lin.toString(2)).slice(-32);
+          out.push('<b>④ Tách 10 · 10 · 12</b>: <span class="bits" style="display:inline-flex"><span class="b1">' + lb.slice(0, 10) + '</span><span class="b2">' + lb.slice(10, 20) + '</span><span class="b3">' + lb.slice(20) + '</span></span> → Dir = <b>' + dir + '</b>, Page = <b>' + pg + '</b>, Offset = <b>' + po + '</b>');
+          var fr = MAP[dir + "," + pg];
+          if (fr === undefined) stop = 'Page directory dòng ' + dir + ' → page table → dòng ' + pg + ' ghi <b>X</b>: trang chưa có trong RAM → <b>lỗi trang</b> (xử lý như mục 9, 11).';
+          else {
+            out.push('<b>⑤ Tra 2 bảng</b>: page directory dòng ' + dir + ' → page table → dòng ' + pg + ' ghi <b>khung ' + fr + '</b>');
+            out.push('<b>⑥ Địa chỉ vật lý</b> = ' + fr + ' × 4096 + ' + po + ' = <b>' + (fr * 4096 + po).toLocaleString("vi-VN") + '</b> (' + H(fr * 4096 + po) + ') ✔');
+          }
+        }
+      }
+      o.innerHTML = '<ol class="pent-steps">' + out.map(function(x){ return '<li>' + x + '</li>'; }).join("") + (stop ? '<li class="bad">✘ ' + stop + '</li>' : '') + '</ol>';
+    }
+    el.oninput = run;
+    el.onclick = function(e){ var b = e.target.closest("button[data-s]"); if (b){ el.querySelector('[data-f=s]').value = b.dataset.s; el.querySelector('[data-f=o]').value = b.dataset.o; run(); } };
+    run();
+  },
   /* Mô phỏng TLB: đếm hit / miss, số lần vào RAM và thời gian truy cập trung bình */
   tlb: function(el){
     el.innerHTML = '<div class="demo-h">🧪 Mô phỏng TLB: hit, miss và thời gian truy cập</div><div class="demo-row">' +

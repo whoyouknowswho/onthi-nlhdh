@@ -388,26 +388,93 @@ Cách tra: vào <b>dòng 1</b> của bảng cấp 1 để tìm bảng cấp 2 c�
  figs:[["c4-48","Slide 48 – Selector + Offset → Segmentation → Linear → Paging → Physical"],["c4-49","Slide 49 – Pentium selector"],["c4-50","Slide 50 – Chọn LDT hoặc GDT theo bit selector"],["c4-51","Slide 51 – Bộ mô tả đoạn code (descriptor)"],["c4-54","Slide 54 – Ánh xạ địa chỉ tuyến tính thành địa chỉ vật lý"],["c4-56","Slide 56 – 4 mức bảo vệ trên Pentium"]],
  yt:"intel pentium segmentation paging GDT LDT selector descriptor",
  html:`
-<div class="flow"><span>Selector + Offset</span><i>→</i><span>Segmentation mechanism</span><i>→</i><span>Linear address</span><i>→</i><span>Paging mechanism</span><i>→</i><span>Physical address</span></div>
-<p><b>Selector (16 bit):</b></p>
+<p><b>Mục này không có gì quá mới:</b> Pentium chỉ ghép <b>phân đoạn (mục 12)</b> và <b>bảng trang 2 mức (mục 8)</b> nối tiếp nhau. Địa chỉ đi qua <b>2 chặng</b>:</p>
+<div class="flow"><span>(Selector, Offset)</span><i>→</i><span>Chặng 1: phân đoạn</span><i>→</i><span>Địa chỉ tuyến tính 32 bit</span><i>→</i><span>Chặng 2: phân trang</span><i>→</i><span>Địa chỉ vật lý</span></div>
+<table>
+<tr><th></th><th>Đầu vào</th><th>Tra bảng nào</th><th>Đầu ra</th></tr>
+<tr><td><b>Chặng 1</b><br><small class="muted">phân đoạn</small></td><td>(selector, offset)</td><td>GDT hoặc LDT → lấy <b>descriptor</b> của đoạn</td><td><b>Base + Offset</b> = địa chỉ tuyến tính</td></tr>
+<tr><td><b>Chặng 2</b><br><small class="muted">phân trang = mục 8</small></td><td>Địa chỉ tuyến tính</td><td>Page directory → page table (tách 10 · 10 · 12)</td><td>Khung × 4096 + offset = địa chỉ vật lý</td></tr>
+</table>
+<div class="tip"><b>Ví von – tìm phòng trong khu ký túc xá:</b> bạn được hẹn ở <b>"Tòa B, phòng 305"</b>.<br>
+<b>Chặng 1:</b> mở sổ danh bạ khu (GDT/LDT), dòng "Tòa B" ghi: <i>tòa này bắt đầu từ ô số 4000 của khu, có 500 phòng</i>. 305 &lt; 500 nên hợp lệ → vị trí trong khu là 4000 + 305 = <b>4305</b> (đây là địa chỉ tuyến tính).<br>
+<b>Chặng 2:</b> số 4305 chỉ là số trên bản vẽ. Muốn biết <b>thật sự</b> nó nằm ở đâu, tra tiếp 2 cuốn sổ như bảng trang 2 mức ở mục 8 → ra vị trí thật trong RAM.</div>
+
+<h4 class="sub">Vì sao phải ghép cả hai? <span class="xs">giải thích thêm</span></h4>
+<table>
+<tr><th></th><th>Được gì</th><th>Mất gì</th></tr>
+<tr><td>Chỉ phân đoạn (mục 12)</td><td>Chia code / data / stack riêng, bảo vệ và chia sẻ theo từng đoạn</td><td>Mỗi đoạn phải nằm <b>liền một khối</b> trong RAM → <b>checkerboarding</b>, phải nén</td></tr>
+<tr><td>Chỉ phân trang</td><td>Không phân mảnh ngoài, chương trình lớn hơn RAM vẫn chạy</td><td>Chỉ có 1 không gian, không phân biệt code hay data</td></tr>
+<tr><td><b>Ghép (Pentium)</b></td><td colspan="2">Giữ được cái lợi của phân đoạn, rồi <b>cắt mỗi đoạn thành trang</b> → đoạn không cần nằm liền trong RAM nữa → <b>hết checkerboarding</b>.</td></tr>
+</table>
+
+<h4 class="sub">Chặng 1a. Selector: "tấm thẻ" chỉ ra đoạn nào (slide 49)</h4>
+<p>Chương trình không ghi thẳng "đoạn data bắt đầu ở đâu". Nó chỉ đưa một con số 16 bit gọi là <b>selector</b>, gồm 3 phần:</p>
 <div class="addr"><div style="flex:6">Index<small>13 bit</small></div><div style="flex:2">TI<small>1 bit: 0 = GDT / 1 = LDT</small></div><div style="flex:2.5">RPL<small>2 bit: mức 0–3</small></div></div>
-<ul><li><b>GDT</b> (Global Descriptor Table) – dùng chung cho cả hệ thống (thanh ghi <b>GDTR</b>); <b>LDT</b> (Local Descriptor Table) – riêng từng chương trình (thanh ghi <b>LDTR</b>).</li>
-<li>Index 13 bit → mỗi bảng tối đa <b>8192</b> descriptor.</li></ul>
-<p><b>Descriptor (8 byte)</b> – mô tả đoạn code (đoạn data hơi khác):</p>
-<table><tr><th>Trường</th><th>Ý nghĩa</th></tr>
-<tr><td>Base 0–15, 16–23, 24–31</td><td>Địa chỉ cơ sở <b>32 bit</b> của segment</td></tr>
-<tr><td>Limit 0–15, 16–19</td><td>Giới hạn <b>20 bit</b></td></tr>
-<tr><td>G</td><td>0: Limit tính theo <b>byte</b>; 1: Limit tính theo <b>trang</b></td></tr>
-<tr><td>D</td><td>0: segment <b>16 bit</b>; 1: segment <b>32 bit</b></td></tr>
-<tr><td>P</td><td>0: segment <b>không có</b> trong bộ nhớ; 1: có trong bộ nhớ</td></tr>
-<tr><td>DPL</td><td>Privilege level (0–3)</td></tr>
-<tr><td>S</td><td>0: System; 1: Application</td></tr>
-<tr><td>Type</td><td>Loại segment và bảo vệ</td></tr></table>
-<p><b>(selector, offset) → linear:</b> selector chọn descriptor → <b>Base address + Offset</b> = <b>32-bit linear address</b> (không gian tuyến tính 0 → 4 GB).</p>
-<p><b>Linear → physical:</b> phân trang 2 mức <b>Dir (10) · Page (10) · Offset (12)</b>. Dir chọn entry trong <b>page directory</b> (1024 entry) → trỏ tới <b>page table</b>; Page chọn entry → trỏ tới <b>page frame</b>; Offset chọn word.</p>
+<table>
+<tr><th>Phần</th><th>Nghĩa là</th><th>Ví von</th></tr>
+<tr><td><b>Index</b> (13 bit)</td><td>Số thứ tự dòng trong bảng mô tả. 13 bit → mỗi bảng tối đa 2<sup>13</sup> = <b>8192</b> dòng</td><td>Số dòng trong sổ danh bạ</td></tr>
+<tr><td><b>TI</b> (1 bit)</td><td>Tra bảng nào: <b>0 → GDT</b>, <b>1 → LDT</b></td><td>Sổ chung của cả khu hay sổ riêng của phòng bạn</td></tr>
+<tr><td><b>RPL</b> (2 bit)</td><td>Mức đặc quyền của bên yêu cầu (0–3)</td><td>Thẻ ra vào: bạn là khách hay ban quản lý</td></tr>
+</table>
+<p><b>2 bảng mô tả (slide 50):</b></p>
+<ul><li><b>GDT</b> (Global Descriptor Table): <b>một bảng chung</b> cho cả hệ thống, mô tả các đoạn của HĐH. Vị trí bảng lưu ở thanh ghi <b>GDTR</b>.</li>
+<li><b>LDT</b> (Local Descriptor Table): <b>mỗi chương trình một bảng riêng</b>, mô tả code, data, stack của chương trình đó. Vị trí bảng lưu ở thanh ghi <b>LDTR</b>.</li></ul>
+<div class="ex"><b>Ví dụ:</b> selector = <b>0x000F</b> = <code>0000000000001 · 1 · 11</code> → Index = <b>1</b>, TI = <b>1</b> (tra LDT), RPL = <b>3</b> (chương trình người dùng).<br>
+→ "Lấy dòng số 1 trong LDT của chương trình này".<br>
+<small class="muted">Mẹo tính nhanh: Index = selector ÷ 8, TI = (selector ÷ 4) mod 2, RPL = selector mod 4.</small></div>
+
+<h4 class="sub">Chặng 1b. Descriptor: dòng trong bảng, cho biết đoạn nằm đâu (slide 51)</h4>
+<p>Mỗi dòng của GDT/LDT là một <b>descriptor 8 byte</b> mô tả một đoạn. Hai thứ quan trọng nhất: <b>Base</b> (đoạn bắt đầu ở đâu) và <b>Limit</b> (đoạn dài bao nhiêu).</p>
+<table><tr><th>Trường</th><th>Ý nghĩa (slide)</th><th>Nói dễ hiểu</th></tr>
+<tr><td><b>Base</b> 0–15, 16–23, 24–31</td><td>Địa chỉ cơ sở <b>32 bit</b> của segment</td><td>Đoạn bắt đầu từ đâu. Bị chia 3 mảnh trong 8 byte, ghép lại được 32 bit</td></tr>
+<tr><td><b>Limit</b> 0–15, 16–19</td><td>Giới hạn <b>20 bit</b></td><td>Đoạn dài bao nhiêu. Offset vượt quá là lỗi</td></tr>
+<tr><td>G</td><td>0: Limit tính theo <b>byte</b>; 1: tính theo <b>trang</b></td><td>20 bit chỉ đếm tới 1 MB; tính theo trang 4 KB thì đoạn dài tới 4 GB</td></tr>
+<tr><td>D</td><td>0: segment <b>16 bit</b>; 1: segment <b>32 bit</b></td><td>Code kiểu cũ hay kiểu mới</td></tr>
+<tr><td>P</td><td>0: segment <b>không có</b> trong bộ nhớ; 1: có</td><td>Giống bit present của bảng trang, nhưng cho cả đoạn</td></tr>
+<tr><td>DPL</td><td>Privilege level (0–3)</td><td>Muốn vào đoạn này phải có quyền tới mức nào</td></tr>
+<tr><td>S</td><td>0: System; 1: Application</td><td>Đoạn của hệ thống hay của ứng dụng</td></tr>
+<tr><td>Type</td><td>Loại segment và bảo vệ</td><td>Code hay data, chỉ đọc hay được ghi…</td></tr></table>
+
+<h4 class="sub">Chặng 1c. Base + Offset = địa chỉ tuyến tính (slide 53)</h4>
+<div class="formula">Kiểm tra: <b>Offset ≤ Limit</b> (sai → lỗi, dừng)<br><b>Địa chỉ tuyến tính = Base + Offset</b> &nbsp;(32 bit, không gian 0 → 4 GB)</div>
+<div class="ex"><b>Ví dụ (tiếp):</b> dòng 1 của LDT ghi Base = <b>0x00400000</b>, Limit = 0xFFFF (G = 0 → 64 KB), P = 1. Chương trình đưa offset = <b>0x3004</b>.<br>
+0x3004 ≤ 0xFFFF ✔ → địa chỉ tuyến tính = 0x00400000 + 0x3004 = <b>0x00403004</b>.</div>
+<div class="tip">Đến đây <b>đã xong phần phân đoạn</b>. Chặng 1 giống hệt thanh ghi base/limit ở mục 3, chỉ khác là mỗi đoạn có base/limit riêng, lấy từ bảng.</div>
+
+<h4 class="sub">Chặng 2. Địa chỉ tuyến tính → địa chỉ vật lý (slide 54)</h4>
+<p>Đây <b>chính là bảng trang 2 mức của mục 8</b>, chia 10 · 10 · 12. Slide chỉ đổi tên: PT1 gọi là <b>Dir</b>, PT2 gọi là <b>Page</b>.</p>
+<div class="addr"><div style="flex:10">Dir<small>10 bit → dòng trong page directory</small></div><div style="flex:10">Page<small>10 bit → dòng trong page table</small></div><div style="flex:12">Offset<small>12 bit → vị trí trong trang 4 KB</small></div></div>
+<ol class="steps">
+<li><b>Dir</b> chọn 1 trong <b>1024</b> dòng của <b>page directory</b>. Dòng đó trỏ tới một <b>page table</b>.</li>
+<li><b>Page</b> chọn 1 dòng trong page table đó. Dòng đó cho số <b>khung trang (page frame)</b>.</li>
+<li><b>Offset</b> chọn đúng byte (word) trong khung: địa chỉ vật lý = khung × 4096 + offset.</li>
+</ol>
+<div class="ex"><b>Ví dụ (tiếp):</b> 0x00403004 = <code>0000000001 · 0000000011 · 000000000100</code> → Dir = <b>1</b>, Page = <b>3</b>, Offset = <b>4</b> (đúng ví dụ ở mục 8).<br>
+Dòng 1 của page directory → page table A. Dòng 3 của page table A ghi <b>khung 7</b> → địa chỉ vật lý = 7 × 4096 + 4 = <b>28676</b> (0x7004).</div>
+
+<p><b>Cả ví dụ đi một mạch:</b></p>
+<table>
+<tr><th>Bước</th><th>Có</th><th>Làm</th><th>Được</th></tr>
+<tr><td>1</td><td>selector 0x000F</td><td>Tách 13 · 1 · 2</td><td>Index 1, TI 1 (LDT), RPL 3</td></tr>
+<tr><td>2</td><td>LDT dòng 1</td><td>Đọc descriptor</td><td>Base 0x00400000, Limit 0xFFFF</td></tr>
+<tr><td>3</td><td>offset 0x3004</td><td>Kiểm tra ≤ Limit, cộng Base</td><td>Tuyến tính 0x00403004</td></tr>
+<tr><td>4</td><td>0x00403004</td><td>Tách 10 · 10 · 12</td><td>Dir 1, Page 3, Offset 4</td></tr>
+<tr><td>5</td><td>Dir 1 → page table, dòng 3</td><td>Tra 2 bảng</td><td>Khung 7</td></tr>
+<tr><td>6</td><td>khung 7, offset 4</td><td>7 × 4096 + 4</td><td><b>Vật lý 28676</b></td></tr>
+</table>
+<div class="demo" data-demo="pent"></div>
 <div class="demo" data-demo="steps" data-key="pentium"></div>
-<table><tr><th>Mức bảo vệ</th><th>Dùng cho</th></tr>
-<tr><td>0 (trong cùng, quyền cao nhất)</td><td>Kernel</td></tr><tr><td>1</td><td>System calls</td></tr><tr><td>2</td><td>Shared libraries</td></tr><tr><td>3 (ngoài cùng)</td><td>User programs</td></tr></table>`},
+
+<h4 class="sub">4 mức bảo vệ trên Pentium (slide 56)</h4>
+<p>Các mức xếp thành <b>vòng tròn lồng nhau</b>. <b>Số càng nhỏ càng ở trong, quyền càng cao.</b></p>
+<table><tr><th>Mức</th><th>Dùng cho</th><th>Ví von: ngân hàng</th></tr>
+<tr><td><b>0</b> (trong cùng, quyền cao nhất)</td><td>Kernel</td><td>Két sắt</td></tr>
+<tr><td><b>1</b></td><td>System calls</td><td>Quầy giao dịch</td></tr>
+<tr><td><b>2</b></td><td>Shared libraries</td><td>Phòng dịch vụ chung</td></tr>
+<tr><td><b>3</b> (ngoài cùng)</td><td>User programs</td><td>Sảnh khách</td></tr></table>
+<p>Cách dùng <span class="xs">giải thích thêm</span>: chương trình người dùng chạy ở mức 3. Nó <b>không được</b> đụng thẳng vào đoạn có DPL thấp hơn (ví dụ dữ liệu kernel, DPL = 0); làm vậy sẽ bị chặn và báo lỗi bảo vệ. Muốn nhờ kernel thì phải đi qua <b>system call</b>, giống khách phải ra quầy chứ không được tự vào két.</p>
+<div class="tip"><b>Mẹo nhớ các con số:</b> selector 16 = <b>13 + 1 + 2</b> · 2<sup>13</sup> = <b>8192</b> dòng mỗi bảng · descriptor <b>8 byte</b>, Base <b>32</b> bit, Limit <b>20</b> bit · tuyến tính <b>32</b> bit = <b>10 + 10 + 12</b> · <b>4</b> mức bảo vệ, <b>0 = kernel</b>.</div>
+`},
 {id:"s4-14",title:"✔ Ghi nhớ nhanh Chương 4",
  figs:[], yt:"",
  html:`
