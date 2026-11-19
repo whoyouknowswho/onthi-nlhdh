@@ -311,19 +311,64 @@ Cách tra: vào <b>dòng 1</b> của bảng cấp 1 để tìm bảng cấp 2 c�
  figs:[["c4-41","Slide 41 – Backing store: (a) vùng swap tĩnh, (b) sao lưu trang động"],["c4-42","Slide 42 – Tách biệt chính sách và cơ chế: external pager"]],
  yt:"operating system involvement with paging page fault handling",
  html:`
-<table><tr><th>4 thời điểm HĐH tham gia vào phân trang</th><th>Việc phải làm</th></tr>
-<tr><td>1. Khởi tạo tiến trình</td><td>Xác định kích thước (chương trình, trang); khởi tạo bảng trang</td></tr>
-<tr><td>2. Tiến trình thực thi</td><td>MMU thiết lập lại cho tiến trình mới; <b>giải phóng (flush) TLB</b></td></tr>
-<tr><td>3. Thời điểm lỗi trang</td><td>Xác định địa chỉ ảo gây lỗi; thay thế trang</td></tr>
-<tr><td>4. Tiến trình kết thúc</td><td>Giải phóng page table, pages</td></tr></table>
+<p>Các mục 6–10 nói về <b>phần cứng</b> (MMU, TLB) và <b>thuật toán</b> chọn trang. Mục này trả lời câu hỏi còn lại: <b>hệ điều hành (phần mềm) phải tự làm những việc gì để phân trang chạy được?</b> Có 4 ý:</p>
+<table>
+<tr><th></th><th>Câu hỏi</th><th>Trả lời ngắn</th></tr>
+<tr><td><b>A</b></td><td>HĐH ra tay vào những lúc nào?</td><td>4 thời điểm trong vòng đời tiến trình: tạo – chạy – lỗi trang – kết thúc</td></tr>
+<tr><td><b>B</b></td><td>Trang nào không được phép đẩy ra?</td><td>Trang đang làm buffer cho I/O phải <b>khóa</b> lại</td></tr>
+<tr><td><b>C</b></td><td>Trang bị đẩy ra đĩa thì cất ở đâu?</td><td><b>Kho sao lưu</b>: chỗ cố định (tĩnh) hoặc cấp khi cần (động)</td></tr>
+<tr><td><b>D</b></td><td>Ai quyết định, ai làm?</td><td><b>Chính sách</b> đặt ngoài kernel (external pager), <b>cơ chế</b> ở trong kernel</td></tr>
+</table>
+
+<h4 class="sub">A. 4 thời điểm HĐH tham gia phân trang (slide 37)</h4>
+<p>Hãy theo dõi một chương trình, ví dụ Word, từ lúc bạn mở đến lúc bạn đóng:</p>
+<table>
+<tr><th>Thời điểm</th><th>HĐH làm gì (slide)</th><th>Nói dễ hiểu</th></tr>
+<tr><td><b>1. Khởi tạo tiến trình</b><br><small class="muted">bạn vừa mở Word</small></td><td>Xác định kích thước trang; khởi tạo bảng trang</td><td>Tính xem chương trình cần bao nhiêu trang và tạo bảng trang cho nó. Lúc đầu hầu hết các dòng là <b>X</b> vì chưa trang nào nằm trong RAM.</td></tr>
+<tr><td><b>2. Tiến trình thực thi</b><br><small class="muted">mỗi lần Word được CPU cho chạy</small></td><td>MMU thiết lập lại cho tiến trình mới; <b>TLB giải phóng (flush)</b></td><td>Đặt bảng trang của Word vào MMU (PTBR trỏ sang bảng trang của Word) và <b>xóa sạch TLB</b>.</td></tr>
+<tr><td><b>3. Thời điểm lỗi trang</b><br><small class="muted">Word đụng vào trang chưa có</small></td><td>Xác định địa chỉ ảo gây lỗi; thay thế trang</td><td>Tìm xem địa chỉ nào gây lỗi, chọn trang để bỏ (thuật toán mục 10), nạp trang cần vào. Chi tiết 10 bước ở bên dưới.</td></tr>
+<tr><td><b>4. Tiến trình kết thúc</b><br><small class="muted">bạn đóng Word</small></td><td>Giải phóng page table, pages</td><td>Trả lại mọi khung trang Word đang giữ và xóa bảng trang của nó.</td></tr>
+</table>
+<div class="tip"><b>Vì sao đổi tiến trình phải xóa TLB?</b> Mỗi tiến trình có bảng trang riêng: <b>trang 5 của Chrome</b> và <b>trang 5 của Word</b> là hai trang khác nhau, nằm ở hai khung khác nhau. Nếu TLB còn giữ dòng "trang 5 → khung 12" của Chrome thì khi Word tra trang 5 sẽ trúng (hit) nhầm và <b>đọc phải dữ liệu của Chrome</b>. Vì vậy cứ đổi tiến trình là xóa sạch TLB.</div>
 <div class="demo" data-demo="steps" data-key="fault10"></div>
-<p><b>Khóa các trang trong bộ nhớ (pinning):</b> đôi khi có tương tác giữa bộ nhớ ảo và I/O. Tiến trình yêu cầu đọc từ thiết bị vào <b>buffer</b>; trong khi chờ I/O, tiến trình khác chạy và gây lỗi trang → buffer của tiến trình thứ nhất <b>có thể bị chọn để đưa ra</b>. Vì vậy phải chỉ rõ một số trang để <b>khóa</b> – được miễn khỏi việc chọn làm trang đích.</p>
-<p><b>Kho sao lưu (Backing Store):</b></p>
-<ul><li>(a) <b>Phân trang đến vùng swap tĩnh</b>: mỗi trang có chỗ cố định trong swap area (bảng trang trỏ thẳng tới vị trí trên đĩa).</li>
-<li>(b) <b>Sao lưu các trang động</b>: trang chỉ được cấp chỗ trên đĩa khi bị swap ra; cần thêm <b>disk map</b> để biết trang nằm đâu.</li></ul>
-<p><b>Tách biệt chính sách và cơ chế</b> – điều khiển lỗi trang với <b>external pager</b> (chạy ở user space):</p>
-<ol class="steps"><li>User process gây <b>page fault</b> (vào kernel)</li><li>Fault handler báo <b>needed page</b> cho external pager</li><li>External pager <b>request page</b> từ đĩa</li><li><b>Page arrives</b></li><li>External pager trả về: <b>here is page</b></li><li>Fault handler bảo MMU handler <b>map page in</b></li></ol>
-<p>→ <b>Cơ chế</b> (MMU handler, fault handler) nằm trong kernel; <b>chính sách</b> (chọn trang nào…) đặt ở external pager.</p>`},
+
+<h4 class="sub">B. Khóa trang trong bộ nhớ (pinning)</h4>
+<p>Slide: <i>đôi khi có tương tác giữa bộ nhớ ảo và I/O</i>. Tình huống cụ thể:</p>
+<ol class="steps">
+<li>Tiến trình <b>A</b> nhờ HĐH đọc một file vào mảng <b>buffer</b> của nó. Buffer nằm ở <b>khung 7</b>. Bộ điều khiển đĩa được dặn: đọc xong thì chép thẳng vào khung 7. A đi ngủ chờ.</li>
+<li>Trong lúc chờ, tiến trình <b>B</b> chạy và gây lỗi trang. Thuật toán thay trang lại chọn đúng <b>khung 7</b> để nạp trang của B.</li>
+<li>Đĩa đọc xong, dữ liệu vẫn đổ vào khung 7, <b>ghi đè lên trang của B</b>. A thì không nhận được dữ liệu ✘.</li>
+</ol>
+<p>Cách chữa: <b>khóa (pin)</b> trang đang làm buffer. Trang bị khóa được <b>miễn khỏi việc chọn làm trang thay thế</b> cho tới khi I/O xong.</p>
+<div class="tip"><b>Ví von:</b> bạn đặt chỗ trên bàn cho cuốn sách đang được người khác mang tới. Ai dọn bàn cũng không được dọn chỗ đã đặt, kẻo sách tới không có chỗ để.</div>
+
+<h4 class="sub">C. Kho sao lưu (backing store, slide 41)</h4>
+<p>Trang bị đẩy khỏi RAM phải được cất trên đĩa, ở <b>vùng swap (swap area)</b>. Trong hình slide, trang 0, 3, 4, 6 đang ở RAM, còn trang 1, 2, 5, 7 ở đĩa. Có 2 cách tổ chức:</p>
+<table>
+<tr><th></th><th>(a) Phân trang đến vùng swap <b>tĩnh</b></th><th>(b) Sao lưu các trang <b>động</b></th></tr>
+<tr><td>Cách làm</td><td>Mỗi trang có sẵn <b>một ô riêng, cố định</b> trên đĩa, đúng thứ tự trang (trang 0 ↔ ô 0, trang 1 ↔ ô 1…)</td><td>Trang chỉ được cấp ô trên đĩa <b>khi bị đẩy ra</b>, ô trống nào cũng được</td></tr>
+<tr><td>Tìm trang trên đĩa</td><td>Dễ: ô của trang p = đầu vùng swap + p × kích thước trang</td><td>Phải tra thêm <b>disk map</b> (bản đồ: trang nào đang ở ô nào)</td></tr>
+<tr><td>Ưu / nhược <span class="xs">ngoài slide</span></td><td>Đơn giản, nhưng <b>tốn chỗ đĩa</b>: giữ ô cả cho trang đang ở RAM</td><td><b>Tiết kiệm</b> chỗ đĩa, nhưng tốn công quản lý disk map</td></tr>
+<tr><td>Ví von</td><td>Mỗi học sinh có <b>tủ đồ riêng</b> đánh số sẵn</td><td><b>Gửi đồ ở quầy</b>, nhận vé ghi số kệ</td></tr>
+</table>
+
+<h4 class="sub">D. Tách biệt chính sách và cơ chế (slide 42)</h4>
+<table>
+<tr><th></th><th>Là gì</th><th>Ví dụ trong phân trang</th><th>Đặt ở đâu</th></tr>
+<tr><td><b>Chính sách</b> (policy)</td><td><b>Quyết định</b> cái gì</td><td>Chọn trang nào để bỏ, nạp trang nào</td><td><b>External pager</b>, chạy ở <b>user space</b></td></tr>
+<tr><td><b>Cơ chế</b> (mechanism)</td><td><b>Làm</b> thế nào</td><td>Bắt lỗi trang, sửa bảng trang, ánh xạ trang vào MMU</td><td><b>Kernel</b>: fault handler, MMU handler</td></tr>
+</table>
+<div class="tip"><b>Ví von:</b> ban quản lý chung cư (external pager) quyết định cho ai vào. Bảo vệ (kernel) chỉ mở hay khóa cửa đúng theo lệnh. Đổi quy định thì chỉ cần đổi ban quản lý, không phải thay bảo vệ. Ở đây cũng vậy: muốn đổi thuật toán chọn trang thì sửa external pager, không phải sửa kernel.</div>
+<p><b>6 bước điều khiển lỗi trang với external pager:</b></p>
+<ol class="steps">
+<li><b>Page fault</b>: tiến trình người dùng đụng vào trang chưa có, nhảy vào kernel.</li>
+<li><b>Needed page</b>: fault handler (trong kernel) không tự quyết, mà báo cho external pager biết đang cần trang nào.</li>
+<li><b>Request page</b>: external pager yêu cầu đọc trang đó từ đĩa.</li>
+<li><b>Page arrives</b>: trang về tới external pager.</li>
+<li><b>Here is page</b>: external pager đưa trang cho fault handler.</li>
+<li><b>Map page in</b>: fault handler bảo MMU handler ánh xạ trang vào bảng trang. Tiến trình chạy tiếp.</li>
+</ol>
+<p>→ Người <b>quyết định</b> là external pager (ngoài kernel), người <b>làm</b> là kernel. Cái giá <span class="xs">ngoài slide</span>: mỗi lỗi trang phải qua lại giữa user space và kernel nhiều lần hơn, nên chậm hơn một chút.</p>`},
 {id:"s4-12",title:"12. Phân đoạn (Segmentation)",
  figs:[["c4-44","Slide 44 – Không gian 1 chiều: symbol table đụng vào source text"],["c4-45","Slide 45 – Mỗi segment tăng/co độc lập"],["c4-46","Slide 46 – So sánh phân trang và phân đoạn"],["c4-47","Slide 47 – Checkerboarding và nén (compaction)"]],
  yt:"segmentation vs paging operating system checkerboarding",

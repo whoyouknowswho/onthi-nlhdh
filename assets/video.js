@@ -162,7 +162,7 @@ var EN = {
   "track":"trắc","tracks":"trắc","trap":"tráp","tree":"tri","triple":"tri pồ","txt":"tê ích tê","type":"tai","unblock":"ăn bờ lốc","unlink":"ăn linh",
   "up":"ắp","used":"diu","user":"diu dơ","users":"diu dơ","usr":"diu dơ","valid":"va lít","victim":"víc tim","video":"vi đê ô","wait":"quét",
   "while":"oai","windows":"uyn đâu","word":"uốt","working":"uốc kinh","worst":"uốt","write":"rai","xyz":"ích i dét","abc":"a bê xê",
-  "cat":"két","ant":"en","dog":"đóc","pig":"pích","cow":"cao","fox":"phốc","from":"phờ rom","for":"pho","fork":"phóc","exec":"ếch xéc",
+  "cat":"két","ant":"en","chrome":"crôm","dog":"đóc","pig":"pích","cow":"cao","fox":"phốc","from":"phờ rom","for":"pho","fork":"phóc","exec":"ếch xéc",
   "memory manager":"me mô ri ma na giơ","bit map":"bít máp","bitmap":"bít máp","device driver":"đi vai đờ rai vơ"
 };
 var CIRC = "①②③④⑤⑥⑦⑧⑨";
