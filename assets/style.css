@@ -499,3 +499,22 @@ main:has(.sum-layout.has-gl){max-width:1600px}
   .gl-fab{display:flex;align-items:center;gap:6px;position:fixed;right:16px;bottom:18px;z-index:45;border:0;border-radius:999px;padding:11px 16px;background:var(--brand);color:#fff;font-weight:800;font-size:14px;box-shadow:0 8px 24px -6px rgba(99,102,241,.6)}
 }
 @media (max-width:1023px){ .sum-layout.has-gl{grid-template-columns:1fr} }
+
+/* Cột thuật ngữ to hơn */
+main:has(.sum-layout.has-gl){max-width:1720px}
+.sum-layout.has-gl{grid-template-columns:240px minmax(0,1fr) 390px}
+.gl-panel{padding:12px 12px 10px}
+.gl-ph{font-size:17px}
+.gl-mode button{font-size:14px;padding:8px 6px}
+.gl-panel .gl-filter{font-size:15px;padding:10px 12px}
+.gl-cur{font-size:13.5px}
+.gl-gh{font-size:13px}
+.gl-panel .gl-grid{gap:8px}
+.gl-panel .gl-item{padding:11px 13px;gap:6px}
+.gl-panel .gl-t b{font-size:16.5px}
+.gl-panel .gl-t span{font-size:13px}
+.gl-panel .gl-d{font-size:15px;line-height:1.55}
+.gl-panel .gl-ex{font-size:14px;padding:6px 9px}
+.gl-panel .gl-go{font-size:13.5px}
+@media (max-width:1279px){ .gl-panel{width:min(440px,94vw)} .sum-layout.has-gl{grid-template-columns:240px minmax(0,1fr)} }
+@media (max-width:1023px){ .sum-layout.has-gl{grid-template-columns:1fr} }
