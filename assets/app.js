@@ -339,39 +339,88 @@ function renderSummary(){
   var c = data.filter(function(d){ return d.ch===ch; })[0] || data[0];
   var qf = fold(sumQuery.trim());
   var gl = (window.GLOSSARY || {})[c.ch];
-  var all = gl ? [glossarySec(c.ch, gl)].concat(c.sections) : c.sections;
-  var secs = all.filter(function(sec){ return !qf || fold(sec.title + " " + sec.html.replace(/<[^>]+>/g," ")).indexOf(qf)>=0; });
+  var secs = c.sections.filter(function(sec){ return !qf || fold(sec.title + " " + sec.html.replace(/<[^>]+>/g," ")).indexOf(qf)>=0; });
   var root = $("#view-summary");
-  root.innerHTML = '<div class="sum-layout"><div class="sum-nav">'+
+  root.innerHTML = '<div class="sum-layout'+(gl?' has-gl':'')+'"><div class="sum-nav">'+
     '<div class="chap-tabs">'+data.map(function(d){ return '<button class="chap-tab '+(d.ch===c.ch?'active':'')+'" data-sumch="'+d.ch+'">Chương '+d.ch+'</button>'; }).join("")+'</div>'+
     '<input class="search" id="sumSearch" placeholder="Tìm trong chương… (vd: TLB, RAID)" value="'+esc(sumQuery)+'">'+
     '<nav class="toc">'+secs.map(function(sec){ return '<a href="#'+sec.id+'" data-toc="'+sec.id+'">'+esc(sec.title)+'</a>'; }).join("")+'</nav></div>'+
     '<div><div class="sum-head"><div class="kicker">Chương '+c.ch+' · '+esc(c.en)+'</div><h2>'+esc(c.title)+'</h2><p>'+c.intro+'</p><p class="muted" style="margin-top:8px;font-size:13.5px">Nhãn <span class="xs">ngoài slide</span> = kiến thức bổ sung từ giáo trình gốc (Tanenbaum), không có trong slide – nên ôn sau phần chính.</p></div>'+
     (secs.length ? secs.map(renderSec).join("") : '<div class="panel empty">Không tìm thấy nội dung phù hợp “'+esc(sumQuery)+'”.</div>')+
     '<div class="sum-cta"><button class="btn primary" data-start="c'+c.ch+'">'+ICON.play+'Luyện câu hỏi Chương '+c.ch+'</button>'+
-    (c.ch<6?'<button class="btn" data-sumch="'+(c.ch+1)+'">Chương '+(c.ch+1)+ICON.right+'</button>':'')+'</div></div></div>';
+    (c.ch<6?'<button class="btn" data-sumch="'+(c.ch+1)+'">Chương '+(c.ch+1)+ICON.right+'</button>':'')+'</div></div>'+
+    (gl ? glossaryPanel(c.ch, gl) : '')+'</div>'+
+    (gl ? '<button class="gl-fab" data-glopen aria-label="Mở bảng thuật ngữ">📖 Thuật ngữ</button>' : '');
   if (gl) linkTerms(root, gl);
   if (sumQuery.trim()) highlight(root.querySelectorAll(".sum-body"), sumQuery.trim());
   mountDemos(root);
   tocLock = 0; spyToc();
 }
-/* ---------- Thuật ngữ: mục riêng + gạch chân giải nghĩa tại chỗ ---------- */
-function glossarySec(ch, gl){
-  var groups = [], by = {};
+/* ---------- Thuật ngữ: cột bên phải (ngăn kéo trên màn hình hẹp) + gạch chân giải nghĩa tại chỗ ---------- */
+var glMode = "sec";
+try { glMode = localStorage.getItem("nlhdh_glmode") || "sec"; } catch (e){}
+function secTitles(ch){ var o = {}; ((window.SUMMARY || []).filter(function(d){ return d.ch === ch; })[0] || {sections:[]}).sections.forEach(function(s){ o[s.id] = s.title; }); return o; }
+function glossaryPanel(ch, gl){
+  var groups = [], by = {}, st = secTitles(ch);
   gl.forEach(function(it, i){ if (!by[it.g]){ by[it.g] = []; groups.push(it.g); } by[it.g].push([it, i]); });
-  var secTitle = {}; ((window.SUMMARY || []).filter(function(d){ return d.ch === ch; })[0] || {sections:[]}).sections.forEach(function(s){ secTitle[s.id] = s.title.replace(/^(\d+)\..*$/, "mục $1"); });
-  var html = '<p>Giải nghĩa nhanh <b>' + gl.length + ' thuật ngữ</b> của chương, xếp theo thứ tự bài học. Trong các mục bên dưới, thuật ngữ được <span class="term-demo">gạch chân chấm</span>: rê chuột hoặc chạm vào để xem nghĩa ngay.</p>' +
-    '<input class="search gl-filter" placeholder="Lọc thuật ngữ… (vd: offset, TLB, phân mảnh)">' +
-    groups.map(function(g){
-      return '<h4 class="sub gl-gh">' + esc(g) + '</h4><div class="gl-grid">' + by[g].map(function(p){
-        var it = p[0];
-        return '<div class="gl-item" id="gl' + ch + '-' + p[1] + '"><div class="gl-t"><b>' + esc(it.t) + '</b>' + (it.en ? '<span>' + esc(it.en) + '</span>' : '') + '</div>' +
+  return '<aside class="gl-panel" id="glPanel" aria-label="Thuật ngữ Chương ' + ch + '">' +
+    '<div class="gl-ph"><b>📖 Thuật ngữ Chương ' + ch + '</b><button class="gl-x" data-glclose aria-label="Đóng">✕</button></div>' +
+    '<div class="gl-mode"><button data-glmode="sec" class="' + (glMode === "sec" ? "on" : "") + '">Mục đang đọc</button><button data-glmode="all" class="' + (glMode === "all" ? "on" : "") + '">Tất cả (' + gl.length + ')</button></div>' +
+    '<input class="search gl-filter" placeholder="Lọc… (vd: offset, TLB)">' +
+    '<div class="gl-cur"></div>' +
+    '<div class="gl-list">' + groups.map(function(g){
+      return '<h5 class="gl-gh">' + esc(g) + '</h5><div class="gl-grid">' + by[g].map(function(p){
+        var it = p[0], sn = it.sec && st[it.sec] ? st[it.sec].replace(/^(\d+)\..*$/, "mục $1").replace(/^✔.*$/, "ghi nhớ nhanh") : "";
+        return '<div class="gl-item" data-i="' + p[1] + '"><div class="gl-t"><b>' + esc(it.t) + '</b>' + (it.en ? '<span>' + esc(it.en) + '</span>' : '') + '</div>' +
           '<div class="gl-d">' + esc(it.d) + '</div>' + (it.ex ? '<div class="gl-ex">' + esc(it.ex) + '</div>' : '') +
-          (it.sec ? '<a href="#' + it.sec + '" data-toc="' + it.sec + '" class="gl-go">Xem ' + esc(secTitle[it.sec] || "mục liên quan") + ' →</a>' : '') + '</div>';
+          (it.sec ? '<a href="#' + it.sec + '" data-toc="' + it.sec + '" class="gl-go">Xem ' + esc(sn || "mục liên quan") + ' →</a>' : '') + '</div>';
       }).join("") + '</div>';
-    }).join("") + '<p class="muted gl-none" hidden>Không có thuật ngữ khớp.</p>';
-  return {id:"g" + ch, title:"📖 Thuật ngữ Chương " + ch, html:html};
+    }).join("") + '<p class="muted gl-none" hidden>Không có thuật ngữ khớp.</p></div></aside>';
 }
+/* Lọc danh sách: theo ô lọc, hoặc chỉ thuật ngữ của mục đang đọc */
+function applyGl(){
+  var p = document.getElementById("glPanel"); if (!p) return;
+  var gl = (window.GLOSSARY || {})[state.sumCh || 4] || [], q = fold(p.querySelector(".gl-filter").value.trim()), cur = p.dataset.sec || "", set = null;
+  if (!q && glMode === "sec" && cur){
+    set = {};
+    Array.prototype.forEach.call(document.querySelectorAll("#" + cur + " .term"), function(t){ set[t.dataset.g] = 1; });
+    gl.forEach(function(it, i){ if (it.sec === cur) set[i] = 1; });
+    if (!Object.keys(set).length) set = null;
+  }
+  var any = false;
+  Array.prototype.forEach.call(p.querySelectorAll(".gl-item"), function(it){
+    var ok = q ? fold(it.textContent).indexOf(q) >= 0 : (!set || set[it.dataset.i]);
+    it.hidden = !ok; if (ok) any = true;
+  });
+  Array.prototype.forEach.call(p.querySelectorAll(".gl-grid"), function(g){ var vis = Array.prototype.some.call(g.children, function(c){ return !c.hidden; }); g.hidden = !vis; g.previousElementSibling.hidden = !vis; });
+  p.querySelector(".gl-none").hidden = any;
+  var lab = p.querySelector(".gl-cur"), st = secTitles(state.sumCh || 4);
+  lab.textContent = q ? "Kết quả lọc" : (set ? "Trong: " + (st[cur] || "") : (glMode === "sec" ? "Mục này không có thuật ngữ riêng, đang hiện tất cả" : "Tất cả thuật ngữ, theo thứ tự bài học"));
+}
+function glSetSec(id){
+  var p = document.getElementById("glPanel"); if (!p || p.dataset.sec === id) return;
+  p.dataset.sec = id; applyGl();
+  if (glMode === "sec") p.querySelector(".gl-list").scrollTop = 0;
+}
+function glHighlight(i){
+  var p = document.getElementById("glPanel"); if (!p) return;
+  Array.prototype.forEach.call(p.querySelectorAll(".gl-item.hl"), function(x){ x.classList.remove("hl"); });
+  var it = p.querySelector('.gl-item[data-i="' + i + '"]'); if (!it || it.hidden) return;
+  it.classList.add("hl");
+  var list = p.querySelector(".gl-list"), top = it.offsetTop - list.offsetTop;
+  if (top < list.scrollTop || top + it.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = Math.max(0, top - 40);
+}
+document.addEventListener("click", function(e){
+  var b = e.target.closest && e.target.closest("[data-glmode], [data-glopen], [data-glclose], #glPanel .gl-go");
+  var p = document.getElementById("glPanel"); if (!p) return;
+  if (!b){ if (p.classList.contains("open") && !(e.target.closest && e.target.closest("#glPanel, #termPop"))) p.classList.remove("open"); return; }
+  if (b.dataset.glmode){
+    glMode = b.dataset.glmode; try { localStorage.setItem("nlhdh_glmode", glMode); } catch (err){}
+    Array.prototype.forEach.call(p.querySelectorAll("[data-glmode]"), function(x){ x.classList.toggle("on", x === b); });
+    applyGl();
+  } else if (b.hasAttribute("data-glopen")){ p.classList.add("open"); }
+  else if (b.hasAttribute("data-glclose") || b.classList.contains("gl-go")){ p.classList.remove("open"); }
+});
 function linkTerms(root, gl){
   var pats = [];
   gl.forEach(function(it, i){ (it.a || []).forEach(function(a){
@@ -398,6 +447,7 @@ function linkTerms(root, gl){
 var termPop = null, termHide = 0;
 function showTerm(el){
   var gl = (window.GLOSSARY || {})[state.sumCh || 4], it = gl && gl[+el.dataset.g]; if (!it) return;
+  glHighlight(+el.dataset.g);
   if (!termPop){ termPop = document.createElement("div"); termPop.id = "termPop"; termPop.setAttribute("role", "tooltip"); document.body.appendChild(termPop);
     termPop.onmouseenter = function(){ clearTimeout(termHide); }; termPop.onmouseleave = hideTerm; }
   clearTimeout(termHide);
@@ -422,14 +472,12 @@ document.addEventListener("click", function(e){
 window.addEventListener("scroll", function(){ if (termPop && termPop.style.display === "block") termPop.style.display = "none"; }, {passive:true});
 document.addEventListener("input", function(e){
   if (!e.target.classList || !e.target.classList.contains("gl-filter")) return;
-  var q = fold(e.target.value.trim()), sec = e.target.closest(".sum-sec"), any = false;
-  Array.prototype.forEach.call(sec.querySelectorAll(".gl-item"), function(it){ var ok = !q || fold(it.textContent).indexOf(q) >= 0; it.hidden = !ok; if (ok) any = true; });
-  Array.prototype.forEach.call(sec.querySelectorAll(".gl-grid"), function(g){ var vis = Array.prototype.some.call(g.children, function(c){ return !c.hidden; }); g.hidden = !vis; g.previousElementSibling.hidden = !vis; });
-  sec.querySelector(".gl-none").hidden = any;
+  applyGl();
 });
 /* Mục lục bên cạnh: tô nổi mục đang chọn / đang đọc */
 var tocLock = 0, spyRaf = 0;
 function setTocOn(id){
+  glSetSec(id);
   var toc = document.querySelector("#view-summary .toc"); if (!toc) return;
   var on = null;
   Array.prototype.forEach.call(toc.querySelectorAll("a[data-toc]"), function(a){ var m = a.dataset.toc === id; a.classList.toggle("on", m); if (m){ on = a; a.setAttribute("aria-current", "true"); } else a.removeAttribute("aria-current"); });
