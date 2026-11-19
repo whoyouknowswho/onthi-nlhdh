@@ -541,3 +541,7 @@ main:has(.sum-layout.has-gl){max-width:1720px}
 .q-tbl{border-collapse:collapse;font-size:14px}
 .q-tbl th,.q-tbl td{border:1px solid var(--line2);padding:3px 10px;text-align:center}
 .q-tbl th{background:var(--card2)}
+/* Bộ lọc chương cho đề ôn tập */
+.ot-scope{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px}
+.ot-scope .lbl{margin-right:4px}
+.set-sub .chip.on{background:var(--brand-soft);color:var(--brand-text);border-color:transparent}

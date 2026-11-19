@@ -1,15 +1,32 @@
 /* Ôn thi Nguyên lý HĐH – logic ứng dụng */
 (function(){
 "use strict";
-var QS = window.QUESTIONS || [];
+var QDROP = window.QDROP || {};   /* câu trùng giữa các đề ôn tập: bị lược */
+var QS = (window.QUESTIONS || []).filter(function(q){ return !QDROP[q.id]; });
 var BYID = {}; QS.forEach(function(q){ BYID[q.id] = q; });
 var CHAPS = [
   {ch:4, key:"c4", name:"Chương 4 – Quản lý Bộ nhớ", short:"Quản lý Bộ nhớ", cls:""},
   {ch:5, key:"c5", name:"Chương 5 – Vào/Ra", short:"Vào/Ra (Input/Output)", cls:"c5"},
   {ch:6, key:"c6", name:"Chương 6 – Hệ thống File", short:"Hệ thống File", cls:"c6"}
 ];
-var QSETS = window.QSETS || [];
-function setOf(key){ return QSETS.filter(function(x){ return x.key===key; })[0]; }
+var QSETS = (window.QSETS || []).map(function(x){
+  var ids = x.ids.filter(function(id){ return BYID[id]; });
+  return Object.assign({}, x, {ids:ids, dropped:x.ids.length - ids.length});
+});
+if (QSETS.length > 1) QSETS.push({key:"otall", name:"Tất cả đề ôn tập", badge:"∑", dropped:0,
+  note:"Gộp mọi đề ôn tập ở trên (đã lược câu trùng).",
+  ids:[].concat.apply([], QSETS.map(function(x){ return x.ids; }))});
+/* Lọc câu trong đề ôn tập theo chương */
+var OT_SCOPES = [["all","Tất cả"],["46","Chương 4–6"],["4","Chương 4"],["5","Chương 5"],["6","Chương 6"],["0","Ngoài chương 4–6"]];
+function scopeOk(sc, ch){ return sc==="all" || (sc==="46" ? ch>=4 && ch<=6 : ch===+sc); }
+function scopeName(sc){ var r = OT_SCOPES.filter(function(x){ return x[0]===sc; })[0]; return r ? r[1] : ""; }
+function setOf(key){
+  var p = String(key).split("@"), base = QSETS.filter(function(x){ return x.key===p[0]; })[0];
+  if (!base) return null;
+  var sc = p[1] || "all"; if (sc==="all") return base;
+  return {key:key, name:base.name+" · "+scopeName(sc), badge:base.badge, note:base.note, dropped:base.dropped,
+    ids:base.ids.filter(function(id){ return scopeOk(sc, BYID[id].ch); })};
+}
 function chName(ch){ return ch ? "Chương "+ch : "Ngoài chương 4–6"; }
 var TYPE_LABEL = {single:"Một đáp án", multi:"Nhiều đáp án", order:"Sắp xếp"};
 var LETTERS = "ABCDEFGHIJ";
@@ -46,7 +63,7 @@ function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.
   // bỏ các câu không còn tồn tại
   Object.keys(state.sessions).forEach(function(k){ var s=state.sessions[k]; s.ids = s.ids.filter(function(id){ return BYID[id]; }); if (!s.ids.length) delete state.sessions[k]; });
   // bổ sung câu hỏi mới vào các bộ theo chương đã lưu từ trước
-  ["c4","c5","c6","all"].concat(QSETS.map(function(x){ return x.key; })).forEach(function(k){
+  ["c4","c5","c6","all"].concat(Object.keys(state.sessions).filter(function(k){ return setOf(k); })).forEach(function(k){
     var s = state.sessions[k]; if (!s) return;
     var have = {}; s.ids.forEach(function(id){ have[id]=1; });
     (setOf(k) ? setOf(k).ids : idsOfChapter(k==="all" ? "all" : +k.slice(1))).forEach(function(id){
@@ -126,11 +143,7 @@ function renderHome(){
   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="goExam">'+ICON.shuffle+'Tạo đề thi thử</button><button class="btn" data-view-go="summary">'+ICON.book+'Đọc tổng hợp kiến thức</button>'+exBtn+'</div></div>'+
   '<div class="stats"><div class="stat"><b>'+idsOfChapter("all").length+'</b><span>câu hỏi</span></div><div class="stat"><b>3</b><span>chương</span></div><div class="stat"><b>'+(allGraded?Math.round(allG/allGraded*100)+'%':'—')+'</b><span>tỉ lệ đúng</span></div></div></div>'+
   '<div class="section-h">Bộ câu hỏi theo chương</div><div class="sets">'+sets.map(setCard).join("")+'</div>'+
-  (QSETS.length ? '<div class="section-h">📝 Đề ôn tập</div><div class="sets">'+QSETS.map(function(x){
-    var by = {}; x.ids.forEach(function(id){ var c = BYID[id].ch; by[c] = (by[c]||0) + 1; });
-    var sub = [4,5,6,0].filter(function(c){ return by[c]; }).map(function(c){ return '<span class="chip">'+(c ? 'Ch'+c : 'Ngoài 4–6')+': <b>'+by[c]+'</b></span>'; }).join(" ");
-    return setCard({key:x.key, ch:"set", ids:x.ids, title:x.name, badge:x.badge, cls:"ot", sub:sub+(x.note?'<br><span class="muted">'+esc(x.note)+'</span>':'')});
-  }).join("")+'</div>' : '')+weakPanel()+
+  (QSETS.length ? otSection() : '')+weakPanel()+
   '<div class="section-h" id="examSetup">Tạo đề thi thử ngẫu nhiên</div>'+
   '<div class="panel"><div class="exam-grid">'+
    '<div><span class="lbl">Chương</span><div class="chk-row">'+CHAPS.map(function(c){ return '<label class="chk"><input type="checkbox" name="exch" value="'+c.ch+'" checked> Chương '+c.ch+'</label>'; }).join("")+'</div></div>'+
@@ -138,6 +151,20 @@ function renderHome(){
    '<div><span class="lbl">Thời gian</span><select class="sel" id="exT"><option value="0">Không giới hạn</option><option value="15">15 phút</option><option value="30">30 phút</option><option value="45" selected>45 phút</option><option value="60">60 phút</option><option value="90">90 phút</option></select></div>'+
    '<div><label class="chk" style="margin-bottom:8px"><input type="checkbox" id="exXS"> Chỉ câu có trong slide</label><button class="btn primary block" id="mkExam">'+ICON.shuffle+'Tạo đề & bắt đầu</button></div>'+
   '</div><div class="legend"><span>• Câu hỏi và đáp án được xáo trộn ngẫu nhiên</span><span>• Không hiện đúng/sai cho đến khi nộp bài</span><span>• Hết giờ sẽ tự động nộp</span></div></div>';
+}
+function otSection(){
+  var sc = state.otScope || "all";
+  var cards = QSETS.map(function(x){
+    var o = setOf(x.key + (sc==="all" ? "" : "@"+sc));
+    if (!o.ids.length) return "";
+    var by = {}; x.ids.forEach(function(id){ var c = BYID[id].ch; by[c] = (by[c]||0) + 1; });
+    var sub = [4,5,6,0].filter(function(c){ return by[c]; }).map(function(c){ return '<span class="chip'+(scopeOk(sc, c)?' on':'')+'">'+(c ? 'Ch'+c : 'Ngoài 4–6')+': <b>'+by[c]+'</b></span>'; }).join(" ");
+    var note = (x.dropped ? 'Đã lược <b>'+x.dropped+'</b> câu trùng với đề trước. ' : '') + (x.note ? esc(x.note) : '');
+    return setCard({key:o.key, ch:"set", ids:o.ids, title:o.name, badge:x.badge, cls:"ot", sub:sub+(note?'<br><span class="muted">'+note+'</span>':'')});
+  }).join("");
+  return '<div class="section-h">📝 Đề ôn tập</div>'+
+    '<div class="ot-scope"><span class="lbl">Lấy câu:</span>'+OT_SCOPES.map(function(x){ return '<button class="fbtn'+(sc===x[0]?' active':'')+'" data-otscope="'+x[0]+'">'+x[1]+'</button>'; }).join("")+'</div>'+
+    '<div class="sets">'+(cards || '<div class="panel muted">Không có câu nào thuộc phạm vi này.</div>')+'</div>';
 }
 function weakPanel(){
   var w = weakIds(), st = state.stats || {}, topics = {};
@@ -873,6 +900,7 @@ function bind(){
     if (t.closest(".demo")) return;
     if (t.classList.contains("tab")){ var v=d.view; if (v==="quiz" && !cur()){ toast("Hãy chọn một bộ câu hỏi trước"); go("home"); return; } if (v==="quiz" && cur().submitted && state.view!=="result" && state.view!=="quiz"){ go("result"); return; } go(v); return; }
     if (d.viewGo){ go(d.viewGo); return; }
+    if (d.otscope){ state.otScope = d.otscope; save(); renderHome(); return; }
     if (d.start){ startSet(d.start); return; }
     if (d.reset){ resetSet(d.reset); renderHome(); return; }
     if (d.clearstats){ if (confirm("Xóa toàn bộ thống kê đúng/sai?")){ state.stats = {}; save(); renderHome(); } return; }
