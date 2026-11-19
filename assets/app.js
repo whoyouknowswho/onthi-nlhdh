@@ -562,6 +562,59 @@ var DEMOS = {
     };
     reset(); draw();
   },
+  /* Tách địa chỉ 32 bit theo bảng trang 2 mức (10 – 10 – 12) */
+  pt2: function(el){
+    var ex = ["0x00403004", "0x00000000", "0xFFFFFFFF", "12345678", "0x12345678"];
+    el.innerHTML = '<div class="demo-h">🧪 Tự tách địa chỉ 32 bit thành PT1 – PT2 – Offset (10 – 10 – 12)</div>' +
+      '<div class="demo-row"><label class="w">Địa chỉ ảo (thập phân hoặc 0x…)<input data-f="a" value="0x00403004"></label></div>' +
+      '<div class="demo-row">' + ex.map(function(v){ return '<button class="btn sm" data-v="' + v + '">' + v + '</button>'; }).join("") + '</div><div class="demo-out"></div>';
+    var inp = el.querySelector('[data-f=a]'), o = el.querySelector(".demo-out");
+    function n(x){ return x.toLocaleString("vi-VN"); }
+    function run(){
+      var raw = inp.value.trim(), a = /^0x/i.test(raw) ? parseInt(raw, 16) : parseInt(raw.replace(/[.\s]/g, ""), 10);
+      if (isNaN(a) || a < 0 || a > 4294967295){ o.innerHTML = 'Nhập số từ 0 đến 4.294.967.295 (hoặc từ 0x00000000 đến 0xFFFFFFFF).'; return; }
+      var bin = ("0".repeat(32) + a.toString(2)).slice(-32), r = a % 4194304, p1 = Math.floor(a / 4194304), p2 = Math.floor(r / 4096), off = a % 4096;
+      o.innerHTML = '<div class="bits"><span class="b1">' + bin.slice(0, 10) + '</span><span class="b2">' + bin.slice(10, 20) + '</span><span class="b3">' + bin.slice(20) + '</span></div>' +
+        '<b>PT1 = ' + p1 + '</b> · <b>PT2 = ' + p2 + '</b> · <b>Offset = ' + off + '</b><br>' +
+        '<small class="muted">Tính bằng số thập phân: địa chỉ = ' + n(a) + ' → PT1 = ' + n(a) + ' ÷ 4.194.304 = ' + p1 + ' (dư ' + n(r) + ') → PT2 = ' + n(r) + ' ÷ 4096 = ' + p2 + ' → Offset = ' + n(a) + ' mod 4096 = ' + off + '</small><br>' +
+        'Cách tra: dòng <b>' + p1 + '</b> của bảng cấp 1 → bảng cấp 2 phủ vùng ' + (p1 * 4) + ' MB – ' + (p1 * 4 + 4) + ' MB → dòng <b>' + p2 + '</b> của bảng đó cho số khung f → địa chỉ vật lý = f × 4096 + ' + off + '.';
+    }
+    el.oninput = run;
+    el.onclick = function(e){ var b = e.target.closest("button[data-v]"); if (b){ inp.value = b.dataset.v; run(); } };
+    run();
+  },
+  /* Mô phỏng TLB: đếm hit / miss, số lần vào RAM và thời gian truy cập trung bình */
+  tlb: function(el){
+    el.innerHTML = '<div class="demo-h">🧪 Mô phỏng TLB: hit, miss và thời gian truy cập</div><div class="demo-row">' +
+      '<label class="w">Chuỗi trang được dùng<input data-f="r" value="1 2 1 3 1 2 4 1 5 1 2 3"></label>' +
+      '<label>Số dòng TLB<input type="number" min="1" max="16" data-f="n" value="3"></label>' +
+      '<label>Tra TLB (ns)<input type="number" min="0" data-f="t" value="20"></label>' +
+      '<label>Vào RAM (ns)<input type="number" min="1" data-f="m" value="100"></label></div><div class="demo-out"></div>';
+    function run(){
+      var refs = numList(el.querySelector('[data-f=r]').value), N = Math.max(1, Math.min(16, +el.querySelector('[data-f=n]').value || 1));
+      var T = Math.max(0, +el.querySelector('[data-f=t]').value || 0), M = Math.max(1, +el.querySelector('[data-f=m]').value || 1), o = el.querySelector(".demo-out");
+      if (!refs.length){ o.innerHTML = 'Nhập chuỗi các số trang, cách nhau bằng dấu cách.'; return; }
+      var tlb = [], hits = 0, ram = 0, rows = "";
+      refs.forEach(function(p, i){
+        var k = tlb.indexOf(p), hit = k >= 0, note;
+        if (hit){ hits++; tlb.splice(k, 1); tlb.push(p); note = 'có sẵn trong TLB'; }
+        else {
+          note = 'tra bảng trang trong RAM';
+          if (tlb.length >= N){ note += ', bỏ trang ' + tlb[0] + ' khỏi TLB'; tlb.shift(); }
+          tlb.push(p);
+        }
+        ram += hit ? 1 : 2;
+        rows += '<tr><td>' + (i + 1) + '</td><td><b>' + p + '</b></td><td class="' + (hit ? 'ok-t' : 'bad-t') + '">' + (hit ? '✔ hit' : '✘ miss') + '</td><td>' + note + '</td><td>' + tlb.join(", ") + '</td><td>' + (hit ? 1 : 2) + '</td></tr>';
+      });
+      function vn(x){ return String(x).replace(".", ","); }
+      var n = refs.length, h = hits / n, avg = h * (T + M) + (1 - h) * (T + 2 * M);
+      o.innerHTML = '<div class="tbl-wrap"><table class="demo-t"><tr><th>Bước</th><th>Trang</th><th>Kết quả</th><th>Việc phải làm</th><th>TLB sau bước</th><th>Số lần vào RAM</th></tr>' + rows + '</table></div>' +
+        '<p style="margin:8px 0 4px">Hit <b>' + hits + '/' + n + '</b> = <b>' + Math.round(h * 100) + '%</b> · Vào RAM <b>' + ram + '</b> lần (không có TLB: ' + (2 * n) + ' lần).</p>' +
+        '<div class="formula">Thời gian trung bình = h × (TLB + RAM) + (1 − h) × (TLB + 2 × RAM) = ' + vn(h.toFixed(2)) + ' × ' + (T + M) + ' + ' + vn((1 - h).toFixed(2)) + ' × ' + (T + 2 * M) + ' ≈ <b>' + vn(Math.round(avg * 10) / 10) + ' ns</b> (không có TLB: ' + (2 * M) + ' ns)</div>' +
+        '<small class="muted">Khi TLB đầy, mô phỏng bỏ dòng lâu nhất chưa dùng (giả định thường gặp, slide không nêu cách chọn).</small>';
+    }
+    el.oninput = run; run();
+  },
   pagerep: function(el){
     el.innerHTML = '<div class="demo-h">🧪 Mô phỏng thay thế trang (đếm lỗi trang)</div><div class="demo-row">'+
       '<label class="w">Chuỗi tham chiếu<input data-f="r" value="7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1"></label><label>Số khung<input type="number" min="1" max="8" data-f="n" value="3"></label>'+

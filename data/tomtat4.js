@@ -268,7 +268,10 @@ Cách tra: vào <b>dòng 1</b> của bảng cấp 1 để tìm bảng cấp 2 c�
 </table>
 <ul><li><b>Valid</b>: dòng này có dùng được không. <b>Virtual page → Page frame</b>: cặp trang → khung. <b>Modified</b>: trang đã bị ghi chưa. <b>Protection</b>: quyền R (đọc), W (ghi), X (thực thi).</li>
 <li>Đọc bảng: trang 19, 20, 21 có quyền <b>R X</b> và Modified = 0, nên là các trang <b>code</b> (chỉ đọc và chạy, không ghi). Trang 129–130 và 860–861 có quyền <b>RW</b> và đã bị ghi, nên là <b>dữ liệu / stack</b>.</li></ul>
-<div class="ex"><b>Dạng bài hay gặp</b> <span class="xs">ngoài slide</span>: TLB tra mất 20 ns, mỗi lần vào RAM 100 ns, tỉ lệ hit 80%. Thời gian truy cập trung bình = 0,8 × (20 + 100) + 0,2 × (20 + 100 + 100) = 96 + 44 = <b>140 ns</b>. Nếu không có TLB thì mất 200 ns.</div>`},
+<div class="ex"><b>Dạng bài hay gặp</b> <span class="xs">ngoài slide</span>: TLB tra mất 20 ns, mỗi lần vào RAM 100 ns, tỉ lệ hit 80%. Thời gian truy cập trung bình = 0,8 × (20 + 100) + 0,2 × (20 + 100 + 100) = 96 + 44 = <b>140 ns</b>. Nếu không có TLB thì mất 200 ns.</div>
+
+<div class="demo" data-demo="pt2"></div>
+<div class="demo" data-demo="tlb"></div>`},
 {id:"s4-9",title:"9. Lỗi trang & thay thế trang",
  figs:[["c4-32","Slide 32 – Các bước điều khiển lỗi trang"],["c4-35","Slide 35 – Thay thế trang: swap out victim, swap in trang mới"]],
  yt:"page fault handling steps operating system",
