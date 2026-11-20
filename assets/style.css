@@ -561,3 +561,9 @@ main:has(.sum-layout.has-gl){max-width:1720px}
 .tp-n{display:inline-block;min-width:22px;padding:0 6px;border-radius:999px;background:var(--card2);border:1px solid var(--line2);font-size:12px;font-weight:800;text-align:center}
 .tp-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 18px;border-top:1px solid var(--line)}
 .tp-foot .grow{flex:1}
+/* Thẻ đề: hàng nút không được tràn ra ngoài thẻ */
+.set-actions{flex-wrap:wrap}
+.set-actions .btn{min-width:0}
+.set-actions:has([data-tags]) .btn.primary{flex-basis:100%}
+.set-actions:has([data-tags]) [data-tags]{flex:1}
+.set-head:has(.set-sub){align-items:flex-start}
