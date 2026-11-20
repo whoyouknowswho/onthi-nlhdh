@@ -871,14 +871,64 @@ Q({ch:5,type:"single",topic:"Device driver",sec:"s5-8",
 
 L.forEach(function(q, i){ q.id = "ot3-" + ("00" + (i + 1)).slice(-3); q.set = "ot3"; q.exp = q.exp || ""; });
 window.QUESTIONS.push.apply(window.QUESTIONS, L);
-/* Chia đôi theo số câu còn lại sau khi lược trùng (QDROP nạp trước file này): nửa đầu là Ôn tập 3, nửa sau là Ôn tập 4.
-   Mã câu giữ nguyên dạng ot3-xxx để không mất tiến độ đã làm. */
-var DROP = window.QDROP || {}, kept = L.filter(function(q){ return !DROP[q.id]; });
-var cut = L.indexOf(kept[Math.ceil(kept.length / 2)]);
-var SRC = "Chép từ tài liệu tổng hợp (tong-hop-sfsa.pdf): trộn đề cuối kỳ và giữa kỳ, nên có nhiều câu ngoài chương 4–6. Đáp án đã kiểm lại; chỗ khác tài liệu có ghi chú.";
-L.slice(cut).forEach(function(q){ q.set = "ot4"; });
-window.QSETS.push({key:"ot3", name:"Ôn tập 3", badge:"Ô3", note:"Nửa đầu tài liệu. " + SRC,
-  ids:L.slice(0, cut).map(function(q){ return q.id; })});
-window.QSETS.push({key:"ot4", name:"Ôn tập 4", badge:"Ô4", note:"Nửa sau tài liệu. " + SRC,
-  ids:L.slice(cut).map(function(q){ return q.id; })});
+
+/* Tái cấu trúc các đề ôn tập:
+   - Gộp các câu Chương 4 từ các đề thành "Ôn tập chương 4"
+   - Gộp các câu Chương 5 từ các đề thành "Ôn tập chương 5"
+   - Gộp các câu Chương 6 từ các đề thành "Ôn tập chương 6"
+   - Đổi tên Ôn tập 4 thành "Ôn tập đồng bộ", giữ các câu về Đồng bộ tiến trình (slide 56 trở đi)
+   - Lược bỏ hoàn toàn các đề Ôn tập 1, 2, 3 cũ */
+var DROP = window.QDROP || {};
+var allQs = window.QUESTIONS;
+var byId = {}; allQs.forEach(function(q){ byId[q.id] = q; });
+
+// 1. Ôn tập chương 4 (Quản lý Bộ nhớ)
+var idsC4 = allQs.filter(function(q){ return q.ch === 4 && !DROP[q.id]; }).map(function(q){ q.set = "ot_c4"; return q.id; });
+window.QSETS.push({
+  key: "ot_c4",
+  name: "Ôn tập chương 4",
+  badge: "Ô4",
+  note: "Gộp tất cả câu hỏi trắc nghiệm Chương 4 (Quản lý Bộ nhớ) từ các đề ôn tập (đã lược câu trùng).",
+  ids: idsC4
+});
+
+// 2. Ôn tập chương 5 (Vào/Ra)
+var idsC5 = allQs.filter(function(q){ return q.ch === 5 && !DROP[q.id]; }).map(function(q){ q.set = "ot_c5"; return q.id; });
+window.QSETS.push({
+  key: "ot_c5",
+  name: "Ôn tập chương 5",
+  badge: "Ô5",
+  note: "Gộp tất cả câu hỏi trắc nghiệm Chương 5 (Vào/Ra) từ các đề ôn tập (đã lược câu trùng).",
+  ids: idsC5
+});
+
+// 3. Ôn tập chương 6 (Hệ thống File)
+var idsC6 = allQs.filter(function(q){ return q.ch === 6 && !DROP[q.id]; }).map(function(q){ q.set = "ot_c6"; return q.id; });
+window.QSETS.push({
+  key: "ot_c6",
+  name: "Ôn tập chương 6",
+  badge: "Ô6",
+  note: "Gộp tất cả câu hỏi trắc nghiệm Chương 6 (Hệ thống File) từ các đề ôn tập (đã lược câu trùng).",
+  ids: idsC6
+});
+
+// 4. Ôn tập đồng bộ
+var syncIdList = [
+  "ot1-20", "ot1-22", "ot2-24", "ot3-042", "ot3-046", "ot3-072", "ot3-073", "ot3-074", "ot3-075", "ot3-084",
+  "ot3-103", "ot3-107", "ot3-108", "ot3-109", "ot3-110", "ot3-111", "ot3-112", "ot3-113", "ot3-114", "ot3-115",
+  "ot3-116", "ot3-117", "ot3-118", "ot3-119", "ot3-120", "ot3-121", "ot3-122", "ot3-123", "ot3-136", "ot3-137",
+  "ot3-149", "ot3-166", "ot3-170", "ot3-176", "ot3-177", "ot3-180"
+];
+var idsSync = syncIdList.filter(function(id){
+  var q = byId[id];
+  if (q) q.set = "ot_dongbo";
+  return q && !DROP[id];
+});
+window.QSETS.push({
+  key: "ot_dongbo",
+  name: "Ôn tập đồng bộ",
+  badge: "ĐB",
+  note: "Gộp các câu hỏi về đồng bộ tiến trình (miền găng, Peterson, TSL, Semaphore, Dining-Philosophers...) theo slide bài giảng.",
+  ids: idsSync
+});
 })();

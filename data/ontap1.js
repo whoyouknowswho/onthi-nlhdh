@@ -144,7 +144,4 @@ var L = [
  expH:"<p>Format cấp thấp chia mỗi track thành các sector. Mỗi sector ngoài 512 byte dữ liệu còn có <b>preamble</b> (đầu sector) và mã <b>ECC</b> (sửa lỗi). Ngoài ra, mỗi track còn để dành một số <b>sector dự phòng (spare)</b> để thay cho sector hỏng sau này.</p><p>Các phần đó đều chiếm chỗ, nhưng <b>không được tính vào dung lượng sau định dạng</b>. Vì thế dung lượng dùng được thấp hơn khoảng 20% so với lúc chưa format.</p><p>\"Xuất hiện các sector bad\" sai: đĩa mới hầu như không có sector hỏng. Hơn nữa, sector hỏng được thay bằng sector dự phòng nên cũng không làm giảm dung lượng đã công bố.</p>"}
 ];
 window.QUESTIONS.push.apply(window.QUESTIONS, L.map(function(q){ q.set = "ot1"; q.exp = q.exp || ""; return q; }));
-window.QSETS.push({key:"ot1", name:"Ôn tập 1", badge:"Ô1",
-  note:"Chép từ một đề thi trắc nghiệm. Đề gốc không kèm đáp án: đáp án được tự giải và đối chiếu với slide.",
-  ids:L.map(function(q){ return q.id; })});
 })();
