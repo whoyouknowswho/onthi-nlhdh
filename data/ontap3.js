@@ -871,14 +871,9 @@ Q({ch:5,type:"single",topic:"Device driver",sec:"s5-8",
 
 L.forEach(function(q, i){ q.id = "ot3-" + ("00" + (i + 1)).slice(-3); q.set = "ot3"; q.exp = q.exp || ""; });
 window.QUESTIONS.push.apply(window.QUESTIONS, L);
-/* Chia đôi theo số câu còn lại sau khi lược trùng (QDROP nạp trước file này): nửa đầu là Ôn tập 3, nửa sau là Ôn tập 4.
+/* Chia đôi theo số câu còn lại sau khi lược trùng (QDROP nạp trước file này): nửa đầu đánh dấu ot3, nửa sau ot4 (dùng để gom đề trong ontap_sets.js).
    Mã câu giữ nguyên dạng ot3-xxx để không mất tiến độ đã làm. */
 var DROP = window.QDROP || {}, kept = L.filter(function(q){ return !DROP[q.id]; });
 var cut = L.indexOf(kept[Math.ceil(kept.length / 2)]);
-var SRC = "Chép từ tài liệu tổng hợp (tong-hop-sfsa.pdf): trộn đề cuối kỳ và giữa kỳ, nên có nhiều câu ngoài chương 4–6. Đáp án đã kiểm lại; chỗ khác tài liệu có ghi chú.";
 L.slice(cut).forEach(function(q){ q.set = "ot4"; });
-window.QSETS.push({key:"ot3", name:"Ôn tập 3", badge:"Ô3", note:"Nửa đầu tài liệu. " + SRC,
-  ids:L.slice(0, cut).map(function(q){ return q.id; })});
-window.QSETS.push({key:"ot4", name:"Ôn tập 4", badge:"Ô4", note:"Nửa sau tài liệu. " + SRC,
-  ids:L.slice(cut).map(function(q){ return q.id; })});
 })();

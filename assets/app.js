@@ -2,7 +2,9 @@
 (function(){
 "use strict";
 var QDROP = window.QDROP || {};   /* câu trùng giữa các đề ôn tập: bị lược */
-var QS = (window.QUESTIONS || []).filter(function(q){ return !QDROP[q.id]; });
+var INSET = {}; (window.QSETS || []).forEach(function(x){ x.ids.forEach(function(id){ INSET[id] = 1; }); });
+/* câu của đề ôn tập chỉ được dùng khi còn nằm trong một đề (câu ngoài chương 4–6 không thuộc phần đồng bộ đã bị bỏ) */
+var QS = (window.QUESTIONS || []).filter(function(q){ return !QDROP[q.id] && (!q.set || INSET[q.id]); });
 var BYID = {}; QS.forEach(function(q){ BYID[q.id] = q; });
 var CHAPS = [
   {ch:4, key:"c4", name:"Chương 4 – Quản lý Bộ nhớ", short:"Quản lý Bộ nhớ", cls:""},
@@ -14,10 +16,10 @@ var QSETS = (window.QSETS || []).map(function(x){
   return Object.assign({}, x, {ids:ids, dropped:x.ids.length - ids.length});
 });
 if (QSETS.length > 1) QSETS.push({key:"otall", name:"Tất cả đề ôn tập", badge:"∑", dropped:0,
-  note:"Gộp mọi đề ôn tập ở trên (đã lược câu trùng).",
+  note:"Gồm mọi câu của Ôn tập chương 4, 5, 6 và Ôn tập đồng bộ.",
   ids:[].concat.apply([], QSETS.map(function(x){ return x.ids; }))});
 /* Lọc câu trong đề ôn tập theo chương */
-var OT_SCOPES = [["all","Tất cả"],["46","Chương 4–6"],["4","Chương 4"],["5","Chương 5"],["6","Chương 6"],["0","Ngoài chương 4–6"]];
+var OT_SCOPES = [["all","Tất cả"],["46","Chương 4–6"],["4","Chương 4"],["5","Chương 5"],["6","Chương 6"],["0","Đồng bộ"]];
 function scopeOk(sc, ch){ return sc==="all" || (sc==="46" ? ch>=4 && ch<=6 : ch===+sc); }
 function scopeName(sc){ var r = OT_SCOPES.filter(function(x){ return x[0]===sc; })[0]; return r ? r[1] : ""; }
 function setOf(key){
@@ -27,7 +29,7 @@ function setOf(key){
   return {key:key, name:base.name+" · "+scopeName(sc), badge:base.badge, note:base.note, dropped:base.dropped,
     ids:base.ids.filter(function(id){ return scopeOk(sc, BYID[id].ch); })};
 }
-function chName(ch){ return ch ? "Chương "+ch : "Ngoài chương 4–6"; }
+function chName(ch){ return ch ? "Chương "+ch : "Đồng bộ tiến trình"; }
 var TYPE_LABEL = {single:"Một đáp án", multi:"Nhiều đáp án", order:"Sắp xếp"};
 var LETTERS = "ABCDEFGHIJ";
 var LS = "nlhdh_state_v1";
@@ -60,6 +62,8 @@ var ICON = {
 var state = { sessions:{}, active:null, view:"home", sumCh:4, stats:{} };
 var XS = window.XS || {};
 function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.sessions) state = Object.assign(state, s); } catch(e){}
+  // bỏ bài đang làm của các đề cũ Ôn tập 1–4 (đã thay bằng đề theo chương và đề đồng bộ)
+  Object.keys(state.sessions).forEach(function(k){ if (/^(ottag:)?ot[1-4](@|$)/.test(k)) delete state.sessions[k]; });
   // bỏ các câu không còn tồn tại
   Object.keys(state.sessions).forEach(function(k){ var s=state.sessions[k]; s.ids = s.ids.filter(function(id){ return BYID[id]; }); if (!s.ids.length) delete state.sessions[k]; });
   // bổ sung câu hỏi mới vào các bộ theo chương đã lưu từ trước
@@ -137,6 +141,11 @@ var TAG_RULES = [
   [6, /Bitmap|Cấp phát|không gian đĩa|Kích thước block|Phân mảnh đĩa|FAT|i-node/i, "Cấp phát & quản lý đĩa (FAT, i-node, bitmap)"],
   [6, /Cấu trúc hệ thống file/i, "Cấu trúc đĩa (MBR, boot block)"],
   [6, /./, "File & thao tác file"],
+  [0, /^Đồng bộ · Miền găng/, "Miền găng & loại trừ lẫn nhau"],
+  [0, /^Đồng bộ · (Luân phiên|Peterson|TSL|Cấm ngắt|Chờ bận)/, "Giải pháp chờ bận (luân phiên, Peterson, TSL, cấm ngắt)"],
+  [0, /^Đồng bộ · (Sleep|Semaphore|Bài toán)/, "Sleep & Wakeup, Semaphore, bài toán kinh điển"],
+  [0, /^Đồng bộ · Giao tiếp/, "Tiến trình tương tác & giao tiếp (IPC)"],
+  [0, /^Đồng bộ · /, "Khái niệm đồng bộ"],
   [0, /System call|Chế độ kernel/i, "System call & chế độ kernel"],
   [0, /Chương 1/i, "Tổng quan HĐH & phần cứng"],
   [0, /Lập lịch CPU/i, "Lập lịch CPU"],
@@ -148,7 +157,7 @@ var TAG_RULES = [
   [0, /./, "Thực hành Linux / Windows"]
 ];
 function tagOf(q){ var r = TAG_RULES.filter(function(x){ return x[0]===q.ch && x[1].test(q.topic); })[0]; return r ? r[2] : q.topic; }
-var TAG_GROUPS = [[4,"Chương 4 – Bộ nhớ"],[5,"Chương 5 – Vào/Ra"],[6,"Chương 6 – File"],[0,"Ngoài chương 4–6"]];
+var TAG_GROUPS = [[4,"Chương 4 – Bộ nhớ"],[5,"Chương 5 – Vào/Ra"],[6,"Chương 6 – File"],[0,"Đồng bộ tiến trình"]];
 function tagSetKey(setKey){ var sc = state.otScope || "all"; return setKey + (sc==="all" ? "" : "@"+sc); }
 function openTagPicker(setKey){
   var o = setOf(tagSetKey(setKey)); if (!o) return;
@@ -240,7 +249,7 @@ function otSection(){
     var o = setOf(x.key + (sc==="all" ? "" : "@"+sc));
     if (!o.ids.length) return "";
     var by = {}; x.ids.forEach(function(id){ var c = BYID[id].ch; by[c] = (by[c]||0) + 1; });
-    var sub = [4,5,6,0].filter(function(c){ return by[c]; }).map(function(c){ return '<span class="chip'+(scopeOk(sc, c)?' on':'')+'">'+(c ? 'Ch'+c : 'Ngoài 4–6')+': <b>'+by[c]+'</b></span>'; }).join(" ");
+    var sub = [4,5,6,0].filter(function(c){ return by[c]; }).map(function(c){ return '<span class="chip'+(scopeOk(sc, c)?' on':'')+'">'+(c ? 'Ch'+c : 'Đồng bộ')+': <b>'+by[c]+'</b></span>'; }).join(" ");
     var note = (x.dropped ? 'Đã lược <b>'+x.dropped+'</b> câu trùng với đề trước. ' : '') + (x.note ? esc(x.note) : '');
     return setCard({key:o.key, ch:"set", tagsFor:x.key, ids:o.ids, title:o.name, badge:x.badge, cls:"ot", sub:sub+(note?'<br><span class="muted">'+note+'</span>':'')});
   }).join("");
@@ -250,7 +259,7 @@ function otSection(){
 }
 function weakPanel(){
   var w = weakIds(), st = state.stats || {}, topics = {};
-  w.forEach(function(id){ var q = BYID[id], k = (q.ch?"Ch"+q.ch:"Ngoài 4–6")+" · "+q.topic; topics[k] = (topics[k]||0) + st[id].w; });
+  w.forEach(function(id){ var q = BYID[id], k = (q.ch?"Ch"+q.ch:"Đồng bộ")+" · "+q.topic; topics[k] = (topics[k]||0) + st[id].w; });
   var top = Object.keys(topics).sort(function(a,b){ return topics[b]-topics[a]; }).slice(0,6);
   var done = Object.keys(st).length;
   return '<div class="section-h">🎯 Ôn câu hay sai</div><div class="panel weak">'+
