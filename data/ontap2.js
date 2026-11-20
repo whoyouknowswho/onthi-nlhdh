@@ -262,4 +262,7 @@ var L = [
  expH:"<p>Bit M = 1 nghĩa là trang <b>đã bị ghi (sửa)</b> từ lúc nạp vào RAM.</p><p>Khi đuổi trang ra:</p><ul><li>M = 1: phải ghi trang ra đĩa trước.</li><li>M = 0: bỏ luôn, vì bản trên đĩa còn nguyên.</li></ul><p>Nhờ vậy tránh được những lần ghi đĩa thừa, nên <b>thay trang nhanh hơn</b>.</p><p>\"Đánh dấu khi có bất kỳ tham chiếu\" là bit <b>R (Referenced)</b>, không phải bit M.</p>"}
 ];
 window.QUESTIONS.push.apply(window.QUESTIONS, L.map(function(q){ q.set = "ot2"; q.exp = q.exp || ""; return q; }));
+window.QSETS.push({key:"ot2", name:"Ôn tập 2", badge:"Ô2",
+  note:"Chép từ Google Form \"NLHĐH - Cuối kì\". Form không kèm đáp án: đáp án được tự giải và đối chiếu với slide.",
+  ids:L.map(function(q){ return q.id; })});
 })();
