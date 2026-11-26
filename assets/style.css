@@ -567,3 +567,11 @@ main:has(.sum-layout.has-gl){max-width:1720px}
 .set-actions:has([data-tags]) .btn.primary{flex-basis:100%}
 .set-actions:has([data-tags]) [data-tags]{flex:1}
 .set-head:has(.set-sub){align-items:flex-start}
+/* Mô phỏng lập lịch CPU (Chương 2) */
+.demo textarea{width:100%;font-family:ui-monospace,Consolas,monospace;font-size:14px;padding:8px 10px;border-radius:9px;border:1px solid var(--line2);background:var(--card2);color:inherit;resize:vertical}
+.gantt{display:flex;height:40px;border-radius:9px;overflow:hidden;margin:10px 0 2px;border:1px solid var(--line2)}
+.g-seg{display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;min-width:0;border-right:1px solid rgba(0,0,0,.25);overflow:hidden}
+.g-seg.idle{background:repeating-linear-gradient(45deg,var(--card2),var(--card2) 6px,transparent 6px,transparent 12px);color:var(--muted)}
+.g-ticks{display:flex;font-size:12px;color:var(--muted);margin-bottom:8px;position:relative}
+.g-ticks span{min-width:0;overflow:visible;white-space:nowrap}
+.g-ticks i{font-style:normal;margin-left:-4px}

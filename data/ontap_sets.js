@@ -36,7 +36,9 @@ var SYNC = {
   "ot3-180":"Chờ bận (busy waiting)"
 };
 var sync = Object.keys(SYNC).filter(function(id){ return BY[id] && !DROP[id]; });
-sync.forEach(function(id){ BY[id].topic = "Đồng bộ · " + SYNC[id]; });
+/* mục trong Tổng hợp Chương 2 để ôn lại: s2-9 miền găng, s2-10 chờ bận, s2-11 Sleep & Wakeup / Semaphore / Monitor */
+function secOf(t){ return /Luân phiên|Peterson|TSL|Cấm ngắt|Chờ bận/.test(t) ? "s2-10" : /Sleep|Semaphore|Bài toán/.test(t) ? "s2-11" : "s2-9"; }
+sync.forEach(function(id){ BY[id].topic = "Đồng bộ · " + SYNC[id]; BY[id].sec = secOf(SYNC[id]); });
 
 var NOTE = "Gộp từ các đề ôn tập cũ (đề thi trắc nghiệm, Google Form \"NLHĐH - Cuối kì\", tài liệu tổng hợp), đã lược câu trùng.";
 window.QSETS.push(

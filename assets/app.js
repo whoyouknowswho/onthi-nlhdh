@@ -30,6 +30,9 @@ function setOf(key){
     ids:base.ids.filter(function(id){ return scopeOk(sc, BYID[id].ch); })};
 }
 function chName(ch){ return ch ? "Chương "+ch : "Đồng bộ tiến trình"; }
+/* chương trong phần Tổng hợp để ôn lại một câu hỏi (câu đồng bộ → Chương 2) */
+function sumChOf(q){ return q.ch>=4 && q.ch<=6 ? q.ch : (/^Đồng bộ/.test(q.topic) ? 2 : 0); }
+function sumList(){ return (window.SUMMARY || []).slice().sort(function(a, b){ return a.ch - b.ch; }); }
 var TYPE_LABEL = {single:"Một đáp án", multi:"Nhiều đáp án", order:"Sắp xếp"};
 var LETTERS = "ABCDEFGHIJ";
 var LS = "nlhdh_state_v1";
@@ -355,7 +358,7 @@ function renderQuiz(){
       var letters = perm.map(function(oi,di){ return q.ans.indexOf(oi)>=0 ? LETTERS[di] : null; }).filter(Boolean).join(", ");
       var head = st==="g" ? ICON.check+"Chính xác!" : st==="r" ? ICON.x+"Chưa chính xác!" : "Bạn chưa trả lời câu này";
       fb = '<div class="feedback '+(st==="g"?"ok":st==="r"?"bad":"na")+'"><h4>'+head+'</h4><div class="ansline">Đáp án đúng: '+letters+'</div>'+(q.expH ? '<div class="exp-h">'+q.expH+'</div>' : '<p>'+esc(q.exp)+'</p>')+
-           (q.ch>=4 && q.ch<=6 ? '<div class="more"><button class="btn sm ghost" data-sum="'+q.ch+'" data-topic="'+esc(q.topic)+'"'+(q.sec?' data-sec="'+q.sec+'"':'')+'>'+ICON.book+'Ôn lý thuyết '+chName(q.ch)+(q.sec?' (mục '+q.sec.split("-")[1]+')':'')+'</button></div>' : '')+'</div>';
+           (sumChOf(q) ? '<div class="more"><button class="btn sm ghost" data-sum="'+sumChOf(q)+'" data-topic="'+esc(q.topic)+'"'+(q.sec?' data-sec="'+q.sec+'"':'')+'>'+ICON.book+'Ôn lý thuyết Chương '+sumChOf(q)+(q.sec?' (mục '+q.sec.split("-")[1]+')':'')+'</button></div>' : '')+'</div>';
     }
     var prevI = pos>0 ? vis[pos-1] : (pos<0 ? vis.filter(function(i){return i<s.cur;}).pop() : undefined);
     var nextI = pos>=0 ? vis[pos+1] : vis.filter(function(i){return i>s.cur;})[0];
@@ -462,7 +465,7 @@ function confetti(){
 /* ================= TỔNG HỢP KIẾN THỨC ================= */
 var sumQuery = "";
 function renderSummary(){
-  var data = window.SUMMARY || [], ch = state.sumCh || 4;
+  var data = sumList(), ch = state.sumCh || 4;
   var c = data.filter(function(d){ return d.ch===ch; })[0] || data[0];
   var qf = fold(sumQuery.trim());
   var gl = (window.GLOSSARY || {})[c.ch];
@@ -474,8 +477,9 @@ function renderSummary(){
     '<nav class="toc">'+secs.map(function(sec){ return '<a href="#'+sec.id+'" data-toc="'+sec.id+'">'+esc(sec.title)+'</a>'; }).join("")+'</nav></div>'+
     '<div><div class="sum-head"><div class="kicker">Chương '+c.ch+' · '+esc(c.en)+'</div><h2>'+esc(c.title)+'</h2><p>'+c.intro+'</p><p class="muted" style="margin-top:8px;font-size:13.5px">Nhãn <span class="xs">ngoài slide</span> = kiến thức bổ sung từ giáo trình gốc (Tanenbaum), không có trong slide – nên ôn sau phần chính.</p></div>'+
     (secs.length ? secs.map(renderSec).join("") : '<div class="panel empty">Không tìm thấy nội dung phù hợp “'+esc(sumQuery)+'”.</div>')+
-    '<div class="sum-cta"><button class="btn primary" data-start="c'+c.ch+'">'+ICON.play+'Luyện câu hỏi Chương '+c.ch+'</button>'+
-    (c.ch<6?'<button class="btn" data-sumch="'+(c.ch+1)+'">Chương '+(c.ch+1)+ICON.right+'</button>':'')+'</div></div>'+
+    '<div class="sum-cta">'+(c.ch===2 ? (setOf("otdb") ? '<button class="btn primary" data-start="otdb">'+ICON.play+'Luyện câu hỏi đồng bộ (Ôn tập đồng bộ)</button>' : '')
+      : '<button class="btn primary" data-start="c'+c.ch+'">'+ICON.play+'Luyện câu hỏi Chương '+c.ch+'</button>')+
+    (function(){ var nx = data[data.indexOf(c)+1]; return nx ? '<button class="btn" data-sumch="'+nx.ch+'">Chương '+nx.ch+ICON.right+'</button>' : ''; })()+'</div></div>'+
     (gl ? glossaryPanel(c.ch, gl) : '')+'</div>'+
     (gl ? '<button class="gl-fab" data-glopen aria-label="Mở bảng thuật ngữ">📖 Thuật ngữ</button>' : '');
   if (gl) linkTerms(root, gl);
@@ -888,6 +892,74 @@ var DEMOS = {
     el.oninput = run;
     el.onclick = function(e){ var b = e.target.closest("button[data-s]"); if (b){ el.querySelector('[data-f=s]').value = b.dataset.s; el.querySelector('[data-f=o]').value = b.dataset.o; run(); } };
     run();
+  },
+  /* Mô phỏng lập lịch CPU (Chương 2): Gantt + thời gian chờ / xoay vòng */
+  sched: function(el){
+    var EX = [
+      ["Slide 47 (RR, q = 20)", "P1 0 53\nP2 0 17\nP3 0 68\nP4 0 24", "rr", 20],
+      ["Slide 41 (FCFS)", "P1 0 24\nP2 0 3\nP3 0 3", "fcfs", 4],
+      ["SJF / SRTF (có thời điểm đến)", "P1 0 8\nP2 1 4\nP3 2 9\nP4 3 5", "srtf", 4],
+      ["Ưu tiên (số nhỏ = ưu tiên cao)", "P1 0 10 3\nP2 0 1 1\nP3 0 2 4\nP4 0 1 5\nP5 0 5 2", "prio", 4]
+    ];
+    var ALG = [["fcfs","FCFS – đến trước phục vụ trước"],["sjf","SJF – ngắn nhất trước (độc quyền)"],["srtf","SRTF – SJF có giành quyền"],["rr","Round Robin"],["prio","Ưu tiên (độc quyền)"],["prio-p","Ưu tiên (có giành quyền)"]];
+    el.innerHTML = '<div class="demo-h">🧪 Mô phỏng lập lịch CPU: tự nhập tiến trình, xem Gantt và thời gian chờ</div>' +
+      '<div class="demo-row"><label class="w">Mỗi dòng: tên · thời điểm đến · thời gian chạy (burst) · [ưu tiên]<textarea data-f="p" rows="5"></textarea></label></div>' +
+      '<div class="demo-row"><label>Thuật toán<select data-f="a">' + ALG.map(function(a){ return '<option value="' + a[0] + '">' + a[1] + '</option>'; }).join("") + '</select></label>' +
+      '<label>Quantum (RR)<input type="number" min="1" data-f="q" value="20"></label></div>' +
+      '<div class="demo-row">' + EX.map(function(e, i){ return '<button class="btn sm" data-ex="' + i + '">' + e[0] + '</button>'; }).join("") + '</div><div class="demo-out"></div>';
+    var P = el.querySelector('[data-f=p]'), A = el.querySelector('[data-f=a]'), Qn = el.querySelector('[data-f=q]'), o = el.querySelector(".demo-out");
+    function load(i){ P.value = EX[i][1]; A.value = EX[i][2]; Qn.value = EX[i][3]; run(); }
+    function parse(){
+      return P.value.split(/\n+/).map(function(l){ return l.trim().split(/[\s,;]+/); }).filter(function(x){ return x[0]; })
+        .map(function(x, i){ return {n:x[0], at:+x[1] || 0, bt:+x[2], pr:x[3] === undefined ? 0 : +x[3], i:i}; })
+        .filter(function(p){ return p.bt > 0 && !isNaN(p.bt); });
+    }
+    function simulate(ps, alg, q){
+      var t = 0, left = {}, done = {}, seg = [], ready = [], fin = {}, first = {}, arrived = {};
+      ps.forEach(function(p){ left[p.n] = p.bt; });
+      function admit(upTo){ ps.forEach(function(p){ if (!arrived[p.n] && p.at <= upTo){ arrived[p.n] = 1; ready.push(p); } }); }
+      function push(n, a, b){ var l = seg[seg.length - 1]; if (l && l.n === n && l.b === a && alg !== "rr") l.b = b; else seg.push({n:n, a:a, b:b}); }
+      var guard = 0;
+      while (Object.keys(done).length < ps.length && guard++ < 10000){
+        admit(t);
+        if (!ready.length){ var nx = Math.min.apply(null, ps.filter(function(p){ return !arrived[p.n]; }).map(function(p){ return p.at; })); push("–", t, nx); t = nx; continue; }
+        var pick;
+        if (alg === "fcfs" || alg === "rr") pick = ready[0];
+        else if (alg === "sjf" || alg === "srtf") pick = ready.slice().sort(function(x, y){ return left[x.n] - left[y.n] || x.at - y.at || x.i - y.i; })[0];
+        else pick = ready.slice().sort(function(x, y){ return x.pr - y.pr || x.at - y.at || x.i - y.i; })[0];
+        ready.splice(ready.indexOf(pick), 1);
+        if (first[pick.n] === undefined) first[pick.n] = t;
+        var dur = left[pick.n];
+        if (alg === "rr") dur = Math.min(dur, q);
+        if (alg === "srtf" || alg === "prio-p"){   // chạy tới khi xong hoặc có tiến trình mới đến (có thể giành quyền)
+          var nextArr = ps.filter(function(p){ return !arrived[p.n] && p.at > t; }).map(function(p){ return p.at; });
+          if (nextArr.length) dur = Math.min(dur, Math.min.apply(null, nextArr) - t);
+        }
+        push(pick.n, t, t + dur); t += dur; left[pick.n] -= dur;
+        admit(t);   // tiến trình đến trong lúc chạy được xếp hàng trước tiến trình vừa hết lượt (như slide RR)
+        if (left[pick.n] <= 0){ done[pick.n] = 1; fin[pick.n] = t; } else ready.push(pick);
+      }
+      return {seg:seg, fin:fin, first:first};
+    }
+    function run(){
+      var ps = parse(), alg = A.value, q = Math.max(1, +Qn.value || 1);
+      Qn.parentNode.style.display = alg === "rr" ? "" : "none";
+      if (!ps.length){ o.innerHTML = 'Nhập mỗi dòng một tiến trình, ví dụ: <code>P1 0 24</code>.'; return; }
+      var r = simulate(ps, alg, q), end = r.seg[r.seg.length - 1].b, col = {}, pal = ["#6366f1","#10b981","#f59e0b","#06b6d4","#a855f7","#f43f5e","#84cc16","#ec4899"];
+      ps.forEach(function(p, i){ col[p.n] = pal[i % pal.length]; });
+      var gantt = '<div class="gantt">' + r.seg.map(function(s){ return '<div class="g-seg' + (s.n === "–" ? ' idle' : '') + '" style="flex:' + (s.b - s.a) + ';' + (s.n === "–" ? '' : 'background:' + col[s.n]) + '" title="' + s.n + ': ' + s.a + '–' + s.b + '"><b>' + (s.n === "–" ? "rảnh" : s.n) + '</b></div>'; }).join("") + '</div>' +
+        '<div class="g-ticks">' + r.seg.map(function(s){ return '<span style="flex:' + (s.b - s.a) + '">' + ((s.b - s.a) / end >= 0.04 || s === r.seg[0] ? s.a : '') + '</span>'; }).join("") + '<i>' + end + '</i></div>';
+      var tw = 0, tt = 0, tr = 0;
+      var rows = ps.map(function(p){ var ta = r.fin[p.n] - p.at, w = ta - p.bt, rs = r.first[p.n] - p.at; tw += w; tt += ta; tr += rs;
+        return '<tr><td><b style="color:' + col[p.n] + '">' + p.n + '</b></td><td>' + p.at + '</td><td>' + p.bt + '</td>' + (/prio/.test(alg) ? '<td>' + p.pr + '</td>' : '') + '<td>' + r.fin[p.n] + '</td><td>' + ta + '</td><td><b>' + w + '</b></td><td>' + rs + '</td></tr>'; }).join("");
+      function avg(x){ return String(Math.round(x / ps.length * 100) / 100).replace(".", ","); }
+      o.innerHTML = gantt + '<div class="tbl-wrap"><table class="demo-t"><tr><th>Tiến trình</th><th>Đến</th><th>Burst</th>' + (/prio/.test(alg) ? '<th>Ưu tiên</th>' : '') + '<th>Xong lúc</th><th>Xoay vòng</th><th>Chờ</th><th>Phản hồi</th></tr>' + rows + '</table></div>' +
+        '<div class="formula">Xoay vòng = xong − đến · Chờ = xoay vòng − burst · Phản hồi = lần đầu được CPU − đến<br>Trung bình: chờ <b>' + avg(tw) + '</b> · xoay vòng <b>' + avg(tt) + '</b> · phản hồi <b>' + avg(tr) + '</b></div>' +
+        '<small class="muted">Hai tiến trình bằng nhau thì ai đến trước (hoặc đứng trên trong danh sách) được chọn trước. Không tính thời gian chuyển ngữ cảnh.</small>';
+    }
+    el.oninput = run;
+    el.onclick = function(e){ var b = e.target.closest("button[data-ex]"); if (b) load(+b.dataset.ex); };
+    load(0);
   },
   /* Mô phỏng TLB: đếm hit / miss, số lần vào RAM và thời gian truy cập trung bình */
   tlb: function(el){
