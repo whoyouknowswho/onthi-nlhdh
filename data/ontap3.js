@@ -442,7 +442,7 @@ Q({ch:0,type:"single",topic:"Chương 2 · Lập lịch CPU",
 Q({ch:0,type:"single",topic:"Chương 3 · Đồng bộ (miền găng)",
  q:"Khi một tiến trình chuẩn bị vào hay ra khỏi một vùng Critical Section thì phải?",
  opts:["Xin phép hệ điều hành","Phát cờ hiệu khi vào và khi ra","Cả hai việc trên","Không làm gì cả"], ans:[2],
- expH:"<p>Cấu trúc chuẩn quanh miền găng: <b>entry section</b> (xin phép vào, ví dụ down(s) – nhờ HĐH / cơ chế đồng bộ cho phép) và <b>exit section</b> (báo đã ra, ví dụ up(s)). Tài liệu chấm \"cả hai việc trên\".</p>"});
+ expH:"<p>\"Cả hai việc trên\" = <b>xin phép hệ điều hành</b> + <b>phát cờ hiệu khi vào và khi ra</b>. Quanh miền găng luôn có 2 phần: <b>entry section</b> (xin vào, ví dụ Down(s) – nhờ HĐH / cơ chế đồng bộ cho phép) và <b>exit section</b> (báo đã ra, ví dụ Up(s) để người sau được vào). \"Không làm gì cả\" sai vì như vậy sẽ xảy ra tranh đoạt điều khiển.</p>"});
 Q({ch:0,type:"single",topic:"Chương 2 · Tiến trình",
  q:"Hàng đợi dành cho các tiến trình xếp hàng chờ nhập xuất được gọi là?",
  opts:["Busy-Waiting buffer","Ready queue","Waiting queue","Running queue"], ans:[2],

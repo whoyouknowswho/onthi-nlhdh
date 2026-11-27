@@ -42,6 +42,19 @@ function $(s, r){ return (r||document).querySelector(s); }
 function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 function shuffle(a){ a = a.slice(); for (var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 function range(n){ var a=[]; for (var i=0;i<n;i++) a.push(i); return a; }
+/* Đáp án nhắc tới đáp án khác ("Cả hai việc trên", "Tất cả đều sai", "Cả A và B"…) không được đảo lung tung:
+   - nhắc theo chữ cái A/B/C/D → giữ nguyên thứ tự cả câu;
+   - nhắc kiểu "trên / tất cả / cả hai" → đáp án đó và các đáp án sau giữ chỗ, chỉ đảo các đáp án phía trên nó. */
+var OPT_LET = /^\s*cả\s+[a-d](\s*(,|và|&)\s*[a-d])+(?![\p{L}])/iu;
+var OPT_REF = /^\s*(tất cả(\s+(đều|các ý|ý|3|ba)|\s*\.?\s*$)|cả\s+(hai|2|3|ba|\()|không có (ý|đáp án|câu|phương án))|(ý|việc|phương án|đáp án|câu|cách)\s+trên(?![\p{L}])/iu;
+function optFixFrom(q){
+  var p = q.opts.map(function(o){ return String(o).replace(/<[^>]+>/g, ""); });
+  if (p.some(function(o){ return OPT_LET.test(o); })) return 0;
+  for (var i=0;i<p.length;i++) if (OPT_REF.test(p[i])) return i;
+  return p.length;
+}
+function optOrder(q){ var n=q.opts.length, k=optFixFrom(q); return shuffle(range(k)).concat(range(n).slice(k)); }
+function optOK(q, perm){ if (!perm || perm.length!==q.opts.length) return false; for (var i=optFixFrom(q);i<perm.length;i++) if (perm[i]!==i) return false; return true; }
 function sameSet(a, b){ if (a.length!==b.length) return false; var x=a.slice().sort(), y=b.slice().sort(); return x.every(function(v,i){ return v===y[i]; }); }
 function fold(s){ return String(s).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase(); }
 var toastT;
@@ -70,6 +83,9 @@ function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.
   if (state.otScope && !OT_SCOPES.some(function(x){ return x[0]===state.otScope; })) state.otScope = "all";
   // bỏ các câu không còn tồn tại
   Object.keys(state.sessions).forEach(function(k){ var s=state.sessions[k]; s.ids = s.ids.filter(function(id){ return BYID[id]; }); if (!s.ids.length) delete state.sessions[k]; });
+  // sửa thứ tự đáp án đã lưu của các câu có đáp án kiểu "Cả hai việc trên" / "Tất cả đều sai"
+  Object.keys(state.sessions).forEach(function(k){ var s=state.sessions[k]; s.opt = s.opt || {};
+    s.ids.forEach(function(id){ if (!optOK(BYID[id], s.opt[id])) s.opt[id] = optOrder(BYID[id]); }); });
   // bổ sung câu hỏi mới vào các bộ theo chương đã lưu từ trước
   ["c4","c5","c6","all"].concat(Object.keys(state.sessions).filter(function(k){ return setOf(k); })).forEach(function(k){
     var s = state.sessions[k]; if (!s) return;
@@ -81,7 +97,7 @@ function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.
     }
     var have = {}; s.ids.forEach(function(id){ have[id]=1; });
     (setOf(k) ? setOf(k).ids : idsOfChapter(k==="all" ? "all" : +k.slice(1))).forEach(function(id){
-      if (!have[id]){ s.ids.push(id); s.opt[id] = shuffle(range(BYID[id].opts.length)); if (s.submitted) s.submitted = false; }
+      if (!have[id]){ s.ids.push(id); s.opt[id] = optOrder(BYID[id]); if (s.submitted) s.submitted = false; }
     });
   });
   if (state.active && !state.sessions[state.active]) state.active = null;
@@ -89,7 +105,7 @@ function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.
 function save(){ try { localStorage.setItem(LS, JSON.stringify(state)); } catch(e){} }
 function cur(){ return state.active ? state.sessions[state.active] : null; }
 
-function makeOptOrder(ids){ var o={}; ids.forEach(function(id){ o[id] = shuffle(range(BYID[id].opts.length)); }); return o; }
+function makeOptOrder(ids){ var o={}; ids.forEach(function(id){ o[id] = optOrder(BYID[id]); }); return o; }
 function newSession(key, name, ids, mode, extra){
   var s = Object.assign({ key:key, name:name, mode:mode, ids:ids.slice(), opt:makeOptOrder(ids), ans:{}, flags:{},
     cur:0, submitted:false, instant: mode==="practice", filter:"all", created:Date.now(), duration:0, start:Date.now() }, extra||{});
