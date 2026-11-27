@@ -117,7 +117,7 @@ function counts(s){
 var timerH = null;
 function go(view){
   state.view = view; save();
-  ["home","quiz","result","summary"].forEach(function(v){ $("#view-"+v).hidden = v!==view; });
+  ["home","quiz","result","summary","tree"].forEach(function(v){ var el = $("#view-"+v); if (el) el.hidden = v!==view; });
   document.querySelectorAll("#tabs .tab").forEach(function(t){ t.classList.toggle("active", t.dataset.view===view || (view==="result" && t.dataset.view==="quiz")); });
   clearInterval(timerH); timerH = null;
   if (window.VideoPlayer && view!=="summary") VideoPlayer.destroyAll();
@@ -125,6 +125,7 @@ function go(view){
   else if (view==="quiz") renderQuiz();
   else if (view==="result") renderResult();
   else if (view==="summary") renderSummary();
+  else if (view==="tree") renderTree();
   window.scrollTo({top:0});
 }
 
@@ -653,6 +654,46 @@ function renderSec(sec){
     (figs ? '<details class="figs-wrap" open><summary>🖼 Hình slide gốc ('+sec.figs.length+')</summary><div class="figs">'+figs+'</div></details>' : '')+'<div class="sum-body">'+sec.html+'</div></article>';
 }
 
+/* ---------- Sơ đồ cây kiến thức ---------- */
+var treeQuery = "";
+function treeCount(n){ return 1 + n.c.reduce(function(a, x){ return a + treeCount(x); }, 0); }
+function treeNode(n, ch, depth, br, ps){
+  var go = n.s && n.s !== ps ? '<button class="tn-go" data-sum="'+ch+'" data-sec="'+n.s+'" title="Đọc mục này trong Tổng hợp">mục '+n.s.split("-")[1]+' →</button>' : "";
+  var row = '<span class="tn-row"><span class="tn-t">'+esc(n.t)+'</span>'+go+(n.d ? '<span class="tn-d">'+esc(n.d)+'</span>' : "")+'</span>';
+  var style = depth === 1 ? ' style="--bc:var(--tb'+(br % 6)+')"' : "";
+  if (!n.c.length) return '<li class="tn leaf"'+style+'>'+row+'</li>';
+  return '<li class="tn"'+style+'><details'+(depth < 2 ? " open" : "")+'><summary>'+row+'<span class="tn-n">'+n.c.length+'</span></summary><ul>'+
+    n.c.map(function(x, i){ return treeNode(x, ch, depth + 1, br, n.s || ps); }).join("")+'</ul></details></li>';
+}
+function renderTree(){
+  var T = window.TREES || {}, chs = Object.keys(T).map(Number).sort(function(a, b){ return a - b; });
+  var ch = T[state.treeCh] ? state.treeCh : chs[0], root = T[ch];
+  $("#view-tree").innerHTML = '<div class="tree-head panel"><div class="chap-tabs">'+chs.map(function(c){ return '<button class="chap-tab'+(c===ch?" active":"")+'" data-treech="'+c+'">Chương '+c+'</button>'; }).join("")+'</div>'+
+    '<div class="tree-tools"><input class="search" id="treeSearch" placeholder="Tìm trong sơ đồ… (vd: TLB, semaphore, FAT)" value="'+esc(treeQuery)+'"><button class="btn sm" data-treeall="open">Mở hết</button><button class="btn sm" data-treeall="close">Thu gọn</button></div>'+
+    '<p class="muted tree-hint">'+treeCount(root)+' nhánh · bấm vào một nhánh để mở/thu · nút <b>mục N →</b> mở phần giải thích trong Tổng hợp.</p></div>'+
+    '<div class="tree-wrap panel"><div class="tree-root"><b>'+esc(root.t)+'</b><span>'+esc(root.d)+'</span></div><ul class="tree">'+
+    root.c.map(function(x, i){ return treeNode(x, ch, 1, i); }).join("")+'</ul></div>';
+  var inp = $("#treeSearch"); inp.oninput = function(){ treeQuery = inp.value; treeFilter(); };
+  if (treeQuery) treeFilter();
+}
+function treeToggleAll(open){ document.querySelectorAll("#view-tree details").forEach(function(d){ d.open = open; }); }
+function treeFilter(){
+  var q = fold(treeQuery.trim()), wrap = $("#view-tree .tree-wrap"); if (!wrap) return;
+  wrap.classList.toggle("filtering", !!q);
+  var lis = wrap.querySelectorAll("li.tn");
+  lis.forEach(function(li){ li.classList.remove("hit", "path"); });
+  if (!q){ treeToggleAll(false); wrap.querySelectorAll("ul.tree > li > details").forEach(function(d){ d.open = true; }); return; }
+  var n = 0;
+  lis.forEach(function(li){
+    var row = li.querySelector(".tn-row");
+    if (fold(row.textContent).indexOf(q) < 0) return;
+    li.classList.add("hit"); n++;
+    var p = li.parentElement; while (p && p !== wrap){ if (p.tagName === "DETAILS") p.open = true; if (p.tagName === "LI") p.classList.add("path"); p = p.parentElement; }
+  });
+  lis.forEach(function(li){ var d = li.querySelector(":scope > details"); if (d && !li.classList.contains("path")) d.open = li.classList.contains("hit") && d.open; });
+  var hint = $("#view-tree .tree-hint"); if (hint) hint.innerHTML = n ? "Tìm thấy <b>"+n+"</b> nhánh khớp “"+esc(treeQuery.trim())+"”." : "Không có nhánh nào khớp “"+esc(treeQuery.trim())+"”.";
+}
+
 /* ---------- Lightbox ---------- */
 function openLightbox(list, idx){
   var lb = $("#lightbox");
@@ -1075,6 +1116,8 @@ function bind(){
     if (t.closest(".demo")) return;
     if (t.classList.contains("tab")){ var v=d.view; if (v==="quiz" && !cur()){ toast("Hãy chọn một bộ câu hỏi trước"); go("home"); return; } if (v==="quiz" && cur().submitted && state.view!=="result" && state.view!=="quiz"){ go("result"); return; } go(v); return; }
     if (d.viewGo){ go(d.viewGo); return; }
+    if (d.treech){ state.treeCh = +d.treech; treeQuery = ""; save(); renderTree(); window.scrollTo({top:0}); return; }
+    if (d.treeall){ treeToggleAll(d.treeall === "open"); return; }
     if (d.otscope){ state.otScope = d.otscope; save(); renderHome(); return; }
     if (d.tags){ openTagPicker(d.tags); return; }
     if (d.tpclose){ tpClose(); return; }
