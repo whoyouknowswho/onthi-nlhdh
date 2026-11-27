@@ -208,56 +208,128 @@ while (TRUE) {                    while (TRUE) {
  figs:[["c2-63","Slide 63 – Giải pháp mềm 1: biến khóa (lock)"],["c2-65","Slide 65 – Giải pháp mềm 2: luân phiên với biến turn"],["c2-67","Slide 67 – Giải pháp mềm 3: Peterson"],["c2-75","Slide 75 – Giải pháp cứng 2: áp dụng TSL"]],
  yt:"peterson solution strict alternation test and set lock busy waiting",
  html:`
-<p><b>Chờ bận (busy waiting)</b>: chưa được vào đoạn găng thì <b>lặp liên tục kiểm tra điều kiện</b> (<code>while (…); // wait</code>), vẫn chiếm CPU. Có 2 nhóm giải pháp (slide 62):</p>
-<table><tr><th>Giải pháp mềm (phần mềm)</th><th>Giải pháp cứng (phần cứng)</th></tr>
-<tr><td>1. Biến khóa (Lock variables) · 2. Luân phiên (Strict alternation) · 3. Peterson</td><td>1. Cấm ngắt (Disabling interrupts) · 2. Lệnh TSL</td></tr></table>
-<h4 class="sub">Mềm 1: biến khóa (slide 63, 64)</h4>
-<pre class="q-pre">int lock = 0;
-while (lock == 1);  // wait
-lock = 1;
+<p><b>Bài toán của mục này:</b> hai tiến trình P0 và P1 cùng muốn vào <b>đoạn găng (CS)</b>. Ta phải viết thêm vài dòng code <b>trước</b> và <b>sau</b> CS để mỗi lúc chỉ một tiến trình ở trong. Mục này xem 5 cách làm, cách nào đúng, cách nào sai và sai ở chỗ nào.</p>
+<pre class="q-pre">NonCS;            // làm việc riêng
+[ code VÀO ]      // ← mỗi giải pháp viết khác nhau ở đây
+CS;               // đoạn găng
+[ code RA ]       // ← và ở đây
+NonCS;</pre>
+<div class="tip"><b>Ví von xuyên suốt:</b> nhà vệ sinh một buồng. CS là lúc ở trong buồng. Mỗi giải pháp là một kiểu \"luật xếp hàng\" khác nhau.</div>
+
+<h4 class="sub">Chờ bận (busy waiting) là gì?</h4>
+<p>Cả 5 giải pháp đều <b>chờ bận</b>: chưa được vào thì đứng lặp kiểm tra mãi, kiểu <code>while (điều kiện); // wait</code> (dấu <code>;</code> ngay sau while nghĩa là thân vòng lặp rỗng, cứ kiểm tra lại liên tục). Trong lúc đó tiến trình vẫn <b>chiếm CPU</b> mà không làm được gì.</p>
+<div class="tip"><b>Ví von:</b> đứng trước cửa nhà vệ sinh, cứ vài giây lại gõ cửa hỏi \"xong chưa?\" thay vì ngồi ghế chờ gọi.</div>
+
+<h4 class="sub">Nhắc lại 4 điều kiện cần thỏa (mục 9)</h4>
+<table><tr><th>#</th><th>Điều kiện</th><th>Hỏi gọn</th></tr>
+<tr><td>1</td><td>Không hai tiến trình cùng trong CS</td><td><b>Có loại trừ không?</b></td></tr>
+<tr><td>2</td><td>Không giả định tốc độ, số CPU</td><td>Chạy nhanh chậm thế nào cũng đúng?</td></tr>
+<tr><td>3</td><td>Ở ngoài CS không được chặn người khác</td><td><b>Có ai bị chặn vô lý không?</b></td></tr>
+<tr><td>4</td><td>Không ai chờ vô hạn</td><td>Có ai chờ mãi không?</td></tr></table>
+
+<h4 class="sub">Tổng quan 5 giải pháp</h4>
+<table><tr><th>Giải pháp</th><th>Ý tưởng một câu</th><th>Kết quả</th></tr>
+<tr><td><b>Mềm 1: Biến khóa</b></td><td>Cửa có biển \"có người / trống\"</td><td>✘ <b>Sai</b>: hai người cùng thấy \"trống\" và cùng vào</td></tr>
+<tr><td><b>Mềm 2: Luân phiên</b></td><td>Đến lượt ai thì người đó vào</td><td>Có loại trừ, nhưng ✘ <b>cứng nhắc</b> (vi phạm điều kiện 3)</td></tr>
+<tr><td><b>Mềm 3: Peterson</b></td><td>Muốn vào thì giơ tay, rồi nhường lượt</td><td>✔ <b>Đúng</b> (chỉ cho 2 tiến trình)</td></tr>
+<tr><td><b>Cứng 1: Cấm ngắt</b></td><td>Khóa trái cả tòa nhà khi vào</td><td>Đúng trên 1 CPU, nhưng ✘ <b>nguy hiểm</b></td></tr>
+<tr><td><b>Cứng 2: TSL</b></td><td>Nhìn biển và lật biển trong một động tác</td><td>✔ <b>Đúng</b>, dùng cho N tiến trình</td></tr></table>
+
+<h4 class="sub">Mềm 1: Biến khóa (slide 63, 64)</h4>
+<pre class="q-pre">int lock = 0;              // 0 = trống, 1 = có người
+while (lock == 1);         // (a) có người thì chờ
+lock = 1;                  // (b) treo biển "có người"
 CS;
-lock = 0;</pre>
-<p><b>Sai ở đâu?</b> Kiểm tra (<code>lock == 1</code>) và đặt (<code>lock = 1</code>) là <b>hai bước rời nhau</b> (slide 64 tô đậm đúng hai dòng này). P0 thấy lock = 0, chưa kịp đặt lock = 1 thì bị ngắt; P1 cũng thấy lock = 0 và vào CS; P0 chạy tiếp cũng vào → <b>cả hai cùng ở trong CS</b>. Vi phạm điều kiện 1.</p>
-<h4 class="sub">Mềm 2: luân phiên (slide 65, 66)</h4>
-<pre class="q-pre">int turn = 1;
-/* P0 */                      /* P1 */
-while (turn != 0);  // wait   while (turn != 1);  // wait
-CS;                           CS;
-turn = 1;                     turn = 0;</pre>
-<ul><li>Dành cho <b>2 tiến trình</b>; biến <code>turn</code> cho biết <b>đến phiên ai</b>. <b>Có loại trừ</b> được.</li>
-<li>Ban đầu turn = 1 → <b>P1 vào trước</b>.</li>
-<li>Nhược điểm: bắt <b>thay phiên cứng nhắc</b>. P0 muốn vào 2 lần liên tiếp phải chờ P1 vào một lần, dù P1 đang bận việc ngoài CS → <b>vi phạm điều kiện 3</b> (tiến trình ngoài CS chặn người khác).</li></ul>
+lock = 0;                  // ra thì lật biển "trống"</pre>
+<p>Trông có vẻ đúng. Nhưng (a) và (b) là <b>hai lệnh riêng</b>, và CPU có thể chuyển sang tiến trình khác <b>ngay giữa hai lệnh đó</b>. Chạy thử:</p>
+<table><tr><th>Bước</th><th>Ai chạy</th><th>Làm gì</th><th>lock</th><th>Trong CS</th></tr>
+<tr><td>1</td><td>P0</td><td>(a) thấy lock = 0 → thoát vòng chờ</td><td>0</td><td>–</td></tr>
+<tr><td>2</td><td colspan="4"><i>⚡ ngắt đồng hồ, CPU chuyển sang P1 trước khi P0 kịp làm (b)</i></td></tr>
+<tr><td>3</td><td>P1</td><td>(a) cũng thấy lock = 0 → thoát vòng chờ</td><td>0</td><td>–</td></tr>
+<tr><td>4</td><td>P1</td><td>(b) lock = 1, vào CS</td><td>1</td><td>P1</td></tr>
+<tr><td>5</td><td>P0</td><td>chạy tiếp từ (b): lock = 1, vào CS</td><td>1</td><td><b>P0 và P1</b> ✘</td></tr></table>
+<p>→ <b>Vi phạm điều kiện 1.</b> Lỗi nằm ở chỗ \"nhìn biển\" và \"treo biển\" bị tách làm hai. Slide 64 (Event) tô đậm đúng hai dòng này để chỉ ra chỗ hở.</p>
+<div class="tip"><b>Ví von:</b> hai người cùng nhìn thấy biển \"trống\", cùng đẩy cửa bước vào. Ai cũng tưởng mình đến trước.</div>
+
+<h4 class="sub">Mềm 2: Luân phiên (slide 65, 66)</h4>
+<pre class="q-pre">int turn = 1;                   // đến phiên ai
+/* P0 */                        /* P1 */
+while (turn != 0);  // chờ      while (turn != 1);  // chờ
+CS;                             CS;
+turn = 1;  // nhường P1         turn = 0;  // nhường P0</pre>
+<p>Không còn biển \"trống / có người\" mà chỉ có <b>\"đến phiên ai\"</b>. Vì turn chỉ mang <b>một</b> giá trị nên không bao giờ hai người cùng thấy \"đến phiên mình\" → <b>có loại trừ</b>. Ban đầu turn = 1 nên <b>P1 vào trước</b>.</p>
+<p>Vấn đề là bắt <b>thay phiên cứng nhắc</b>: P0, P1, P0, P1… Chạy thử khi P1 muốn vào hai lần liên tiếp:</p>
+<table><tr><th>Bước</th><th>Ai</th><th>Làm gì</th><th>turn</th></tr>
+<tr><td>1</td><td>P1</td><td>turn = 1 → vào CS</td><td>1</td></tr>
+<tr><td>2</td><td>P1</td><td>ra CS, đặt turn = 0 (nhường P0)</td><td>0</td></tr>
+<tr><td>3</td><td>P0</td><td>đang bận việc riêng (NonCS) rất lâu, <b>không muốn vào</b></td><td>0</td></tr>
+<tr><td>4</td><td>P1</td><td>muốn vào lần 2: turn = 0 ≠ 1 → <b>phải chờ</b>, CS đang trống mà không được vào</td><td>0</td></tr></table>
+<p>→ P0 ở <b>ngoài</b> CS mà vẫn chặn được P1: <b>vi phạm điều kiện 3</b>. Giải pháp này cũng chỉ dùng cho 2 tiến trình.</p>
+<div class="tip"><b>Ví von:</b> hai anh em được quy định thay phiên rửa bát. Hôm nay đến phiên em, nhưng em đi vắng, anh muốn rửa cũng không được phép, bát cứ để đó.</div>
+
 <h4 class="sub">Mềm 3: Peterson (slide 67–69)</h4>
 <pre class="q-pre">int turn;
-Boolean interest[2] = FALSE;
-/* Pi */
-j = 1 - i;
-interest[i] = TRUE;                        // tôi muốn vào
-turn = j;                                  // nhường lượt cho bạn
-while (turn == j &amp;&amp; interest[j] == TRUE);   // bạn muốn và đang tới lượt bạn thì chờ
+Boolean interest[2] = {FALSE, FALSE};   // interest[i] = TRUE: Pi muốn vào
+/* Pi, với j = 1 - i là người kia */
+interest[i] = TRUE;                       // (1) giơ tay: tôi muốn vào
+turn = j;                                 // (2) lịch sự: "mời bạn trước"
+while (turn == j && interest[j] == TRUE); // (3) bạn muốn VÀ đang là lượt bạn → chờ
 CS;
-interest[i] = FALSE;</pre>
-<ul><li><b>Kết hợp</b> ý tưởng <b>biến khóa (interest)</b> và <b>luân phiên (turn)</b>.</li>
-<li><b>Loại trừ nhau</b>: Pi vào CS khi interest[j] == FALSE <b>hoặc</b> turn == i. Nếu cả hai cùng muốn, turn chỉ mang được 0 hoặc 1 nên chỉ một tiến trình vào.</li>
-<li><b>Tiến độ</b>: dùng 2 biến interest riêng, tiến trình không muốn vào thì không chặn ai.</li>
-<li><b>Chờ có hạn</b>: interest và turn đều thay đổi giá trị nên không ai chờ mãi.</li>
-<li>Nhược: <b>không mở rộng cho N tiến trình</b>, vẫn chờ bận.</li></ul>
-<div class="tip"><b>Ví von Peterson:</b> hai người cùng tới cửa. Mỗi người giơ tay “tôi muốn vào” (interest) rồi <b>lịch sự nói “mời bạn trước”</b> (turn = j). Người nói câu đó <b>sau cùng</b> sẽ phải chờ.</div>
-<h4 class="sub">Cứng 1: cấm ngắt (slide 72, 73)</h4>
-<p>Vào CS thì <b>Disable Interrupt</b> (cấm mọi ngắt, nên không bị chuyển sang tiến trình khác), ra thì <b>Enable Interrupt</b>. Nguy hiểm:</p>
-<ul><li>Tiến trình kẹt trong CS (vòng lặp vô hạn) thì <b>cả hệ thống đứng</b>.</li>
-<li>Phải cho tiến trình người dùng dùng <b>lệnh đặc quyền</b> → nguy hiểm.</li>
-<li>Hệ thống <b>N CPU</b>: cấm ngắt chỉ có tác dụng trên một CPU → <b>không chắc loại trừ</b>.</li></ul>
-<h4 class="sub">Cứng 2: lệnh TSL – Test and Set Lock (slide 74, 75)</h4>
+interest[i] = FALSE;                      // (4) ra thì hạ tay</pre>
+<p>Peterson ghép hai ý trước: <b>interest</b> (ai đang muốn vào) và <b>turn</b> (nhường lượt). Pi chỉ phải chờ khi <b>cả hai</b> điều sau cùng đúng: người kia <b>đang muốn vào</b> VÀ <b>đang là lượt người kia</b>.</p>
+<p><b>Trường hợp 1, chỉ P0 muốn vào:</b> interest[1] = FALSE nên điều kiện chờ của P0 sai ngay → P0 vào luôn. Không bị chặn vô lý (khác luân phiên).</p>
+<p><b>Trường hợp 2, cả hai cùng muốn vào gần như cùng lúc</b> (trường hợp khó):</p>
+<table><tr><th>Bước</th><th>Ai</th><th>Làm gì</th><th>interest[0]</th><th>interest[1]</th><th>turn</th></tr>
+<tr><td>1</td><td>P0</td><td>(1) interest[0] = TRUE</td><td>T</td><td>F</td><td>–</td></tr>
+<tr><td>2</td><td>P1</td><td>(1) interest[1] = TRUE</td><td>T</td><td>T</td><td>–</td></tr>
+<tr><td>3</td><td>P0</td><td>(2) turn = 1 (mời P1)</td><td>T</td><td>T</td><td>1</td></tr>
+<tr><td>4</td><td>P1</td><td>(2) turn = 0 (mời P0) ← <b>nói sau cùng</b></td><td>T</td><td>T</td><td><b>0</b></td></tr>
+<tr><td>5</td><td>P0</td><td>(3) turn == 1? Không → <b>vào CS</b></td><td>T</td><td>T</td><td>0</td></tr>
+<tr><td>6</td><td>P1</td><td>(3) turn == 0 và interest[0] = T → <b>chờ</b></td><td>T</td><td>T</td><td>0</td></tr>
+<tr><td>7</td><td>P0</td><td>(4) ra CS: interest[0] = FALSE</td><td>F</td><td>T</td><td>0</td></tr>
+<tr><td>8</td><td>P1</td><td>(3) interest[0] = F → hết chờ, <b>vào CS</b></td><td>F</td><td>T</td><td>0</td></tr></table>
+<p>Mấu chốt: turn chỉ giữ được <b>một</b> giá trị, là giá trị của <b>người ghi sau cùng</b>. Người ghi sau cùng đã \"mời người kia trước\", nên chính người đó phải chờ. Không thể có chuyện cả hai cùng vào.</p>
+<table><tr><th>Điều kiện</th><th>Peterson</th><th>Vì sao</th></tr>
+<tr><td>Loại trừ</td><td>✔</td><td>Cả hai cùng muốn thì turn chỉ là 0 hoặc 1 → chỉ một người vào</td></tr>
+<tr><td>Tiến độ (điều kiện 3)</td><td>✔</td><td>Người không muốn vào có interest = FALSE → không chặn ai</td></tr>
+<tr><td>Chờ có hạn</td><td>✔</td><td>Ra CS thì hạ interest; nếu muốn vào lại thì phải đặt turn nhường người kia</td></tr></table>
+<p>Nhược điểm: <b>chỉ cho 2 tiến trình</b>, và vẫn <b>chờ bận</b>.</p>
+<div class="tip"><b>Ví von:</b> hai người cùng tới cửa. Mỗi người giơ tay \"tôi muốn vào\" rồi lịch sự nói \"mời bạn trước\". Ai nói câu đó <b>sau cùng</b> thì đứng chờ. Nếu chỉ có một người tới thì cứ thế đi vào.</div>
+
+<h4 class="sub">Cứng 1: Cấm ngắt (slide 72, 73)</h4>
+<pre class="q-pre">Disable Interrupt;   // tắt mọi ngắt
+CS;
+Enable Interrupt;    // bật lại</pre>
+<p>Tiến trình bị chuyển đi là do <b>ngắt</b> (ngắt đồng hồ báo hết lượt…). Tắt ngắt thì không ai chen vào được trong lúc đang ở CS → loại trừ trên <b>một CPU</b>. Nhưng:</p>
+<ul><li>Tiến trình kẹt trong CS (vòng lặp vô hạn) thì không còn ngắt nào lấy lại CPU → <b>cả hệ thống đứng</b>.</li>
+<li>Phải cho tiến trình người dùng dùng <b>lệnh đặc quyền</b> tắt ngắt → nguy hiểm.</li>
+<li>Máy <b>nhiều CPU</b>: tắt ngắt ở CPU này không ngăn được CPU kia chạy tiến trình khác vào CS → không chắc loại trừ.</li></ul>
+<div class="tip"><b>Ví von:</b> để đi vệ sinh, bạn khóa luôn cửa chính cả tòa nhà. Không ai vào được thật, nhưng nếu bạn ngủ quên trong đó thì cả tòa nhà đứng hình; còn nếu tòa nhà có hai cửa chính (hai CPU) thì khóa một cửa cũng vô ích.</div>
+
+<h4 class="sub">Cứng 2: Lệnh TSL – Test and Set Lock (slide 74, 75)</h4>
 <pre class="q-pre">int lock = 0;
-while (TSL(lock));  // wait
+while (TSL(lock));   // chờ
 CS;
 lock = 0;</pre>
-<p>CPU cung cấp lệnh <b>TSL</b>: <b>trả về giá trị hiện tại</b> của biến và <b>đặt biến thành TRUE</b>, tất cả trong <b>một lệnh không thể chia cắt</b> (nguyên tử). Nhờ vậy sửa được đúng lỗi của biến khóa: không ai chen vào giữa bước kiểm tra và bước đặt. Biến lock khởi tạo bằng <b>0</b>.</p>
-<p><b>Nhận xét giải pháp cứng</b> (slide 76): phù hợp khi có hỗ trợ phần cứng, <b>dễ mở rộng cho N tiến trình</b>, nhưng không dễ trên hệ nhiều CPU. TSL còn có thể gây <b>đói (starvation)</b>: các tiến trình tranh nhau, ai nhanh tay thì vào, có tiến trình thua mãi.</p>
-<h4 class="sub">Nhận xét chung về chờ bận (slide 70, 77)</h4>
-<ul><li><b>Lãng phí thời gian CPU</b>: lặp kiểm tra liên tục. Khó mở rộng.</li>
-<li>Khắc phục: tiến trình chưa đủ điều kiện vào CS nên <b>bị chặn lại (ngủ)</b> để nhường CPU → <b>Sleep &amp; Wakeup</b> (mục 11).</li></ul>`},
+<p>TSL là <b>một lệnh máy</b> do CPU cung cấp. Nó làm hai việc <b>dính liền, không thể bị chen ngang</b> (nguyên tử):</p>
+<ol><li><b>Trả về</b> giá trị cũ của lock.</li><li><b>Đặt</b> lock = 1 (TRUE).</li></ol>
+<ul><li>Trả về 0: trước đó cửa trống, giờ mình đã đặt lock = 1 → thoát vòng chờ, vào CS.</li>
+<li>Trả về 1: đang có người, lock vẫn là 1 → tiếp tục chờ.</li></ul>
+<p>Đây chính là biến khóa ở Mềm 1, nhưng bước <b>\"nhìn biển\"</b> và <b>\"treo biển\"</b> được gộp thành <b>một động tác</b>, nên không còn khe hở ở bước 2 như trong bảng chạy thử của biến khóa. Biến lock khởi tạo bằng <b>0</b>.</p>
+<p>Ưu: đúng, dễ mở rộng cho <b>N tiến trình</b>. Nhược: vẫn chờ bận, và có thể gây <b>đói</b> (các tiến trình tranh nhau, ai nhanh tay thì vào, có tiến trình thua mãi).</p>
+
+<div class="demo" data-demo="cs"></div>
+
+<h4 class="sub">So sánh cuối cùng</h4>
+<table><tr><th></th><th>Loại trừ</th><th>Ngoài CS không chặn ai</th><th>Số tiến trình</th><th>Ghi nhớ</th></tr>
+<tr><td>Biến khóa</td><td>✘</td><td>✔</td><td>N</td><td>Nhìn và treo biển tách rời</td></tr>
+<tr><td>Luân phiên</td><td>✔</td><td>✘</td><td>2</td><td>Thay phiên cứng nhắc</td></tr>
+<tr><td>Peterson</td><td>✔</td><td>✔</td><td>2</td><td>Giơ tay + mời bạn trước</td></tr>
+<tr><td>Cấm ngắt</td><td>✔ (1 CPU)</td><td>✔</td><td>N</td><td>Nguy hiểm, không dùng cho N CPU</td></tr>
+<tr><td>TSL</td><td>✔</td><td>✔</td><td>N</td><td>Nhìn và treo biển trong 1 lệnh</td></tr></table>
+<p><b>Nhận xét chung (slide 70, 76, 77):</b> mọi giải pháp chờ bận đều <b>lãng phí CPU</b> vì cứ lặp kiểm tra. Cách khắc phục là cho tiến trình chưa được vào <b>ngủ (bị chặn)</b>, nhường CPU cho người khác, rồi được đánh thức khi tới lượt → <b>Sleep &amp; Wakeup, Semaphore, Monitor</b> ở mục 11.</p>
+<div class="tip"><b>Mẹo nhớ:</b> Khóa <b>hở</b> (hai bước tách rời) · Luân phiên <b>cứng</b> (thay phiên bắt buộc) · Peterson <b>lịch sự</b> (mời bạn trước) · Cấm ngắt <b>liều</b> (treo máy, không hợp nhiều CPU) · TSL <b>gộp</b> (một lệnh nguyên tử).</div>
+`},
 {id:"s2-11",title:"11. Sleep & Wakeup, Semaphore, Monitor, Message passing",
  figs:[["c2-81","Slide 81 – Áp dụng Sleep() và Wakeup()"],["c2-84","Slide 84 – Cấu trúc Semaphore: giá trị và danh sách tiến trình bị chặn"],["c2-85","Slide 85 – Down(S) và Up(S)"],["c2-86","Slide 86 – Sử dụng Semaphore: s = 1 để loại trừ, s = 0 để định thứ tự"],["c2-90","Slide 90 – Sử dụng Monitor"]],
  yt:"semaphore monitor sleep wakeup message passing operating system",

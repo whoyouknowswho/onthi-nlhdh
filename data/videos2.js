@@ -269,6 +269,41 @@ V["s2-10~pet"] = function(){ return {title:"Peterson, cấm ngắt và lệnh TS
   d:[t("cm",480,430,"Chờ bận lãng phí CPU → nên cho tiến trình ngủ",{fs:20,c:"bad"})]}
 ]};};
 
+V["s2-10~trace"] = function(){
+ function code(pre, x, lines, c){ return lines.map(function(l, k){ return b(pre+k, x, 150+k*52, 360, 42, l, c || "gray", {fs:14}); }); }
+ return {title:"Chạy thử từng bước: biến khóa sai, Peterson đúng", scenes:[
+ {s:"Chạy thử <b>biến khóa</b>. Ban đầu lock bằng 0. Cả P0 và P1 đều muốn vào, đang đứng ở dòng kiểm tra while.",
+  d:[H("Chạy thử biến khóa"), b("lk",380,70,200,50,"lock = 0","violet",{fs:18}), t("h0",240,135,"P0",{fs:16,c:"brand"}), t("h1",720,135,"P1",{fs:16,c:"ok"}),
+     code("a",60,["while (lock == 1);","lock = 1;","CS;","lock = 0;"]), code("b",540,["while (lock == 1);","lock = 1;","CS;","lock = 0;"]),
+     d("p0",42,171,{t:"▶",c:"brand",r:12}), d("p1",522,171,{t:"▶",c:"ok",r:12})]},
+ {s:"P0 kiểm tra: lock bằng 0 nên thoát vòng chờ. Nhưng <b>chưa kịp đặt lock bằng 1</b> thì bị ngắt, CPU chuyển sang P1.",
+  d:[u("p0",{y:223}), t("in",480,400,"⚡ ngắt: CPU chuyển sang P1 trước khi P0 đặt lock = 1",{fs:16,c:"bad"})]},
+ {s:"P1 kiểm tra: lock <b>vẫn bằng 0</b>, nên P1 cũng thoát vòng chờ.",
+  d:[x("in"), u("p1",{y:223}), f("lk")]},
+ {s:"P1 đặt lock bằng 1 rồi vào đoạn găng.",
+  d:[u("lk",{t:"lock = 1"}), u("p1",{y:275}), u("b2",{c:"ok"})]},
+ {s:"P0 chạy tiếp đúng chỗ dừng: đặt lock bằng 1 và cũng vào đoạn găng. <b>Cả hai cùng ở trong đoạn găng</b>: biến khóa sai vì nhìn biển và treo biển là hai bước rời nhau.",
+  d:[u("p0",{y:275}), u("a2",{c:"bad"}), u("b2",{c:"bad"}), t("er",480,400,"Cả P0 và P1 cùng trong CS ✘",{fs:20,c:"bad"})]},
+ {s:"Giờ chạy thử <b>Peterson</b> trong trường hợp khó nhất: cả hai cùng muốn vào gần như cùng lúc. Ban đầu chưa ai giơ tay.",
+  d:[clr(), H("Chạy thử Peterson"), b("i0",140,70,220,50,"interest[0] = F","gray",{fs:16}), b("i1",370,70,220,50,"interest[1] = F","gray",{fs:16}), b("tn",600,70,220,50,"turn = 0","violet",{fs:16}),
+     t("h0",240,135,"P0",{fs:16,c:"brand"}), t("h1",720,135,"P1",{fs:16,c:"ok"}),
+     code("a",60,["interest[0] = TRUE;","turn = 1;","while (turn == 1 && interest[1]);","CS;","interest[0] = FALSE;"]),
+     code("b",540,["interest[1] = TRUE;","turn = 0;","while (turn == 0 && interest[0]);","CS;","interest[1] = FALSE;"]),
+     d("p0",42,171,{t:"▶",c:"brand",r:12}), d("p1",522,171,{t:"▶",c:"ok",r:12})]},
+ {s:"Cả hai giơ tay: interest 0 và interest 1 đều thành TRUE.",
+  d:[u("i0",{t:"interest[0] = T",c:"brand"}), u("i1",{t:"interest[1] = T",c:"ok"}), u("p0",{y:223}), u("p1",{y:223})]},
+ {s:"P0 lịch sự mời P1 trước: turn bằng 1.",
+  d:[u("tn",{t:"turn = 1"}), u("p0",{y:275}), f("tn")]},
+ {s:"Ngay sau đó P1 cũng mời P0 trước: turn bằng 0. <b>P1 là người nói sau cùng</b>, và turn chỉ giữ được một giá trị nên giờ turn bằng 0.",
+  d:[u("tn",{t:"turn = 0"}), u("p1",{y:275}), f("tn")]},
+ {s:"P0 kiểm tra: turn có bằng 1 không? Không, nên P0 <b>vào đoạn găng</b>. P1 kiểm tra: turn bằng 0 và P0 đang muốn vào, nên P1 <b>phải chờ</b>.",
+  d:[u("p0",{y:327}), u("a3",{c:"ok"}), u("b2",{c:"warn"}), t("wt",720,445,"P1 chờ",{fs:18,c:"warn"})]},
+ {s:"P0 ra khỏi đoạn găng thì hạ tay: interest 0 thành FALSE. Lúc này điều kiện chờ của P1 sai, nên P1 vào đoạn găng. Không lúc nào có hai người cùng ở trong.",
+  d:[x("wt"), u("a3",{c:"gray"}), u("p0",{y:379}), u("i0",{t:"interest[0] = F",c:"gray"}), u("b2",{c:"gray"}), u("p1",{y:327}), u("b3",{c:"ok"})]},
+ {s:"Ghi nhớ: <b>người nói “mời bạn trước” sau cùng thì chờ</b>. Nếu chỉ một người muốn vào thì interest của người kia bằng FALSE, người đó vào ngay, không bị chặn vô lý.",
+  d:[t("rm",480,470,"Người ghi turn sau cùng thì chờ → không bao giờ cả hai cùng vào",{fs:18,c:"ok"})]}
+]};};
+
 /* ---------- 11. Sleep & Wakeup, Semaphore, Monitor ---------- */
 V["s2-11"] = function(){ return {title:"Sleep & Wakeup, Semaphore, Monitor", scenes:[
  {s:"Thay vì đứng ngoài hỏi liên tục, tiến trình không vào được đoạn găng thì gọi <b>Sleep</b> để ngủ. Tiến trình ra khỏi đoạn găng gọi <b>WakeUp</b> để đánh thức người đang chờ.",
@@ -294,5 +329,5 @@ V["s2-11"] = function(){ return {title:"Sleep & Wakeup, Semaphore, Monitor", sce
      b("k1",60,260,260,110,"Bounded-Buffer\n(sản xuất – tiêu dùng)","warn",{fs:15}), b("k2",350,260,260,110,"Readers –\nWriters","warn",{fs:15}), b("k3",640,260,260,110,"Dining-\nPhilosophers","warn",{fs:15})]}
 ]};};
 
-Object.assign(window.VLABEL, {"s2-7":"FCFS, SJF, ưu tiên","s2-7~rr":"Round Robin","s2-10":"Biến khóa, luân phiên","s2-10~pet":"Peterson, cấm ngắt, TSL"});
+Object.assign(window.VLABEL, {"s2-7":"FCFS, SJF, ưu tiên","s2-7~rr":"Round Robin","s2-10":"Biến khóa, luân phiên","s2-10~pet":"Peterson, cấm ngắt, TSL","s2-10~trace":"Chạy thử từng bước"});
 })();

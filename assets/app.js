@@ -1007,6 +1007,78 @@ var DEMOS = {
     el.onclick = function(e){ var b = e.target.closest("button[data-ex]"); if (b) load(+b.dataset.ex); };
     load(0);
   },
+  /* Chương 2 mục 10: tự cho P0 / P1 chạy từng bước với 4 giải pháp chờ bận */
+  cs: function(el){
+    /* mỗi dòng: [chữ hiển thị (i = mình, j = người kia), loại]; loại: "non" | "cs" | thao tác */
+    var ALG = {
+      lock: {name:"Biến khóa", vars:{lock:0}, lines:[["NonCS; (việc riêng)","non"],["while (lock == 1); // chờ","waitLock"],["lock = 1;","setLock"],["CS;","cs"],["lock = 0;","clrLock"]],
+        demo:[0,1,0,1,0,1], demoTxt:"P0 và P1 cùng thấy lock = 0 trước khi ai kịp đặt lock = 1"},
+      turn: {name:"Luân phiên", vars:{turn:1}, lines:[["NonCS; (việc riêng)","non"],["while (turn != i); // chờ","waitTurn"],["CS;","cs"],["turn = j;","giveTurn"]],
+        demo:[1,1,1,1,1,1,1], demoTxt:"P1 vào xong, muốn vào lần nữa nhưng phải chờ P0 – dù P0 không hề muốn vào"},
+      pet: {name:"Peterson", vars:{turn:0, "interest[0]":0, "interest[1]":0}, lines:[["NonCS; (việc riêng)","non"],["interest[i] = TRUE;","raise"],["turn = j;","giveTurn"],["while (turn == j && interest[j]); // chờ","waitPet"],["CS;","cs"],["interest[i] = FALSE;","lower"]],
+        demo:[0,1,0,1,0,1,0,1,1,0,0,1], demoTxt:"cả hai cùng muốn vào: P1 nói “mời bạn trước” sau cùng nên P1 chờ"},
+      tsl: {name:"TSL", vars:{lock:0}, lines:[["NonCS; (việc riêng)","non"],["while (TSL(lock)); // chờ","tsl"],["CS;","cs"],["lock = 0;","clrLock"]],
+        demo:[0,1,0,1,1,0,0,1], demoTxt:"cả hai cùng thử: TSL kiểm tra và đặt khóa trong 1 lệnh nên chỉ 1 người vào"}
+    };
+    var algKey = "lock", A, v, pc, log, timer = null;
+    function reset(){ A = ALG[algKey]; v = JSON.parse(JSON.stringify(A.vars)); pc = [0, 0]; log = []; stop(); }
+    function stop(){ if (timer){ clearInterval(timer); timer = null; } }
+    function txt(s, i){ return s.replace(/\[i\]/g, "["+i+"]").replace(/\[j\]/g, "["+(1-i)+"]").replace(/ i\)/g, " "+i+")").replace(/= j;/g, "= "+(1-i)+";").replace(/turn == j/g, "turn == "+(1-i)).replace(/turn != i/g, "turn != "+i); }
+    function waiting(i){
+      var k = A.lines[pc[i]][1], j = 1 - i;
+      if (k === "waitLock") return v.lock === 1;
+      if (k === "waitTurn") return v.turn !== i;
+      if (k === "waitPet") return v.turn === j && v["interest["+j+"]"] === 1;
+      if (k === "tsl") return v.lock === 1;
+      return false;
+    }
+    function step(i){
+      var L = A.lines, k = L[pc[i]][1], j = 1 - i, msg = "", next = (pc[i] + 1) % L.length;
+      if (k === "non"){ msg = "muốn vào đoạn găng"; }
+      else if (k === "waitLock"){ if (v.lock === 1){ msg = "thấy lock = 1 → tiếp tục chờ (chờ bận)"; next = pc[i]; } else msg = "thấy lock = 0 → thoát vòng chờ"; }
+      else if (k === "setLock"){ v.lock = 1; msg = "đặt lock = 1"; }
+      else if (k === "clrLock"){ v.lock = 0; msg = "ra khỏi CS, đặt lock = 0"; }
+      else if (k === "waitTurn"){ if (v.turn !== i){ msg = "turn = "+v.turn+" ≠ "+i+" → chờ"; next = pc[i]; } else msg = "turn = "+i+" → được vào"; }
+      else if (k === "giveTurn"){ v.turn = j; msg = "đặt turn = "+j+(A === ALG.pet ? " (mời P"+j+" trước)" : " (nhường P"+j+")"); }
+      else if (k === "raise"){ v["interest["+i+"]"] = 1; msg = "giơ tay: interest["+i+"] = TRUE"; }
+      else if (k === "lower"){ v["interest["+i+"]"] = 0; msg = "ra khỏi CS, hạ tay: interest["+i+"] = FALSE"; }
+      else if (k === "waitPet"){ if (v.turn === j && v["interest["+j+"]"] === 1){ msg = "turn = "+j+" và P"+j+" đang muốn vào → chờ"; next = pc[i]; } else msg = (v["interest["+j+"]"] ? "turn = "+i : "P"+j+" không muốn vào")+" → được vào"; }
+      else if (k === "tsl"){ var old = v.lock; v.lock = 1; if (old === 1){ msg = "TSL trả về 1 (đã có người) → chờ"; next = pc[i]; } else msg = "TSL trả về 0 và đặt lock = 1 trong 1 lệnh → được vào"; }
+      else if (k === "cs"){ msg = "làm việc trong CS rồi ra"; }
+      pc[i] = next;
+      if (A.lines[pc[i]][1] === "cs") msg += " → <b>vào CS</b>";
+      log.push('<b>P'+i+'</b>: '+msg);
+      draw();
+    }
+    function draw(){
+      var inCS = [0,1].map(function(i){ return A.lines[pc[i]][1] === "cs"; });
+      var cols = [0,1].map(function(i){
+        return '<div class="cs-p"><h5>P'+i+(inCS[i] ? ' <span class="cs-tag in">trong CS</span>' : waiting(i) && /wait|tsl/.test(A.lines[pc[i]][1]) ? ' <span class="cs-tag wt">đang chờ</span>' : '')+'</h5>'+
+          A.lines.map(function(l, n){ return '<div class="cs-l'+(n === pc[i] ? ' cur' : '')+(l[1] === "cs" ? ' crit' : '')+'"><span>'+(n === pc[i] ? '▶' : '')+'</span><code>'+esc(txt(l[0], i))+'</code></div>'; }).join("")+
+          '<button class="btn sm primary" data-cs="'+i+'">P'+i+' chạy 1 bước</button></div>';
+      }).join("");
+      var vars = Object.keys(v).map(function(k){ return '<span class="cs-v"><code>'+k+'</code> = <b>'+(/interest/.test(k) ? (v[k] ? "TRUE" : "FALSE") : v[k])+'</b></span>'; }).join("");
+      var both = inCS[0] && inCS[1], blocked = null;
+      if (A === ALG.turn){ [0,1].forEach(function(i){ if (A.lines[pc[i]][1] === "waitTurn" && waiting(i) && A.lines[pc[1-i]][1] === "non") blocked = i; }); }
+      var st = both ? '<div class="vmd-msg fault">✘ <b>Cả P0 và P1 cùng ở trong đoạn găng!</b> Vi phạm điều kiện 1 (loại trừ).</div>'
+        : blocked !== null ? '<div class="vmd-msg fault">⚠ P'+blocked+' phải chờ dù P'+(1-blocked)+' đang ở ngoài và không muốn vào. Vi phạm điều kiện 3.</div>'
+        : '<div class="vmd-msg">'+(inCS[0] || inCS[1] ? 'Đoạn găng: <b>P'+(inCS[0] ? 0 : 1)+'</b>. ' : 'Đoạn găng đang trống. ')+'Bấm cho P0 hoặc P1 chạy theo thứ tự bạn muốn – CPU có thể chuyển tiến trình ở <b>bất kỳ</b> bước nào.</div>';
+      el.querySelector(".cs-body").innerHTML = '<div class="cs-vars">'+vars+'</div><div class="cs-grid">'+cols+'</div>'+st+
+        '<div class="cs-log">'+(log.length ? log.map(function(x, n){ return '<div>'+(n+1)+'. '+x+'</div>'; }).join("") : '<span class="muted">Nhật ký các bước sẽ hiện ở đây.</span>')+'</div>';
+    }
+    el.innerHTML = '<div class="demo-h">🧪 Tự cho P0 và P1 chạy xen kẽ từng bước</div>'+
+      '<div class="demo-row">'+Object.keys(ALG).map(function(k){ return '<button class="btn sm'+(k===algKey?' on':'')+'" data-csalg="'+k+'">'+ALG[k].name+'</button>'; }).join("")+'</div>'+
+      '<div class="demo-row"><button class="btn sm" data-csdemo="1">▶ Chạy kịch bản mẫu</button><button class="btn sm" data-csreset="1">↺ Làm lại</button><span class="muted cs-dt"></span></div><div class="cs-body"></div>';
+    function setAlg(k){ algKey = k; el.querySelectorAll("[data-csalg]").forEach(function(b){ b.classList.toggle("on", b.dataset.csalg === k); }); reset(); el.querySelector(".cs-dt").textContent = "Kịch bản: " + A.demoTxt; draw(); }
+    el.onclick = function(e){
+      var b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.csalg){ setAlg(b.dataset.csalg); return; }
+      if (b.dataset.csreset){ reset(); draw(); return; }
+      if (b.dataset.cs != null){ stop(); step(+b.dataset.cs); return; }
+      if (b.dataset.csdemo){ reset(); draw(); var seq = A.demo.slice(); timer = setInterval(function(){ if (!seq.length){ stop(); return; } step(seq.shift()); }, 900); stepTimers.push(timer); }
+    };
+    setAlg("lock");
+  },
   /* Mô phỏng TLB: đếm hit / miss, số lần vào RAM và thời gian truy cập trung bình */
   tlb: function(el){
     el.innerHTML = '<div class="demo-h">🧪 Mô phỏng TLB: hit, miss và thời gian truy cập</div><div class="demo-row">' +
