@@ -47,7 +47,10 @@ function chapter(c){ return pool.filter(function(q){ return q.ch === c; }).map(f
 
 var NOTE = "Gộp từ mọi đề và tài liệu ôn tập (đề thi trắc nghiệm, Google Form \"NLHĐH - Cuối kì\", tài liệu tổng hợp, đề K23, DaCoDA…), đã lược câu trùng.";
 window.QSETS.push(
-  {key:"otc2", name:"Ôn tập chương 2", badge:"Ch2", note:"Tiến trình, luồng, lập lịch CPU và đồng bộ tiến trình. " + NOTE, ids:chapter(2)},
+  {key:"otc2k", name:"Ôn tập chương 2: Không đồng bộ", badge:"Ch2", note:"Tiến trình, luồng, lập lịch CPU (mục 1–8 của Chương 2). " + NOTE,
+   ids:chapter(2).filter(function(id){ return !/^Đồng bộ/.test(BY[id].topic); })},
+  {key:"otc2d", name:"Ôn tập chương 2: Đồng bộ", badge:"ĐB", note:"Đồng bộ tiến trình: tranh đua, miền găng, chờ bận, Peterson, TSL, Sleep & Wakeup, Semaphore, Monitor (mục 9–11). " + NOTE,
+   ids:chapter(2).filter(function(id){ return /^Đồng bộ/.test(BY[id].topic); })},
   {key:"otc4", name:"Ôn tập chương 4", badge:"Ch4", note:"Quản lý bộ nhớ. " + NOTE, ids:chapter(4)},
   {key:"otc5", name:"Ôn tập chương 5", badge:"Ch5", note:"Vào/Ra. " + NOTE, ids:chapter(5)},
   {key:"otc6", name:"Ôn tập chương 6", badge:"Ch6", note:"Hệ thống file. " + NOTE, ids:chapter(6)}

@@ -66,7 +66,7 @@ var state = { sessions:{}, active:null, view:"home", sumCh:4, stats:{} };
 var XS = window.XS || {};
 function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.sessions) state = Object.assign(state, s); } catch(e){}
   // bỏ bài đang làm của các đề cũ Ôn tập 1–4 (đã thay bằng đề theo chương và đề đồng bộ)
-  Object.keys(state.sessions).forEach(function(k){ if (/^(ottag:)?(ot[1-4]|otdb)(@|$)/.test(k)) delete state.sessions[k]; });
+  Object.keys(state.sessions).forEach(function(k){ if (/^(ottag:)?(ot[1-4]|otdb|otc2)(@|$)/.test(k)) delete state.sessions[k]; });
   if (state.otScope && !OT_SCOPES.some(function(x){ return x[0]===state.otScope; })) state.otScope = "all";
   // bỏ các câu không còn tồn tại
   Object.keys(state.sessions).forEach(function(k){ var s=state.sessions[k]; s.ids = s.ids.filter(function(id){ return BYID[id]; }); if (!s.ids.length) delete state.sessions[k]; });
@@ -483,7 +483,7 @@ function renderSummary(){
     '<nav class="toc">'+secs.map(function(sec){ return '<a href="#'+sec.id+'" data-toc="'+sec.id+'">'+esc(sec.title)+'</a>'; }).join("")+'</nav></div>'+
     '<div><div class="sum-head"><div class="kicker">Chương '+c.ch+' · '+esc(c.en)+'</div><h2>'+esc(c.title)+'</h2><p>'+c.intro+'</p><p class="muted" style="margin-top:8px;font-size:13.5px">Nhãn <span class="xs">ngoài slide</span> = kiến thức bổ sung từ giáo trình gốc (Tanenbaum), không có trong slide – nên ôn sau phần chính.</p></div>'+
     (secs.length ? secs.map(renderSec).join("") : '<div class="panel empty">Không tìm thấy nội dung phù hợp “'+esc(sumQuery)+'”.</div>')+
-    '<div class="sum-cta">'+(c.ch===2 ? (setOf("otc2") ? '<button class="btn primary" data-start="otc2">'+ICON.play+'Luyện câu hỏi Chương 2 (Ôn tập chương 2)</button>' : '')
+    '<div class="sum-cta">'+(c.ch===2 ? (setOf("otc2k") ? '<button class="btn primary" data-start="otc2k">'+ICON.play+'Luyện câu hỏi: Không đồng bộ (mục 1–8)</button>' : '')+(setOf("otc2d") ? '<button class="btn primary" data-start="otc2d">'+ICON.play+'Luyện câu hỏi: Đồng bộ (mục 9–11)</button>' : '')
       : '<button class="btn primary" data-start="c'+c.ch+'">'+ICON.play+'Luyện câu hỏi Chương '+c.ch+'</button>')+
     (function(){ var nx = data[data.indexOf(c)+1]; return nx ? '<button class="btn" data-sumch="'+nx.ch+'">Chương '+nx.ch+ICON.right+'</button>' : ''; })()+'</div></div>'+
     (gl ? glossaryPanel(c.ch, gl) : '')+'</div>'+
