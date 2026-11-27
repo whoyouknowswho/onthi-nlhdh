@@ -115,7 +115,7 @@ var L = [
  q:"Kỹ thuật DMA (Direct Memory Access) được phát minh và áp dụng trong bộ điều khiển Đĩa, nhằm:",
  opts:["Tăng tốc độ tính toán cho CPU khi gặp yêu cầu vào/ra","Tất cả đều đúng","Giảm tải cho CPU khi gặp yêu cầu vào / ra","Tăng tốc độ truy cập bộ nhớ"],
  ans:[2],
- expH:"<p>Không có DMA thì CPU phải <b>tự chép từng byte</b> giữa thiết bị và RAM (programmed I/O), hoặc bị ngắt sau mỗi ký tự.</p><p>Có DMA, CPU chỉ cần dặn bộ điều khiển DMA: \"chép N byte từ đĩa vào địa chỉ X\". DMA tự làm toàn bộ, xong thì ngắt CPU <b>một lần</b>. Trong lúc đó CPU rảnh để làm việc khác.</p><p>Mục đích là <b>giảm tải cho CPU</b>. DMA không làm CPU tính nhanh hơn, cũng không làm RAM nhanh hơn.</p>"},
+ expH:"<p>Không có DMA thì CPU phải <b>tự chép từng byte</b> giữa thiết bị và RAM (programmed I/O), hoặc bị ngắt sau mỗi ký tự.</p><p>Có DMA, CPU chỉ cần dặn bộ điều khiển DMA: \"chép N byte từ đĩa vào địa chỉ X\". DMA tự làm toàn bộ, xong thì ngắt CPU <b>một lần</b>. Trong lúc đó CPU rảnh để làm việc khác.</p><p>Mục đích là <b>giảm tải cho CPU</b>. DMA không làm CPU tính nhanh hơn, cũng không làm RAM nhanh hơn.</p><p class=\"muted\"><small>Lưu ý: đáp án chính thức của Google Form \"NLHĐH - Cuối kì\" ghi <b>\"Tất cả đều đúng\"</b>; còn đáp án đề HĐH cuối kỳ và bộ DaCoDA ghi \"Giảm tải cho CPU\". Nếu thi đúng đề Google Form đó thì chọn \"Tất cả đều đúng\".</small></p>"},
 {id:"ot2-22",ch:4,type:"multi",topic:"Thay thế trang – bit R",sec:"s4-10",
  q:"Trong kỹ thuật Bộ nhớ ảo. Để thay thế trang, bit Reference (R) được sử dụng trong thuật toán:",
  opts:["NRU","Second Chance","FIFO","Optimal"],

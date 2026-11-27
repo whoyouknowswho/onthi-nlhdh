@@ -81,7 +81,7 @@ var L = [
  q:"Phát biểu nào sau đây không đúng về cấp phát liên tục của files?",
  opts:["Hiệu quả đọc file tuyệt vời.","Được sử dụng rộng rãi trên CD-ROM.","Là nguyên nhân gây ra phân mảnh đĩa.","Đơn giản để thực hiện."],
  ans:[2],
- expH:"<p><b>Lưu ý: câu này có vấn đề.</b> Theo giáo trình Tanenbaum, cả 4 ý đều nói đúng về cấp phát liên tục:</p><ul><li>Đơn giản: chỉ cần nhớ block bắt đầu và số block.</li><li>Đọc rất nhanh: cả file nằm liền nhau, chỉ cần seek một lần.</li><li>Dùng rộng rãi trên CD-ROM: kích thước file biết trước và không đổi.</li><li>Nhược điểm: lâu dần đĩa bị <b>phân mảnh</b>, đầy các lỗ trống xen kẽ.</li></ul><p>Trang chọn tạm ý \"phân mảnh đĩa\" vì đó là ý duy nhất nói về <b>nhược điểm</b>; ba ý còn lại là ưu điểm. Nếu gặp câu này khi thi, hãy hỏi lại giảng viên hoặc xem đáp án chính thức.</p>"},
+ expH:"<p><b>Lưu ý: câu này có vấn đề.</b> Theo giáo trình Tanenbaum, cả 4 ý đều nói đúng về cấp phát liên tục:</p><ul><li>Đơn giản: chỉ cần nhớ block bắt đầu và số block.</li><li>Đọc rất nhanh: cả file nằm liền nhau, chỉ cần seek một lần.</li><li>Dùng rộng rãi trên CD-ROM: kích thước file biết trước và không đổi.</li><li>Nhược điểm: lâu dần đĩa bị <b>phân mảnh</b>, đầy các lỗ trống xen kẽ.</li></ul><p>Trang chọn tạm ý \"phân mảnh đĩa\" vì đó là ý duy nhất nói về <b>nhược điểm</b>; ba ý còn lại là ưu điểm. Đáp án các bộ DaCoDA và đề K23 cũng chọn ý này.</p>"},
 {id:"ot1-16",ch:5,type:"single",topic:"Phân lớp phần mềm Vào/Ra",sec:"s5-9",
  q:"Lớp nào trong 4 lớp của phần mềm Vào/Ra thực hiện \"Kiểm tra user có được phép sử dụng thiết bị\"?",
  opts:["Phần mềm độc lập với thiết bị.","Driver của thiết bị.","Phần mềm ở mức người dùng.","Điều khiển ngắt."],

@@ -1,20 +1,16 @@
-/* Các đề ôn tập hiển thị trên trang (thay cho Ôn tập 1–4 cũ).
-   Câu hỏi vẫn nằm trong ontap1.js, ontap2.js, ontap3.js (mã câu giữ nguyên để không mất tiến độ đã làm);
-   file này chỉ gom lại thành đề:
-   - Ôn tập chương 4 / 5 / 6: mọi câu của chương đó trong các đề cũ (đã lược câu trùng theo QDROP).
-   - Ôn tập đồng bộ: chỉ các câu thuộc phần đồng bộ tiến trình trong slide Chương 2 (slide 57–92:
-     tiến trình tương tác, tranh đua, miền găng, giải pháp chờ bận, Sleep & Wakeup, Semaphore, Monitor,
-     Message passing, bài toán kinh điển).
-   Câu ngoài chương 4–6 không thuộc phần đồng bộ (system call, lập lịch CPU, luồng, deadlock, bảo mật,
-   thực hành Linux/Windows…) không còn nằm trong đề nào. */
+/* Các đề ôn tập hiển thị trên trang.
+   Câu hỏi nằm trong ontap1.js, ontap2.js, ontap3.js, ontap4.js (mã câu giữ nguyên để không mất tiến độ đã làm);
+   file này chỉ gom lại thành đề theo chương:
+   - Ôn tập chương 2: tiến trình, luồng, lập lịch CPU và đồng bộ tiến trình (đúng nội dung slide Chương 2).
+   - Ôn tập chương 4 / 5 / 6: mọi câu của chương đó.
+   Đã lược câu trùng (QDROP). Câu không thuộc chương 2, 4, 5, 6 (chương 1 tổng quan / system call, chương 3
+   deadlock, bảo mật, thực hành Linux/Windows…) không nằm trong đề nào. */
 window.QSETS = [];
 (function(){
 var Q = window.QUESTIONS || [], DROP = window.QDROP || {}, BY = {};
 Q.forEach(function(q){ BY[q.id] = q; });
-var pool = Q.filter(function(q){ return /^ot[1-4]$/.test(q.set) && !DROP[q.id]; });
-function chapter(c){ return pool.filter(function(q){ return q.ch === c; }).map(function(q){ return q.id; }); }
 
-/* Câu đồng bộ: mã câu → chủ đề nhỏ (dùng để chia tag) */
+/* Câu đồng bộ (thuộc Chương 2): mã câu → chủ đề nhỏ (dùng để chia tag) */
 var SYNC = {
   "ot1-20":"Sleep & Wakeup",            "ot1-22":"TSL",
   "ot2-24":"Luân phiên (biến turn)",
@@ -35,18 +31,25 @@ var SYNC = {
   "ot3-176":"Miền găng (loại trừ lẫn nhau)", "ot3-177":"Khái niệm",
   "ot3-180":"Chờ bận (busy waiting)"
 };
-var sync = Object.keys(SYNC).filter(function(id){ return BY[id] && !DROP[id]; });
-/* mục trong Tổng hợp Chương 2 để ôn lại: s2-9 miền găng, s2-10 chờ bận, s2-11 Sleep & Wakeup / Semaphore / Monitor */
-function secOf(t){ return /Luân phiên|Peterson|TSL|Cấm ngắt|Chờ bận/.test(t) ? "s2-10" : /Sleep|Semaphore|Bài toán/.test(t) ? "s2-11" : "s2-9"; }
-sync.forEach(function(id){ BY[id].topic = "Đồng bộ · " + SYNC[id]; BY[id].sec = secOf(SYNC[id]); });
+/* mục trong Tổng hợp Chương 2 để ôn lại */
+function syncSec(t){ return /Luân phiên|Peterson|TSL|Cấm ngắt|Chờ bận/.test(t) ? "s2-10" : /Sleep|Semaphore|Bài toán/.test(t) ? "s2-11" : "s2-9"; }
+Object.keys(SYNC).forEach(function(id){ var q = BY[id]; if (!q) return; q.ch = 2; q.topic = "Đồng bộ · " + SYNC[id]; q.sec = syncSec(SYNC[id]); });
 
-var NOTE = "Gộp từ các đề ôn tập cũ (đề thi trắc nghiệm, Google Form \"NLHĐH - Cuối kì\", tài liệu tổng hợp), đã lược câu trùng.";
+/* Các câu "Chương 2 · …" (tiến trình, luồng, lập lịch) trong đề cũ: chuyển sang chương 2 */
+Q.forEach(function(q){
+  if (!q.set || q.ch !== 0 || !/^Chương 2 · /.test(q.topic)) return;
+  q.ch = 2; q.topic = q.topic.replace(/^Chương 2 · /, "");
+  q.sec = /Lập lịch/.test(q.topic) ? "s2-7" : /Luồng/.test(q.topic) ? "s2-4" : /fork/.test(q.topic) ? "s2-2" : /Giao tiếp/.test(q.topic) ? "s2-9" : "s2-3";
+});
+
+var pool = Q.filter(function(q){ return /^ot[1-5]$/.test(q.set) && !DROP[q.id]; });
+function chapter(c){ return pool.filter(function(q){ return q.ch === c; }).map(function(q){ return q.id; }); }
+
+var NOTE = "Gộp từ mọi đề và tài liệu ôn tập (đề thi trắc nghiệm, Google Form \"NLHĐH - Cuối kì\", tài liệu tổng hợp, đề K23, DaCoDA…), đã lược câu trùng.";
 window.QSETS.push(
+  {key:"otc2", name:"Ôn tập chương 2", badge:"Ch2", note:"Tiến trình, luồng, lập lịch CPU và đồng bộ tiến trình. " + NOTE, ids:chapter(2)},
   {key:"otc4", name:"Ôn tập chương 4", badge:"Ch4", note:"Quản lý bộ nhớ. " + NOTE, ids:chapter(4)},
   {key:"otc5", name:"Ôn tập chương 5", badge:"Ch5", note:"Vào/Ra. " + NOTE, ids:chapter(5)},
-  {key:"otc6", name:"Ôn tập chương 6", badge:"Ch6", note:"Hệ thống file. " + NOTE, ids:chapter(6)},
-  {key:"otdb", name:"Ôn tập đồng bộ", badge:"ĐB",
-   note:"Đồng bộ tiến trình theo slide Chương 2 (slide 57–92): miền găng, giải pháp chờ bận, Sleep & Wakeup, Semaphore, Monitor, IPC.",
-   ids:sync}
+  {key:"otc6", name:"Ôn tập chương 6", badge:"Ch6", note:"Hệ thống file. " + NOTE, ids:chapter(6)}
 );
 })();

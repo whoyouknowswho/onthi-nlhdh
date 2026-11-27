@@ -19,7 +19,7 @@ if (QSETS.length > 1) QSETS.push({key:"otall", name:"Tất cả đề ôn tập"
   note:"Gồm mọi câu của Ôn tập chương 4, 5, 6 và Ôn tập đồng bộ.",
   ids:[].concat.apply([], QSETS.map(function(x){ return x.ids; }))});
 /* Lọc câu trong đề ôn tập theo chương */
-var OT_SCOPES = [["all","Tất cả"],["46","Chương 4–6"],["4","Chương 4"],["5","Chương 5"],["6","Chương 6"],["0","Đồng bộ"]];
+var OT_SCOPES = [["all","Tất cả"],["2","Chương 2"],["4","Chương 4"],["5","Chương 5"],["6","Chương 6"]];
 function scopeOk(sc, ch){ return sc==="all" || (sc==="46" ? ch>=4 && ch<=6 : ch===+sc); }
 function scopeName(sc){ var r = OT_SCOPES.filter(function(x){ return x[0]===sc; })[0]; return r ? r[1] : ""; }
 function setOf(key){
@@ -29,9 +29,9 @@ function setOf(key){
   return {key:key, name:base.name+" · "+scopeName(sc), badge:base.badge, note:base.note, dropped:base.dropped,
     ids:base.ids.filter(function(id){ return scopeOk(sc, BYID[id].ch); })};
 }
-function chName(ch){ return ch ? "Chương "+ch : "Đồng bộ tiến trình"; }
+function chName(ch){ return ch ? "Chương "+ch : "Ngoài chương 2, 4–6"; }
 /* chương trong phần Tổng hợp để ôn lại một câu hỏi (câu đồng bộ → Chương 2) */
-function sumChOf(q){ return q.ch>=4 && q.ch<=6 ? q.ch : (/^Đồng bộ/.test(q.topic) ? 2 : 0); }
+function sumChOf(q){ return q.ch===2 || (q.ch>=4 && q.ch<=6) ? q.ch : 0; }
 function sumList(){ return (window.SUMMARY || []).slice().sort(function(a, b){ return a.ch - b.ch; }); }
 var TYPE_LABEL = {single:"Một đáp án", multi:"Nhiều đáp án", order:"Sắp xếp"};
 var LETTERS = "ABCDEFGHIJ";
@@ -66,7 +66,8 @@ var state = { sessions:{}, active:null, view:"home", sumCh:4, stats:{} };
 var XS = window.XS || {};
 function load(){ try { var s = JSON.parse(localStorage.getItem(LS)); if (s && s.sessions) state = Object.assign(state, s); } catch(e){}
   // bỏ bài đang làm của các đề cũ Ôn tập 1–4 (đã thay bằng đề theo chương và đề đồng bộ)
-  Object.keys(state.sessions).forEach(function(k){ if (/^(ottag:)?ot[1-4](@|$)/.test(k)) delete state.sessions[k]; });
+  Object.keys(state.sessions).forEach(function(k){ if (/^(ottag:)?(ot[1-4]|otdb)(@|$)/.test(k)) delete state.sessions[k]; });
+  if (state.otScope && !OT_SCOPES.some(function(x){ return x[0]===state.otScope; })) state.otScope = "all";
   // bỏ các câu không còn tồn tại
   Object.keys(state.sessions).forEach(function(k){ var s=state.sessions[k]; s.ids = s.ids.filter(function(id){ return BYID[id]; }); if (!s.ids.length) delete state.sessions[k]; });
   // bổ sung câu hỏi mới vào các bộ theo chương đã lưu từ trước
@@ -144,11 +145,15 @@ var TAG_RULES = [
   [6, /Bitmap|Cấp phát|không gian đĩa|Kích thước block|Phân mảnh đĩa|FAT|i-node/i, "Cấp phát & quản lý đĩa (FAT, i-node, bitmap)"],
   [6, /Cấu trúc hệ thống file/i, "Cấu trúc đĩa (MBR, boot block)"],
   [6, /./, "File & thao tác file"],
-  [0, /^Đồng bộ · Miền găng/, "Miền găng & loại trừ lẫn nhau"],
-  [0, /^Đồng bộ · (Luân phiên|Peterson|TSL|Cấm ngắt|Chờ bận)/, "Giải pháp chờ bận (luân phiên, Peterson, TSL, cấm ngắt)"],
-  [0, /^Đồng bộ · (Sleep|Semaphore|Bài toán)/, "Sleep & Wakeup, Semaphore, bài toán kinh điển"],
-  [0, /^Đồng bộ · Giao tiếp/, "Tiến trình tương tác & giao tiếp (IPC)"],
-  [0, /^Đồng bộ · /, "Khái niệm đồng bộ"],
+  [2, /^Đồng bộ · Miền găng/, "Miền găng & loại trừ lẫn nhau"],
+  [2, /^Đồng bộ · (Luân phiên|Peterson|TSL|Cấm ngắt|Chờ bận)/, "Giải pháp chờ bận (luân phiên, Peterson, TSL, cấm ngắt)"],
+  [2, /^Đồng bộ · (Sleep|Semaphore|Bài toán)/, "Sleep & Wakeup, Semaphore, bài toán kinh điển"],
+  [2, /^Đồng bộ · Giao tiếp/, "Tiến trình tương tác & giao tiếp (IPC)"],
+  [2, /^Đồng bộ · /, "Khái niệm đồng bộ"],
+  [2, /Lập lịch/, "Lập lịch CPU"],
+  [2, /Luồng/, "Luồng (threads)"],
+  [2, /Giao tiếp/, "Tiến trình tương tác & giao tiếp (IPC)"],
+  [2, /./, "Tiến trình (khái niệm, trạng thái, PCB, fork)"],
   [0, /System call|Chế độ kernel/i, "System call & chế độ kernel"],
   [0, /Chương 1/i, "Tổng quan HĐH & phần cứng"],
   [0, /Lập lịch CPU/i, "Lập lịch CPU"],
@@ -160,7 +165,7 @@ var TAG_RULES = [
   [0, /./, "Thực hành Linux / Windows"]
 ];
 function tagOf(q){ var r = TAG_RULES.filter(function(x){ return x[0]===q.ch && x[1].test(q.topic); })[0]; return r ? r[2] : q.topic; }
-var TAG_GROUPS = [[4,"Chương 4 – Bộ nhớ"],[5,"Chương 5 – Vào/Ra"],[6,"Chương 6 – File"],[0,"Đồng bộ tiến trình"]];
+var TAG_GROUPS = [[2,"Chương 2 – Tiến trình & luồng"],[4,"Chương 4 – Bộ nhớ"],[5,"Chương 5 – Vào/Ra"],[6,"Chương 6 – File"],[0,"Ngoài chương 2, 4–6"]];
 function tagSetKey(setKey){ var sc = state.otScope || "all"; return setKey + (sc==="all" ? "" : "@"+sc); }
 function openTagPicker(setKey){
   var o = setOf(tagSetKey(setKey)); if (!o) return;
@@ -252,7 +257,7 @@ function otSection(){
     var o = setOf(x.key + (sc==="all" ? "" : "@"+sc));
     if (!o.ids.length) return "";
     var by = {}; x.ids.forEach(function(id){ var c = BYID[id].ch; by[c] = (by[c]||0) + 1; });
-    var sub = [4,5,6,0].filter(function(c){ return by[c]; }).map(function(c){ return '<span class="chip'+(scopeOk(sc, c)?' on':'')+'">'+(c ? 'Ch'+c : 'Đồng bộ')+': <b>'+by[c]+'</b></span>'; }).join(" ");
+    var sub = [2,4,5,6,0].filter(function(c){ return by[c]; }).map(function(c){ return '<span class="chip'+(scopeOk(sc, c)?' on':'')+'">'+(c ? 'Ch'+c : 'Khác')+': <b>'+by[c]+'</b></span>'; }).join(" ");
     var note = (x.dropped ? 'Đã lược <b>'+x.dropped+'</b> câu trùng với đề trước. ' : '') + (x.note ? esc(x.note) : '');
     return setCard({key:o.key, ch:"set", tagsFor:x.key, ids:o.ids, title:o.name, badge:x.badge, cls:"ot", sub:sub+(note?'<br><span class="muted">'+note+'</span>':'')});
   }).join("");
@@ -262,7 +267,7 @@ function otSection(){
 }
 function weakPanel(){
   var w = weakIds(), st = state.stats || {}, topics = {};
-  w.forEach(function(id){ var q = BYID[id], k = (q.ch?"Ch"+q.ch:"Đồng bộ")+" · "+q.topic; topics[k] = (topics[k]||0) + st[id].w; });
+  w.forEach(function(id){ var q = BYID[id], k = (q.ch?"Ch"+q.ch:"Khác")+" · "+q.topic; topics[k] = (topics[k]||0) + st[id].w; });
   var top = Object.keys(topics).sort(function(a,b){ return topics[b]-topics[a]; }).slice(0,6);
   var done = Object.keys(st).length;
   return '<div class="section-h">🎯 Ôn câu hay sai</div><div class="panel weak">'+
@@ -477,7 +482,7 @@ function renderSummary(){
     '<nav class="toc">'+secs.map(function(sec){ return '<a href="#'+sec.id+'" data-toc="'+sec.id+'">'+esc(sec.title)+'</a>'; }).join("")+'</nav></div>'+
     '<div><div class="sum-head"><div class="kicker">Chương '+c.ch+' · '+esc(c.en)+'</div><h2>'+esc(c.title)+'</h2><p>'+c.intro+'</p><p class="muted" style="margin-top:8px;font-size:13.5px">Nhãn <span class="xs">ngoài slide</span> = kiến thức bổ sung từ giáo trình gốc (Tanenbaum), không có trong slide – nên ôn sau phần chính.</p></div>'+
     (secs.length ? secs.map(renderSec).join("") : '<div class="panel empty">Không tìm thấy nội dung phù hợp “'+esc(sumQuery)+'”.</div>')+
-    '<div class="sum-cta">'+(c.ch===2 ? (setOf("otdb") ? '<button class="btn primary" data-start="otdb">'+ICON.play+'Luyện câu hỏi đồng bộ (Ôn tập đồng bộ)</button>' : '')
+    '<div class="sum-cta">'+(c.ch===2 ? (setOf("otc2") ? '<button class="btn primary" data-start="otc2">'+ICON.play+'Luyện câu hỏi Chương 2 (Ôn tập chương 2)</button>' : '')
       : '<button class="btn primary" data-start="c'+c.ch+'">'+ICON.play+'Luyện câu hỏi Chương '+c.ch+'</button>')+
     (function(){ var nx = data[data.indexOf(c)+1]; return nx ? '<button class="btn" data-sumch="'+nx.ch+'">Chương '+nx.ch+ICON.right+'</button>' : ''; })()+'</div></div>'+
     (gl ? glossaryPanel(c.ch, gl) : '')+'</div>'+
