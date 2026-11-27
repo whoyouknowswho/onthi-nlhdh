@@ -1079,6 +1079,60 @@ var DEMOS = {
     };
     setAlg("lock");
   },
+  /* Chương 2 mục 11: tự bấm Down / Up trên một semaphore */
+  sem: function(el){
+    var PRE = {
+      mutex: {name:"Loại trừ (s = 1)", init:1, seq:[["P1","down"],["P2","down"],["P3","down"],["P1","up"],["P2","up"],["P3","up"]],
+        txt:"P1, P2, P3 cùng Down; mỗi lúc chỉ 1 người được dùng, người ra Up thì đánh thức người kế"},
+      order: {name:"Định thứ tự (s = 0)", init:0, seq:[["P2","down"],["P1","up"]],
+        txt:"P2 tới trước, Down thì ngủ; P1 làm xong Job1 rồi Up → đánh thức P2 làm Job2"},
+      park: {name:"Bãi xe 2 chỗ (s = 2)", init:2, seq:[["P1","down"],["P2","down"],["P3","down"],["P4","down"],["P1","up"],["P2","up"]],
+        txt:"2 chỗ: P1, P2 vào được; P3, P4 phải chờ; xe ra (Up) thì gọi xe chờ vào"}
+    };
+    var NAMES = ["P1","P2","P3","P4"], cur = "mutex", val, queue, st, log, timer = null;
+    function reset(){ val = PRE[cur].init; queue = []; st = {}; NAMES.forEach(function(n){ st[n] = {sleep:false, held:0}; }); log = []; stop(); }
+    function stop(){ if (timer){ clearInterval(timer); timer = null; } }
+    function down(n){
+      if (st[n].sleep) return;
+      var before = val; val--;
+      if (val < 0){ queue.push(n); st[n].sleep = true; log.push('<b>'+n+'</b> Down: '+before+' → '+val+' (âm) → <b>vào hàng chờ và ngủ</b>'); }
+      else { st[n].held++; log.push('<b>'+n+'</b> Down: '+before+' → '+val+' (không âm) → <b>được dùng</b>'); }
+      draw();
+    }
+    function up(n){
+      if (st[n].sleep) return;
+      var before = val; val++;
+      if (st[n].held > 0) st[n].held--;
+      if (val <= 0 && queue.length){ var w = queue.shift(); st[w].sleep = false; st[w].held++; log.push('<b>'+n+'</b> Up: '+before+' → '+val+' (≤ 0) → <b>đánh thức '+w+'</b>, '+w+' được dùng'); }
+      else log.push('<b>'+n+'</b> Up: '+before+' → '+val+' (&gt; 0) → không ai chờ, value được <b>ghi nhớ</b>');
+      draw();
+    }
+    function draw(){
+      var meaning = val > 0 ? 'còn <b>'+val+'</b> vé trống' : val === 0 ? 'hết vé, không ai chờ' : '<b>'+(-val)+'</b> tiến trình đang ngủ chờ';
+      var procs = NAMES.map(function(n){
+        var s = st[n], state = s.sleep ? '<span class="cs-tag wt">đang ngủ chờ</span>' : s.held ? '<span class="cs-tag in">đang dùng'+(s.held > 1 ? ' ×'+s.held : '')+'</span>' : '<span class="muted" style="font-size:12.5px">ở ngoài</span>';
+        return '<div class="sem-p'+(s.sleep ? ' zz' : s.held ? ' on' : '')+'"><b>'+n+'</b>'+state+'<div class="sem-b"><button class="btn sm" data-sdown="'+n+'"'+(s.sleep ? ' disabled' : '')+'>Down</button><button class="btn sm" data-sup="'+n+'"'+(s.sleep ? ' disabled' : '')+'>Up</button></div></div>';
+      }).join("");
+      el.querySelector(".sem-body").innerHTML =
+        '<div class="sem-top"><div class="sem-val'+(val < 0 ? ' neg' : '')+'">s.value = <b>'+val+'</b></div><div class="sem-m">'+meaning+'</div>'+
+        '<div class="sem-q">Danh sách chờ s.L: '+(queue.length ? queue.map(function(q){ return '<span class="chip">'+q+'</span>'; }).join(" → ") : '<span class="muted">trống</span>')+'</div></div>'+
+        '<div class="sem-grid">'+procs+'</div>'+
+        '<div class="cs-log">'+(log.length ? log.map(function(x, i){ return '<div>'+(i+1)+'. '+x+'</div>'; }).join("") : '<span class="muted">Bấm Down / Up cho từng tiến trình. Down = xin vé, Up = trả vé.</span>')+'</div>';
+    }
+    el.innerHTML = '<div class="demo-h">🧪 Tự bấm Down / Up trên một semaphore</div>'+
+      '<div class="demo-row">'+Object.keys(PRE).map(function(k){ return '<button class="btn sm'+(k===cur?' on':'')+'" data-spre="'+k+'">'+PRE[k].name+'</button>'; }).join("")+'</div>'+
+      '<div class="demo-row"><button class="btn sm" data-sdemo="1">▶ Chạy kịch bản mẫu</button><button class="btn sm" data-sreset="1">↺ Làm lại</button><span class="muted cs-dt"></span></div><div class="sem-body"></div>';
+    function setPre(k){ cur = k; el.querySelectorAll("[data-spre]").forEach(function(b){ b.classList.toggle("on", b.dataset.spre === k); }); reset(); el.querySelector(".cs-dt").textContent = "Kịch bản: " + PRE[k].txt; draw(); }
+    el.onclick = function(e){
+      var b = e.target.closest("button"); if (!b || b.disabled) return;
+      if (b.dataset.spre){ setPre(b.dataset.spre); return; }
+      if (b.dataset.sreset){ reset(); draw(); return; }
+      if (b.dataset.sdown){ stop(); down(b.dataset.sdown); return; }
+      if (b.dataset.sup){ stop(); up(b.dataset.sup); return; }
+      if (b.dataset.sdemo){ reset(); draw(); var seq = PRE[cur].seq.slice(); timer = setInterval(function(){ if (!seq.length){ stop(); return; } var s = seq.shift(); if (s[1] === "down") down(s[0]); else up(s[0]); }, 1000); stepTimers.push(timer); }
+    };
+    setPre("mutex");
+  },
   /* Mô phỏng TLB: đếm hit / miss, số lần vào RAM và thời gian truy cập trung bình */
   tlb: function(el){
     el.innerHTML = '<div class="demo-h">🧪 Mô phỏng TLB: hit, miss và thời gian truy cập</div><div class="demo-row">' +

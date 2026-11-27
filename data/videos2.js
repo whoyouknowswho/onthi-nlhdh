@@ -394,29 +394,144 @@ V["s2-10~sum"] = function(){ return {title:"So sánh 5 giải pháp chờ bận"
 ]};};
 
 /* ---------- 11. Sleep & Wakeup, Semaphore, Monitor ---------- */
-V["s2-11"] = function(){ return {title:"Sleep & Wakeup, Semaphore, Monitor", scenes:[
- {s:"Thay vì đứng ngoài hỏi liên tục, tiến trình không vào được đoạn găng thì gọi <b>Sleep</b> để ngủ. Tiến trình ra khỏi đoạn găng gọi <b>WakeUp</b> để đánh thức người đang chờ.",
-  d:[H("Sleep & Wakeup"), b("pa",80,110,300,100,"P trong đoạn găng","ok",{fs:18}), b("pb",580,110,300,100,"Q: Sleep()\nbị chặn, không tốn CPU","gray",{fs:16}),
-     a("wk",380,250,580,250,{t:"ra khỏi CS → WakeUp(Q)",c:"ok",cv:40}), f("wk")]},
- {s:"Lỗi của Sleep và Wakeup: Q kiểm tra thấy bận, <b>chưa kịp ngủ</b> thì bị ngắt. P ra khỏi đoạn găng gọi WakeUp nhưng Q chưa ngủ nên tín hiệu bị mất. Q quay lại ngủ và <b>ngủ mãi</b>.",
-  d:[u("pb",{c:"bad",t:"Q ngủ mãi\n(mất tín hiệu)"}), t("ls",480,400,"Mất tín hiệu đánh thức",{fs:20,c:"bad"})]},
- {s:"<b>Semaphore</b> do Dijkstra đề xuất năm 1965: một giá trị nguyên kèm danh sách tiến trình đang chờ, dùng qua hai thao tác không chia cắt là <b>Down</b> và <b>Up</b>.",
-  d:[clr(), H("Semaphore"), b("dn",60,90,400,250,"Down(S)\nS.value--\nnếu S.value < 0:\n  đưa vào danh sách, Sleep","brand",{fs:17}),
-     b("up",500,90,400,250,"Up(S)\nS.value++\nnếu S.value ≤ 0:\n  lấy ra khỏi danh sách, Wakeup","ok",{fs:17})]},
- {s:"Dùng để <b>loại trừ</b>: đặt s bằng 1. Ai vào trước làm s về 0 rồi vào; người sau làm s âm thì ngủ, cho tới khi người trước gọi Up.",
-  d:[clr(), H("s = 1: loại trừ lẫn nhau"), b("sv",380,80,200,60,"s = 1","violet",{fs:20}), b("c1",60,200,380,90,"P1: Down(s) → s = 0 → vào CS","ok",{fs:16}),
-     b("c2",520,200,380,90,"P2: Down(s) → s = −1 → ngủ","bad",{fs:16}), a("c3",440,330,520,330,{c:"ok",t:"P1 Up(s) → đánh thức P2"})]},
- {s:"Dùng để <b>định thứ tự</b>: đặt s bằng 0. P2 làm Down trước thì ngủ, cho tới khi P1 làm xong Job1 và gọi Up. Nhờ vậy Job2 luôn chạy sau Job1.",
-  d:[clr(), H("s = 0: định thứ tự"), b("sv",380,80,200,60,"s = 0","violet",{fs:20}), b("j1",80,200,340,110,"P1:\nJob1;\nUp(s);","brand",{fs:17}),
-     b("j2",540,200,340,110,"P2:\nDown(s);\nJob2;","ok",{fs:17}), a("jj",422,280,537,240,{c:"bad",t:"Up đánh thức"}), t("od",480,380,"Job2 luôn chạy sau Job1",{fs:20,c:"ok"})]},
- {s:"<b>Monitor</b> do Hoare và Brinch Hansen đề xuất, được ngôn ngữ lập trình cung cấp. Mỗi lúc chỉ một tiến trình chạy trong monitor nên <b>loại trừ được làm tự động</b>; đồng bộ thêm bằng biến điều kiện Wait và Signal.",
-  d:[clr(), H("Monitor"), b("mo",230,90,500,250,"monitor M {\n  biến dùng chung\n  procedure F1() { …; Signal(c); }\n  procedure F2() { Wait(c); …; }\n}","cyan",{fs:16}),
-     t("mn",480,400,"Loại trừ tự động · biến điều kiện Wait / Signal",{fs:18,c:"ok"})]},
- {s:"<b>Message passing</b>: gửi bằng send, nhận bằng receive, phải biết tên bên kia. Cuối cùng là ba bài toán đồng bộ kinh điển: bộ đệm có hạn, người đọc người ghi, và bữa tối của các triết gia.",
-  d:[clr(), H("Message passing và bài toán kinh điển"), b("ps",60,90,190,70,"P","brand",{fs:18}), b("qr",710,90,190,70,"Q","ok",{fs:18}),
-     a("ms",252,125,707,125,{t:"send(Q, msg) → receive(P, msg)",c:"violet"}),
-     b("k1",60,260,260,110,"Bounded-Buffer\n(sản xuất – tiêu dùng)","warn",{fs:15}), b("k2",350,260,260,110,"Readers –\nWriters","warn",{fs:15}), b("k3",640,260,260,110,"Dining-\nPhilosophers","warn",{fs:15})]}
+V["s2-11"] = function(){ return {title:"Sleep & Wakeup và lỗi mất tín hiệu", scenes:[
+ {s:"Ở mục 10, mọi giải pháp đều <b>chờ bận</b>: đứng lặp kiểm tra, phí CPU. Mục 11 đổi cách chờ: chưa được vào thì <b>đi ngủ</b>, nhường CPU, tới lượt thì <b>được đánh thức</b>.",
+  d:[H("Từ chờ bận sang ngủ – đánh thức"), b("bw",60,100,400,200,"Chờ bận (mục 10)\n\nđứng gõ cửa liên tục\n→ tốn CPU","bad",{fs:18}), a("ar",462,200,497,200,{c:"ok"}),
+     b("sw",500,100,400,200,"Ngủ – đánh thức (mục 11)\n\nlấy số, ngồi ghế chờ gọi\n→ không tốn CPU","ok",{fs:18})]},
+ {s:"Ý tưởng gốc là <b>Sleep và Wakeup</b>. Trên đó xây ra 3 giải pháp: <b>Semaphore</b>, <b>Monitor</b> và <b>Message passing</b>.",
+  d:[b("g1",60,360,260,80,"Semaphore","brand",{fs:19}), b("g2",350,360,260,80,"Monitor","cyan",{fs:19}), b("g3",640,360,260,80,"Message passing","violet",{fs:18})]},
+ {s:"HĐH cung cấp 2 lời gọi hệ thống. <b>Sleep</b>: tiến trình gọi nó chuyển sang <b>bị chặn</b>, không được cấp CPU. <b>WakeUp P</b>: chuyển tiến trình P sang <b>sẵn sàng</b>. Phải nhờ HĐH vì việc này đổi trạng thái tiến trình.",
+  d:[clr(), H("2 lời gọi hệ thống"), b("sl",60,100,400,160,"Sleep()\n\ntiến trình gọi → Blocked","violet",{fs:19}), b("wk",500,100,400,160,"WakeUp(P)\n\nP → Ready","ok",{fs:19}),
+     t("nt",480,320,"phải nhờ HĐH vì việc này đổi trạng thái tiến trình",{fs:17,c:"gray"})]},
+ {s:"Áp dụng: dùng hai biến chung, <b>busy</b> cho biết có người trong đoạn găng chưa, và <b>blocked</b> là số tiến trình đang ngủ chờ. Vào: có người thì tăng blocked rồi ngủ; trống thì đặt busy bằng 1. Ra: đặt busy bằng 0, nếu có người chờ thì đánh thức một người.",
+  d:[clr(), H("Áp dụng Sleep() và WakeUp()"), b("vb",230,70,240,50,"busy = 0","violet",{fs:17}), b("vk",490,70,240,50,"blocked = 0","violet",{fs:17}),
+     codeCol("c",160,["if (busy) { blocked = blocked + 1; Sleep(); }","else busy = 1;","CS;","busy = 0;","if (blocked) { WakeUp(P); blocked = blocked - 1; }"],640,140)]},
+ {s:"Chạy thử bình thường. P tới trước: busy bằng 0 nên đặt busy bằng 1 và vào đoạn găng. Q tới sau: thấy busy bằng 1, tăng blocked lên 1 rồi <b>ngủ</b>, không tốn CPU.",
+  d:[u("vb",{t:"busy = 1"}), u("vk",{t:"blocked = 1"}), b("sP",60,430,400,50,"P: trong đoạn găng","ok",{fs:16}), b("sQ",500,430,400,50,"Q: đang ngủ (không tốn CPU)","gray",{fs:16})]},
+ {s:"P ra khỏi đoạn găng: đặt busy bằng 0, thấy blocked bằng 1 nên gọi <b>WakeUp Q</b> và giảm blocked về 0. Q thức dậy và vào đoạn găng.",
+  d:[u("vb",{t:"busy = 0"}), u("vk",{t:"blocked = 0"}), u("sP",{t:"P: đã ra",c:"gray"}), u("sQ",{t:"Q: được đánh thức → vào CS",c:"ok"}), f("sQ")]},
+ {s:"Nhưng slide 82 chỉ ra vấn đề: kiểm tra điều kiện và từ bỏ CPU có thể bị chặn giữa chừng. Cùng chạy thử một tình huống xấu.",
+  d:[clr(), H("Lỗi: mất tín hiệu đánh thức"), b("r1",60,80,840,52,"1. P vào CS: busy = 1","ok",{fs:16})]},
+ {s:"Bước 2: Q tới, thấy busy bằng 1, tăng blocked lên 1 và <b>chuẩn bị</b> gọi Sleep.",
+  d:[b("r2",60,145,840,52,"2. Q thấy busy = 1 → blocked = 1, chuẩn bị gọi Sleep()","gray",{fs:16})]},
+ {s:"Bước 3: đúng lúc đó có ngắt, CPU chuyển sang P <b>trước khi Q kịp ngủ</b>.",
+  d:[b("r3",60,210,840,52,"3. ⚡ Ngắt: CPU chuyển sang P trước khi Q kịp ngủ","bad",{fs:16})]},
+ {s:"Bước 4: P ra khỏi đoạn găng, đặt busy bằng 0, thấy blocked bằng 1 nên gọi WakeUp Q. Nhưng Q <b>chưa ngủ</b>, nên tín hiệu đánh thức <b>bị mất</b>.",
+  d:[b("r4",60,275,840,52,"4. P ra: busy = 0, WakeUp(Q) – nhưng Q chưa ngủ → tín hiệu bị mất","warn",{fs:16})]},
+ {s:"Bước 5: Q chạy tiếp đúng chỗ dừng, gọi Sleep và <b>ngủ mãi</b>. Đoạn găng trống mà không còn ai đánh thức Q.",
+  d:[b("r5",60,340,840,52,"5. Q chạy tiếp: Sleep() → ngủ mãi, không còn ai gọi","bad",{fs:16}), f("r5")]},
+ {s:"Ví von: bạn định ngủ trưa và dặn tới giờ thì gọi. Người kia gọi đúng lúc bạn đang trải chiếu, chưa nằm xuống, nên bạn không nghe. Bạn nằm xuống ngủ và không ai gọi lần hai.",
+  d:[b("vv",120,420,720,80,"Gọi đúng lúc đang trải chiếu → không nghe → ngủ quên luôn","warn",{fs:17})]},
+ {s:"Cách chữa: cần một biến <b>nhớ lại</b> cả những lần đánh thức chưa ai nhận, và việc kiểm tra cộng đi ngủ phải <b>không bị chen ngang</b>. Đó chính là <b>Semaphore</b>.",
+  d:[clr(), H("Cần gì để sửa?"), b("f1",60,110,400,140,"Nhớ lại lần đánh thức\nchưa ai nhận","brand",{fs:18}), b("f2",500,110,400,140,"Kiểm tra + đi ngủ\nkhông bị chen ngang","brand",{fs:18}),
+     a("fa",480,265,480,335,{c:"ok"}), b("sm",330,340,300,80,"→ Semaphore","ok",{fs:22})]}
 ]};};
 
-Object.assign(window.VLABEL, {"s2-7":"FCFS, SJF, ưu tiên","s2-7~rr":"Round Robin","s2-10":"Chờ bận & biến khóa","s2-10~turn":"Luân phiên","s2-10~pet":"Peterson","s2-10~hw":"Cấm ngắt & TSL","s2-10~sum":"So sánh"});
+V["s2-11~sem"] = function(){
+ function st(){ return [b("sv",80,75,220,60,"s = 1","violet",{fs:20}), b("sq",330,75,550,60,"Hàng chờ s.L: trống","gray",{fs:17}),
+   b("cs",80,165,800,64,"Đoạn găng: trống","gray",{fs:18}), b("p1",80,270,240,90,"P1\nở ngoài","gray",{fs:17}), b("p2",360,270,240,90,"P2\nở ngoài","gray",{fs:17}), b("p3",640,270,240,90,"P3\nở ngoài","gray",{fs:17})]; }
+ return {title:"Semaphore: Down, Up và chạy thử", scenes:[
+ {s:"<b>Semaphore</b> do Dijkstra đề xuất năm 1965. Một semaphore gồm hai phần: một <b>giá trị nguyên</b>, và một <b>danh sách các tiến trình đang bị chặn</b> chờ nó.",
+  d:[H("Semaphore (Dijkstra, 1965)"), b("sc",210,80,540,190,"typedef struct {\n  int value;            // giá trị nguyên\n  struct process *L;    // danh sách chờ\n} Semaphore;","violet",{fs:17}),
+     t("nt",480,340,"chỉ được dùng qua Down(s) và Up(s)",{fs:19,c:"brand"}), t("n2",480,385,"hai thao tác này được thực hiện trọn vẹn, không bị chen ngang",{fs:17,c:"gray"})]},
+ {s:"<b>Down</b> là xin một vé: trừ value đi 1. Nếu value thành <b>âm</b>, nghĩa là hết vé, tiến trình được đưa vào danh sách chờ và đi ngủ.",
+  d:[clr(), H("Down(s): xin vé"), b("dc",120,80,400,220,"Down(S) {\n  S.value--;\n  if (S.value < 0) {\n    Add(P, S.L);\n    Sleep();\n  }\n}","brand",{fs:17}),
+     b("d1",570,90,330,80,"value trừ 1","gray",{fs:17}), b("d2",570,190,330,100,"âm → hết vé\n→ vào hàng, ngủ","bad",{fs:17})]},
+ {s:"<b>Up</b> là trả một vé: cộng value thêm 1. Nếu value <b>vẫn nhỏ hơn hoặc bằng 0</b>, nghĩa là đang có người ngủ chờ, thì lấy một người ra khỏi danh sách và đánh thức.",
+  d:[clr(), H("Up(s): trả vé"), b("uc",120,80,400,220,"Up(S) {\n  S.value++;\n  if (S.value <= 0) {\n    Remove(P, S.L);\n    Wakeup(P);\n  }\n}","ok",{fs:17}),
+     b("u1",570,90,330,80,"value cộng 1","gray",{fs:17}), b("u2",570,190,330,100,"vẫn ≤ 0 → có người chờ\n→ đánh thức 1 người","ok",{fs:16})]},
+ {s:"Đọc giá trị semaphore: lớn hơn 0 là <b>còn bấy nhiêu vé</b>; bằng 0 là <b>hết vé, không ai chờ</b>; âm là <b>có bấy nhiêu tiến trình đang ngủ chờ</b>.",
+  d:[clr(), H("Đọc giá trị s.value"), b("m1",60,110,260,150,"value > 0\n\ncòn value vé","ok",{fs:18}), b("m2",350,110,260,150,"value = 0\n\nhết vé,\nkhông ai chờ","warn",{fs:18}), b("m3",640,110,260,150,"value < 0\n\n|value| người\nđang chờ","bad",{fs:18}),
+     t("ex",480,330,"ví dụ: s = −2 → có 2 tiến trình đang ngủ chờ",{fs:18,c:"gray"})]},
+ {s:"Chạy thử với s bằng 1 và ba tiến trình P1, P2, P3 cùng muốn vào đoạn găng. Mỗi tiến trình làm: Down, vào đoạn găng, rồi Up.",
+  d:[clr(), H("Chạy thử: s = 1, ba tiến trình"), st(), t("cd",480,420,"mỗi tiến trình: Down(s); CS; Up(s);",{fs:17,c:"gray"})]},
+ {s:"P1 Down: 1 thành 0, không âm, nên P1 <b>được vào</b> đoạn găng.",
+  d:[x("cd"), u("sv",{t:"s = 0"}), u("cs",{t:"Đoạn găng: P1",c:"ok"}), u("p1",{t:"P1\nđang dùng",c:"ok"}), t("lg",480,420,"P1 Down: 1 → 0 → vào",{fs:18,c:"ok"})]},
+ {s:"P2 Down: 0 thành âm 1, âm, nên P2 vào hàng chờ và <b>ngủ</b>.",
+  d:[u("sv",{t:"s = −1",c:"bad"}), u("sq",{t:"Hàng chờ s.L: P2",c:"warn"}), u("p2",{t:"P2\nđang ngủ",c:"warn"}), u("lg",{t:"P2 Down: 0 → −1 → ngủ",c:"warn"})]},
+ {s:"P3 Down: âm 1 thành âm 2, P3 cũng <b>ngủ</b>. Giá trị âm 2 nói đúng là đang có 2 tiến trình chờ.",
+  d:[u("sv",{t:"s = −2"}), u("sq",{t:"Hàng chờ s.L: P2 → P3"}), u("p3",{t:"P3\nđang ngủ",c:"warn"}), u("lg",{t:"P3 Down: −1 → −2 → ngủ (2 người chờ)"})]},
+ {s:"P1 ra khỏi đoạn găng, gọi Up: âm 2 thành âm 1, vẫn nhỏ hơn hoặc bằng 0, nên <b>đánh thức P2</b>. P2 vào đoạn găng.",
+  d:[u("sv",{t:"s = −1"}), u("sq",{t:"Hàng chờ s.L: P3"}), u("cs",{t:"Đoạn găng: P2"}), u("p1",{t:"P1\nđã ra",c:"gray"}), u("p2",{t:"P2\nđang dùng",c:"ok"}), u("lg",{t:"P1 Up: −2 → −1 → đánh thức P2",c:"ok"})]},
+ {s:"P2 gọi Up: âm 1 thành 0, vẫn nhỏ hơn hoặc bằng 0, nên <b>đánh thức P3</b>.",
+  d:[u("sv",{t:"s = 0",c:"violet"}), u("sq",{t:"Hàng chờ s.L: trống",c:"gray"}), u("cs",{t:"Đoạn găng: P3"}), u("p2",{t:"P2\nđã ra",c:"gray"}), u("p3",{t:"P3\nđang dùng",c:"ok"}), u("lg",{t:"P2 Up: −1 → 0 → đánh thức P3"})]},
+ {s:"P3 gọi Up: 0 thành 1, lớn hơn 0, không còn ai chờ. Từ đầu tới cuối, mỗi lúc chỉ một tiến trình trong đoạn găng.",
+  d:[u("sv",{t:"s = 1"}), u("cs",{t:"Đoạn găng: trống",c:"gray"}), u("p3",{t:"P3\nđã ra",c:"gray"}), u("lg",{t:"P3 Up: 0 → 1 → không ai chờ",c:"gray"})]},
+ {s:"Vì sao semaphore không mất tín hiệu như Sleep và Wakeup? Thứ nhất, Up khi chưa ai chờ thì value được <b>cộng lên và ghi nhớ</b>, lần Down sau thấy không âm nên khỏi ngủ. Thứ hai, Down và Up <b>không bị chen ngang</b>, nên không có khe hở giữa kiểm tra và đi ngủ.",
+  d:[clr(), H("Vì sao không mất tín hiệu?"), b("w1",60,110,400,170,"Up khi chưa ai chờ\n→ value tăng và được GHI NHỚ\n→ Down sau khỏi ngủ","ok",{fs:17}), b("w2",500,110,400,170,"Down / Up\nkhông bị chen ngang\n→ không có khe hở","ok",{fs:17})]},
+ {s:"Ví von: semaphore như <b>bãi gửi xe có N chỗ</b> với một bảng đếm. Xe vào thì trừ 1; hết chỗ thì xếp hàng ngoài cổng. Xe ra thì cộng 1 và gọi xe đầu hàng vào. Bảng đếm âm 2 nghĩa là có 2 xe đang chờ.",
+  d:[b("pk",120,340,720,110,"Bãi xe N chỗ: vào = Down (trừ 1) · ra = Up (cộng 1, gọi xe chờ)\nbảng đếm −2 → có 2 xe đang chờ ngoài cổng","warn",{fs:16})]}
+]};};
+
+V["s2-11~use"] = function(){ return {title:"Hai cách dùng Semaphore", scenes:[
+ {s:"Cách dùng thứ nhất: <b>loại trừ lẫn nhau</b>. Đặt s bằng 1, mọi tiến trình đều làm Down, vào đoạn găng, rồi Up. Chỉ có một vé nên mỗi lúc chỉ một người trong đoạn găng.",
+  d:[H("Cách 1: loại trừ (s = 1)"), b("sv",380,75,200,55,"s = 1","violet",{fs:20}), b("cd",230,170,500,150,"mọi Pi:\nDown(s);\nCS;\nUp(s);","brand",{fs:18}), t("nt",480,380,"1 vé → mỗi lúc 1 người trong đoạn găng",{fs:18,c:"ok"})]},
+ {s:"Cách dùng thứ hai: <b>định thứ tự</b>. Đặt s bằng 0. P1 làm Job1 rồi Up. P2 làm Down rồi mới làm Job2. Mục tiêu: Job2 luôn chạy sau Job1.",
+  d:[clr(), H("Cách 2: định thứ tự (s = 0)"), b("sv",380,75,200,55,"s = 0","violet",{fs:20}), b("j1",80,170,340,130,"P1:\nJob1;\nUp(s);","brand",{fs:18}), b("j2",540,170,340,130,"P2:\nDown(s);\nJob2;","ok",{fs:18})]},
+ {s:"Trường hợp P2 tới trước: P2 Down, 0 thành âm 1, nên P2 <b>ngủ</b>, chưa làm được Job2.",
+  d:[u("sv",{t:"s = −1"}), u("j2",{c:"warn"}), t("c1",710,350,"P2 ngủ ở Down",{fs:17,c:"warn"})]},
+ {s:"P1 làm xong Job1 rồi Up: âm 1 thành 0, nên <b>đánh thức P2</b>. Lúc này P2 mới làm Job2. Job2 đúng là sau Job1.",
+  d:[u("sv",{t:"s = 0"}), u("j2",{c:"ok"}), a("wk",422,235,537,235,{c:"ok",t:"Up đánh thức"}), u("c1",{t:"P2 làm Job2 sau Job1",c:"ok"})]},
+ {s:"Trường hợp P1 tới trước: P1 làm Job1, Up: 0 thành 1, value được <b>ghi nhớ</b>. Sau đó P2 Down: 1 thành 0, không âm, nên <b>không phải ngủ</b> mà làm Job2 luôn. Vẫn là Job2 sau Job1.",
+  d:[x("wk","c1"), u("sv",{t:"s = 0 → 1 → 0"}), t("c2",480,370,"P1 Up trước: s = 1 (ghi nhớ) → P2 Down: 1 → 0, không ngủ",{fs:17,c:"ok"})]},
+ {s:"Kết luận: dù ai tới trước, <b>Job2 luôn chạy sau Job1</b>.",
+  d:[b("rs",230,420,500,70,"Job2 luôn chạy sau Job1 ✔","ok",{fs:20})]},
+ {s:"Ngoài slide: semaphore chỉ nhận 0 và 1 gọi là <b>nhị phân</b>, dùng cho loại trừ. Semaphore nhận số bất kỳ gọi là <b>đếm</b>, dùng khi có N tài nguyên giống nhau, ví dụ bãi xe 3 chỗ thì đặt s bằng 3.",
+  d:[clr(), H("Semaphore nhị phân và đếm"), b("bn",60,100,400,160,"Nhị phân (binary)\nchỉ 0 hoặc 1\n→ loại trừ","brand",{fs:18}), b("ct",500,100,400,160,"Đếm (counting)\nsố bất kỳ\n→ N tài nguyên giống nhau","cyan",{fs:18}),
+     [0,1,2].map(function(i){ return b("slot"+i,250+i*160,330,140,70,"chỗ "+(i+1),"ok",{fs:16}); }), t("pk",480,440,"bãi xe 3 chỗ → s = 3",{fs:17,c:"gray"})]},
+ {s:"Lỗi hay gặp khi dùng semaphore: <b>quên Up</b> thì người sau chờ mãi; <b>viết ngược</b>, Up trước Down, thì hỏng loại trừ; và <b>Down hai lần</b> trên cùng semaphore bằng 1 thì tự chặn chính mình.",
+  d:[clr(), H("Lỗi hay gặp"), b("e1",60,90,840,80,"Quên Up(s) → người sau chờ mãi","bad",{fs:18}), b("e2",60,190,840,80,"Viết ngược: Up(s) trước, Down(s) sau → hỏng loại trừ","bad",{fs:18}),
+     b("e3",60,290,840,80,"Down(s) hai lần khi s = 1 → tự chặn chính mình","bad",{fs:18})]}
+]};};
+
+V["s2-11~mon"] = function(){ return {title:"Monitor và Message passing", scenes:[
+ {s:"<b>Monitor</b> do Hoare năm 1974 và Brinch Hansen năm 1975 đề xuất. Khác semaphore do HĐH cung cấp, monitor là cơ chế <b>do ngôn ngữ lập trình cung cấp</b>: gói biến dùng chung và các thủ tục thao tác trên chúng vào một khối.",
+  d:[H("Monitor (Hoare 1974, Brinch Hansen 1975)"), b("mc",180,80,600,230,"monitor monitor-name {\n  shared variable declarations\n  procedure body P1 (…) { … }\n  …\n  procedure body Pn (…) { … }\n  { initialization code }\n}","cyan",{fs:17}),
+     t("nt",480,370,"do ngôn ngữ lập trình cung cấp",{fs:18,c:"brand"})]},
+ {s:"Điểm mạnh nhất: <b>loại trừ được làm tự động</b>. Mỗi lúc chỉ một tiến trình được chạy bên trong monitor; tiến trình khác gọi vào phải chờ ở cửa. Lập trình viên không phải tự viết Down và Up.",
+  d:[clr(), H("Loại trừ tự động"), b("mo",330,90,400,260,"","cyan"), t("mt",530,115,"Monitor",{fs:17,c:"cyan"}), b("in",430,180,200,80,"P1 bên trong","ok",{fs:17}),
+     b("w2",60,150,200,60,"P2 chờ ở cửa","warn",{fs:16}), b("w3",60,240,200,60,"P3 chờ ở cửa","warn",{fs:16}), t("nt",480,410,"mỗi lúc chỉ 1 tiến trình bên trong monitor",{fs:18,c:"ok"})]},
+ {s:"Để định thứ tự, monitor có <b>biến điều kiện</b>. <b>Wait c</b>: ngủ chờ điều kiện c và tạm <b>nhả monitor</b> cho người khác vào. <b>Signal c</b>: đánh thức một tiến trình đang chờ c.",
+  d:[clr(), H("Biến điều kiện"), b("wt",60,100,400,150,"Wait(c)\nngủ chờ c, tạm nhả monitor","warn",{fs:18}), b("sg",500,100,400,150,"Signal(c)\nđánh thức 1 người đang chờ c","ok",{fs:18})]},
+ {s:"Ví dụ slide 90, loại trừ: monitor M có hàm AccessMutual chứa đoạn găng truy cập tài nguyên. Tiến trình chỉ cần gọi M chấm AccessMutual, monitor tự bảo đảm mỗi lúc một người.",
+  d:[clr(), H("Ví dụ: loại trừ bằng monitor"), b("m1",80,100,420,170,"Monitor M\n  <resource type> RC;\n  Function AccessMutual\n    CS;  // truy cập RC","cyan",{fs:16}), b("pi",560,140,320,90,"Pi:\nM.AccessMutual();","brand",{fs:17})]},
+ {s:"Ví dụ định thứ tự: F1 làm Job1 rồi Signal c; F2 Wait c rồi mới làm Job2. Nếu P2 gọi F2 trước, nó Wait và ngủ, nhả monitor cho P1 vào. P1 gọi F1: làm Job1, Signal c, đánh thức P2, P2 làm Job2.",
+  d:[clr(), H("Ví dụ: định thứ tự bằng monitor"), b("m2",60,90,380,190,"Monitor M\n  Condition c;\n  F1: Job1; Signal(c);\n  F2: Wait(c); Job2;","cyan",{fs:16}),
+     b("q2",520,90,380,80,"P2: M.F2() → Wait(c), ngủ","warn",{fs:16}), b("q1",520,200,380,80,"P1: M.F1() → Job1, Signal(c)","brand",{fs:16}),
+     a("sg",710,285,710,345,{c:"ok"}), b("q3",520,350,380,70,"P2 thức dậy → Job2","ok",{fs:16})]},
+ {s:"Ví von: monitor như <b>phòng khám có lễ tân</b>. Bệnh nhân chỉ cần vào phòng chờ; lễ tân tự bảo đảm mỗi lúc một người gặp bác sĩ. Ai chờ kết quả xét nghiệm thì ra ghế ngồi, có kết quả thì được gọi lại.",
+  d:[clr(), H("Ví von: phòng khám có lễ tân"), b("v1",60,110,260,130,"Lễ tân\n= loại trừ tự động","cyan",{fs:17}), b("v2",350,110,260,130,"Ra ghế chờ\n= Wait(c)","warn",{fs:17}), b("v3",640,110,260,130,"Được gọi lại\n= Signal(c)","ok",{fs:17})]},
+ {s:"<b>Message passing</b>: gửi bằng send P message, nhận bằng receive Q message. Tiến trình phải biết rõ tên tiến trình bên kia. Bên nhận phải chờ tới khi có message, nên tự động chạy sau bên gửi.",
+  d:[clr(), H("Message passing"), b("pp",60,110,220,80,"P","brand",{fs:20}), b("qq",680,110,220,80,"Q","ok",{fs:20}), a("ms",282,150,677,150,{c:"violet",t:"send(Q, msg) → receive(P, msg)"}),
+     t("rc",480,250,"receive phải chờ tới khi có message → bên nhận chạy sau bên gửi",{fs:17,c:"gray"})]},
+ {s:"Đặc tính liên kết: được thiết lập <b>tự động</b>; mỗi liên kết gắn <b>đúng một cặp</b> tiến trình; giữa mỗi cặp có <b>đúng một</b> liên kết; liên kết có thể một chiều nhưng thường là <b>hai chiều</b>. Không cần bộ nhớ chung nên dùng được cả qua mạng.",
+  d:[b("k1",60,300,190,90,"tự động","violet",{fs:17}), b("k2",270,300,190,90,"đúng 1 cặp","violet",{fs:17}), b("k3",480,300,190,90,"1 liên kết / cặp","violet",{fs:16}), b("k4",690,300,210,90,"thường 2 chiều","violet",{fs:17}),
+     t("vv",480,450,"Ví von: nhắn tin – chưa nhận được tin thì cứ chờ",{fs:17,c:"warn"})]}
+]};};
+
+V["s2-11~cls"] = function(){
+ var PH = [[480,130],[642,234],[580,401],[380,401],[318,234]], CH = [[536,211],[570,306],[480,365],[390,306],[424,211]];
+ return {title:"Bài toán đồng bộ kinh điển và tổng kết", scenes:[
+ {s:"Slide 92 nêu ba bài toán đồng bộ kinh điển: <b>bộ đệm có hạn</b>, tức người sản xuất và người tiêu dùng; <b>người đọc và người ghi</b>; và <b>bữa tối của các triết gia</b>.",
+  d:[H("3 bài toán đồng bộ kinh điển"), b("p1",60,110,260,150,"Bounded-Buffer\n(Producer–Consumer)","brand",{fs:17}), b("p2",350,110,260,150,"Readers and\nWriters","cyan",{fs:17}), b("p3",640,110,260,150,"Dining-\nPhilosophers","warn",{fs:17})]},
+ {s:"Bộ đệm có hạn: người sản xuất bỏ hàng vào kho N ô, người tiêu dùng lấy ra. Kho <b>đầy</b> thì người sản xuất phải chờ; kho <b>rỗng</b> thì người tiêu dùng phải chờ; và không được hai người cùng sửa kho một lúc.",
+  d:[clr(), H("Bounded-Buffer (Producer–Consumer)"), b("pr",40,150,180,70,"Producer","brand",{fs:17}), [0,1,2,3,4].map(function(i){ return b("bf"+i,250+i*95,150,85,70,i<2?"hàng":"","gray",{fs:14}); }),
+     b("cs",745,150,180,70,"Consumer","ok",{fs:17}), t("r1",480,290,"kho đầy → Producer chờ · kho rỗng → Consumer chờ",{fs:17,c:"warn"}), t("r2",480,330,"không hai người cùng sửa kho",{fs:17,c:"warn"})]},
+ {s:"Lời giải bằng semaphore, ngoài slide: mutex bằng 1 để bảo vệ kho, empty bằng N là số ô trống, full bằng 0 là số ô có hàng. Producer: Down empty, Down mutex, bỏ hàng, Up mutex, Up full. Consumer làm ngược lại.",
+  d:[x("r1","r2"), b("s1",60,260,260,50,"mutex = 1","violet",{fs:16}), b("s2",350,260,260,50,"empty = N (ô trống)","violet",{fs:15}), b("s3",640,260,260,50,"full = 0 (ô có hàng)","violet",{fs:15}),
+     b("cp",60,330,400,170,"Producer:\nDown(empty); Down(mutex);\n  bỏ hàng vào kho;\nUp(mutex); Up(full);","brand",{fs:15}), b("cc",500,330,400,170,"Consumer:\nDown(full); Down(mutex);\n  lấy hàng ra;\nUp(mutex); Up(empty);","ok",{fs:15})]},
+ {s:"Người đọc và người ghi: nhiều người <b>đọc cùng lúc</b> được vì đọc không làm hỏng dữ liệu; nhưng người <b>ghi</b> phải <b>độc quyền</b>, không ai khác được đọc hay ghi lúc đó.",
+  d:[clr(), H("Readers and Writers"), b("db",380,90,200,90,"Dữ liệu","violet",{fs:18}), [0,1,2].map(function(i){ return b("rd"+i,80+i*140,240,120,60,"Reader "+(i+1),"ok",{fs:15}); }),
+     t("ro",270,340,"nhiều người đọc cùng lúc ✔",{fs:17,c:"ok"}), b("wr",640,240,200,60,"Writer","bad",{fs:16}), t("wo",740,340,"người ghi phải độc quyền",{fs:17,c:"bad"})]},
+ {s:"Bữa tối của các triết gia: 5 triết gia ngồi quanh bàn, giữa mỗi hai người có <b>một chiếc đũa</b>, muốn ăn phải cầm <b>đủ hai chiếc</b>.",
+  d:[clr(), H("Dining-Philosophers"), t("tb",480,282,"bàn ăn",{fs:16,c:"gray"}), PH.map(function(p,i){ return b("ph"+i,p[0]-60,p[1]-22,120,44,"Triết gia "+(i+1),"cyan",{fs:13}); }),
+     CH.map(function(c,i){ return d("ch"+i,c[0],c[1],{c:"warn",r:9}); }), t("nd",480,480,"5 triết gia · 5 chiếc đũa · cần 2 chiếc mới ăn",{fs:16,c:"gray"})]},
+ {s:"Nếu cả 5 cùng lúc cầm chiếc đũa bên trái rồi chờ chiếc bên phải, thì ai cũng giữ một chiếc và chờ người bên cạnh: <b>tất cả kẹt mãi</b>. Đó là bế tắc, deadlock. Lời giải phải tránh cả bế tắc lẫn đói.",
+  d:[PH.map(function(p,i){ return u("ph"+i,{c:"bad"}); }), u("nd",{t:"cả 5 cầm đũa trái rồi chờ đũa phải → kẹt mãi (deadlock)",c:"bad"})]},
+ {s:"Tổng kết mục 11. Sleep và Wakeup không tốn CPU nhưng <b>mất tín hiệu</b>. Semaphore <b>đếm vé</b> bằng Down và Up. Monitor <b>tự lo loại trừ</b>, dùng Wait và Signal. Message passing thì <b>nhắn tin</b> bằng send và receive.",
+  d:[clr(), H("Tổng kết mục 11"), [["Sleep & Wakeup","HĐH · mất tín hiệu","bad"],["Semaphore","HĐH · Down / Up · đếm vé","brand"],["Monitor","ngôn ngữ · loại trừ tự động · Wait / Signal","cyan"],["Message passing","HĐH · send / receive · nhắn tin","violet"]].map(function(r,i){ var y=85+i*95;
+       return [b("t"+i+"a",60,y,300,78,r[0],r[2],{fs:18}), b("t"+i+"b",380,y,520,78,r[1],"gray",{fs:16})]; })]}
+]};};
+
+Object.assign(window.VLABEL, {"s2-7":"FCFS, SJF, ưu tiên","s2-7~rr":"Round Robin","s2-10":"Chờ bận & biến khóa","s2-10~turn":"Luân phiên","s2-10~pet":"Peterson","s2-10~hw":"Cấm ngắt & TSL","s2-10~sum":"So sánh","s2-11":"Sleep & Wakeup","s2-11~sem":"Semaphore","s2-11~use":"Dùng Semaphore","s2-11~mon":"Monitor & Message","s2-11~cls":"Bài toán kinh điển"});
 })();

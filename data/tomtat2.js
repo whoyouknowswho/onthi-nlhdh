@@ -334,48 +334,126 @@ lock = 0;</pre>
  figs:[["c2-81","Slide 81 – Áp dụng Sleep() và Wakeup()"],["c2-84","Slide 84 – Cấu trúc Semaphore: giá trị và danh sách tiến trình bị chặn"],["c2-85","Slide 85 – Down(S) và Up(S)"],["c2-86","Slide 86 – Sử dụng Semaphore: s = 1 để loại trừ, s = 0 để định thứ tự"],["c2-90","Slide 90 – Sử dụng Monitor"]],
  yt:"semaphore monitor sleep wakeup message passing operating system",
  html:`
-<p>Ba giải pháp đồng bộ theo kiểu Sleep &amp; Wakeup (slide 78): <b>Semaphore, Monitor, Message passing</b>.</p>
-<h4 class="sub">Sleep &amp; Wakeup (slide 79–82)</h4>
-<ul><li>Không vào được CS thì <b>từ bỏ CPU</b> (ngủ). Ra khỏi CS thì <b>đánh thức</b> tiến trình đang chờ.</li>
-<li>Cần <b>HĐH hỗ trợ</b> vì làm thay đổi trạng thái tiến trình. HĐH cung cấp 2 lời gọi hệ thống: <b>Sleep()</b> chuyển tiến trình sang <b>bị chặn</b>; <b>WakeUp(P)</b> chuyển P sang <b>sẵn sàng</b>.</li></ul>
-<pre class="q-pre">if (busy) { blocked = blocked + 1; Sleep(); }
-else busy = 1;
+<p><b>Nối tiếp mục 10:</b> các giải pháp chờ bận đều bắt tiến trình đứng lặp kiểm tra, <b>lãng phí CPU</b>. Mục này đổi cách chờ: chưa được vào thì <b>đi ngủ</b> (bị chặn, nhường CPU), tới lượt thì <b>được đánh thức</b>. Có 3 giải pháp theo kiểu này (slide 78): <b>Semaphore, Monitor, Message passing</b>, xây trên ý tưởng gốc là Sleep &amp; Wakeup.</p>
+<table><tr><th></th><th>Chờ bận (mục 10)</th><th>Sleep &amp; Wakeup (mục 11)</th></tr>
+<tr><td>Chưa được vào thì</td><td>Đứng lặp kiểm tra</td><td>Ngủ, nằm trong danh sách chờ</td></tr>
+<tr><td>Dùng CPU khi chờ?</td><td>Có, phí</td><td><b>Không</b></td></tr>
+<tr><td>Ví von</td><td>Đứng trước cửa gõ liên tục \"xong chưa?\"</td><td>Lấy số rồi ngồi ghế, tới lượt được gọi</td></tr></table>
+
+<h4 class="sub">1. Sleep &amp; Wakeup (slide 79–82)</h4>
+<p>HĐH cung cấp 2 lời gọi hệ thống (phải nhờ HĐH vì việc này <b>đổi trạng thái tiến trình</b>):</p>
+<ul><li><b>Sleep()</b>: tiến trình gọi nó chuyển sang trạng thái <b>bị chặn</b> (Blocked), không được cấp CPU nữa.</li>
+<li><b>WakeUp(P)</b>: chuyển tiến trình P sang trạng thái <b>sẵn sàng</b> (Ready).</li></ul>
+<p>Áp dụng (slide 81), dùng 2 biến chung: <code>busy</code> (đang có người trong CS?) và <code>blocked</code> (số tiến trình đang ngủ chờ):</p>
+<pre class="q-pre">int busy = 0, blocked = 0;
+/* vào */
+if (busy) {                  // có người trong CS
+    blocked = blocked + 1;   //   ghi tên mình vào danh sách chờ
+    Sleep();                 //   đi ngủ
+}
+else busy = 1;               // trống: treo biển "có người"
 CS;
+/* ra */
 busy = 0;
-if (blocked) { WakeUp(P); blocked = blocked - 1; }</pre>
-<p><b>Vấn đề</b> (slide 82): bước <b>kiểm tra điều kiện</b> và bước <b>từ bỏ CPU</b> có thể bị ngắt chen giữa; <b>biến khóa không được bảo vệ</b>. Ví dụ: P thấy busy = 1, chưa kịp Sleep thì bị ngắt; tiến trình kia ra khỏi CS gọi WakeUp nhưng P chưa ngủ nên tín hiệu bị mất; P quay lại ngủ và <b>ngủ mãi</b> (mất tín hiệu đánh thức).</p>
-<h4 class="sub">Semaphore (slide 83–86)</h4>
-<ul><li>Do <b>Dijkstra</b> đề xuất năm <b>1965</b>. Semaphore s gồm một <b>giá trị nguyên</b> và một <b>danh sách các tiến trình bị chặn</b>.</li>
-<li>Hai lời gọi hệ thống <b>Down(s)</b> và <b>Up(s)</b>, thực hiện <b>không bị chia cắt</b>.</li></ul>
-<pre class="q-pre">Down(S) {                    Up(S) {
-  S.value--;                   S.value++;
-  if (S.value &lt; 0) {           if (S.value &lt;= 0) {
-    Add(P, S.L);                 Remove(P, S.L);
-    Sleep();                     Wakeup(P);
-  }                            }
-}                            }</pre>
-<table><tr><th>Cách dùng (slide 86)</th><th>Code</th><th>Ý nghĩa</th></tr>
-<tr><td><b>s = 1</b>: loại trừ lẫn nhau</td><td>Down(s); CS; Up(s);</td><td>Người đầu tiên làm s = 0 rồi vào; người sau làm s âm thì ngủ</td></tr>
-<tr><td><b>s = 0</b>: định thứ tự</td><td>P1: Job1; Up(s); · P2: Down(s); Job2;</td><td><b>Job2 luôn chạy sau Job1</b>: P2 Down trước thì ngủ cho tới khi P1 Up</td></tr></table>
-<div class="tip"><b>Đọc giá trị semaphore:</b> value dương = số tài nguyên còn trống; value âm = <b>số tiến trình đang chờ</b> (ví dụ −2 là 2 tiến trình đang ngủ). <span class="xs">ngoài slide</span>: semaphore chỉ nhận 0/1 gọi là <b>nhị phân (binary)</b>, nhận số bất kỳ gọi là <b>đếm (counting)</b>.</div>
-<h4 class="sub">Monitor (slide 87–90)</h4>
-<ul><li>Đề xuất bởi <b>Hoare (1974)</b> và <b>Brinch Hansen (1975)</b>. Là cơ chế đồng bộ <b>do ngôn ngữ lập trình cung cấp</b>.</li>
-<li>Chức năng như semaphore nhưng <b>dễ dùng, ít sai hơn</b>: <b>loại trừ được thực hiện tự động</b> (mỗi lúc chỉ một tiến trình chạy trong monitor).</li>
-<li>Dùng <b>biến điều kiện (condition)</b> với <b>Wait(c)</b> và <b>Signal(c)</b> để định thứ tự. Ví dụ slide 90: F1 làm Job1 rồi Signal(c); F2 Wait(c) rồi mới làm Job2.</li></ul>
-<pre class="q-pre">monitor monitor-name {
-  shared variable declarations
-  procedure body P1 (…) { … }
-  …
-  procedure body Pn (…) { … }
-  { initialization code }
+if (blocked) {               // có người đang ngủ chờ
+    WakeUp(P);               //   đánh thức một người
+    blocked = blocked - 1;
 }</pre>
-<h4 class="sub">Message passing (slide 91)</h4>
-<ul><li><code>send(P, message)</code> gửi cho tiến trình P; <code>receive(Q, message)</code> nhận từ Q. Tiến trình phải <b>biết rõ tên</b> bên kia.</li>
-<li>Liên kết <b>tự động thiết lập</b>; mỗi liên kết gắn với <b>đúng một cặp</b> tiến trình; giữa mỗi cặp có <b>đúng một</b> liên kết; liên kết có thể một chiều nhưng thường <b>hai chiều</b>.</li></ul>
-<h4 class="sub">Các bài toán đồng bộ kinh điển (slide 92)</h4>
-<ul><li><b>Bounded-Buffer</b> (Producer–Consumer, người sản xuất – người tiêu dùng): bộ đệm có hạn, đầy thì người sản xuất chờ, rỗng thì người tiêu dùng chờ.</li>
-<li><b>Readers and Writers</b>: nhiều người đọc cùng lúc được, nhưng người ghi phải độc quyền.</li>
-<li><b>Dining-Philosophers</b> (bữa tối của các triết gia): 5 triết gia ngồi quanh bàn, giữa mỗi hai người có 1 chiếc đũa; muốn ăn phải cầm đủ 2 chiếc. Minh họa deadlock và starvation khi cấp nhiều tài nguyên.</li></ul>`},
+<p><b>Chạy thử trường hợp bình thường:</b> P vào trước (busy = 1). Q tới, thấy busy = 1 → blocked = 1, Q ngủ (không tốn CPU). P ra: busy = 0, thấy blocked = 1 → WakeUp(Q), blocked = 0. Q được đánh thức và vào CS.</p>
+<p><b>Vấn đề (slide 82):</b> \"kiểm tra điều kiện và từ bỏ CPU có thể bị chặn\" và \"biến lock không được bảo vệ\". Nói dễ hiểu: giữa lúc Q <b>kiểm tra</b> và lúc Q <b>thật sự ngủ</b> có một khe hở, CPU có thể chuyển sang P đúng lúc đó.</p>
+<table><tr><th>Bước</th><th>Ai</th><th>Làm gì</th><th>busy</th><th>blocked</th></tr>
+<tr><td>1</td><td>P</td><td>vào CS, busy = 1</td><td>1</td><td>0</td></tr>
+<tr><td>2</td><td>Q</td><td>thấy busy = 1 → blocked = 1, chuẩn bị gọi Sleep()</td><td>1</td><td>1</td></tr>
+<tr><td>3</td><td colspan="4"><i>⚡ ngắt: CPU chuyển sang P trước khi Q kịp gọi Sleep()</i></td></tr>
+<tr><td>4</td><td>P</td><td>ra CS: busy = 0; thấy blocked = 1 → WakeUp(Q). Nhưng Q <b>chưa ngủ</b> → tín hiệu <b>bị mất</b></td><td>0</td><td>0</td></tr>
+<tr><td>5</td><td>Q</td><td>chạy tiếp đúng chỗ dừng: gọi Sleep() → <b>ngủ mãi</b>, không còn ai đánh thức</td><td>0</td><td>0</td></tr></table>
+<p>→ CS trống mà Q ngủ vĩnh viễn: <b>mất tín hiệu đánh thức</b> (lost wakeup). Ngoài ra biến <code>busy</code> cũng có lỗi \"nhìn biển rồi mới treo biển\" như biến khóa ở mục 10.</p>
+<div class="tip"><b>Ví von:</b> bạn định đi ngủ trưa và dặn \"tới giờ thì gọi tôi\". Người kia gọi đúng lúc bạn đang trải chiếu, chưa nằm xuống, nên bạn không nghe. Bạn nằm xuống ngủ, và không ai gọi lần hai nữa.</div>
+<p>Cách chữa là cần một biến <b>nhớ lại</b> cả những lần đánh thức chưa ai nhận, và việc kiểm tra + đi ngủ phải <b>không bị chen ngang</b>. Đó chính là Semaphore.</p>
+
+<h4 class="sub">2. Semaphore (slide 83–86)</h4>
+<p>Do <b>Dijkstra</b> đề xuất năm <b>1965</b>. Một semaphore gồm 2 phần (slide 84):</p>
+<pre class="q-pre">typedef struct {
+    int value;                 // giá trị nguyên của semaphore
+    struct process *L;         // danh sách tiến trình đang bị chặn chờ semaphore
+} Semaphore;</pre>
+<p>Và chỉ được dùng qua 2 lời gọi hệ thống <b>Down(s)</b> và <b>Up(s)</b>, được thực hiện <b>trọn vẹn, không bị chen ngang</b> (slide 83: \"Down và Up được thực hiện tuần tự\"):</p>
+<pre class="q-pre">Down(S) {                       Up(S) {
+  S.value--;                      S.value++;
+  if (S.value &lt; 0) {              if (S.value &lt;= 0) {
+    Add(P, S.L);  // vào hàng       Remove(P, S.L);  // lấy 1 người ra
+    Sleep();      // ngủ            Wakeup(P);       // đánh thức
+  }                               }
+}                               }</pre>
+<table><tr><th>Thao tác</th><th>Nói dễ hiểu</th></tr>
+<tr><td><b>Down(s)</b> (xin)</td><td>Xin một \"vé\". Trừ value đi 1. Nếu value thành <b>âm</b> nghĩa là hết vé → vào hàng chờ và ngủ.</td></tr>
+<tr><td><b>Up(s)</b> (trả)</td><td>Trả một \"vé\". Cộng value thêm 1. Nếu value vẫn <b>≤ 0</b> nghĩa là đang có người ngủ chờ → đánh thức một người.</td></tr></table>
+<div class="formula">value &gt; 0: còn <b>value</b> vé trống · value = 0: hết vé, không ai chờ · value &lt; 0: <b>|value|</b> tiến trình đang ngủ chờ</div>
+<p><b>Chạy thử với s = 1</b> và 3 tiến trình P1, P2, P3 cùng muốn vào CS (mỗi tiến trình làm Down → CS → Up):</p>
+<table><tr><th>Bước</th><th>Ai</th><th>Làm gì</th><th>value</th><th>Danh sách chờ</th><th>Trong CS</th></tr>
+<tr><td>1</td><td>P1</td><td>Down: 1 → 0, không âm → vào</td><td>0</td><td>–</td><td>P1</td></tr>
+<tr><td>2</td><td>P2</td><td>Down: 0 → −1, âm → ngủ</td><td>−1</td><td>P2</td><td>P1</td></tr>
+<tr><td>3</td><td>P3</td><td>Down: −1 → −2, âm → ngủ</td><td>−2</td><td>P2, P3</td><td>P1</td></tr>
+<tr><td>4</td><td>P1</td><td>Up: −2 → −1, vẫn ≤ 0 → đánh thức P2</td><td>−1</td><td>P3</td><td>P2</td></tr>
+<tr><td>5</td><td>P2</td><td>Up: −1 → 0, ≤ 0 → đánh thức P3</td><td>0</td><td>–</td><td>P3</td></tr>
+<tr><td>6</td><td>P3</td><td>Up: 0 → 1, &gt; 0 → không ai chờ</td><td>1</td><td>–</td><td>–</td></tr></table>
+<p>Nhìn cột value: −2 ở bước 3 đúng là \"2 tiến trình đang chờ\". Mỗi lúc chỉ một tiến trình trong CS.</p>
+<p><b>Vì sao semaphore không mất tín hiệu?</b> Nếu Up xảy ra khi chưa ai ngủ, value được <b>cộng lên và giữ lại</b>; lần Down sau thấy value không âm nên khỏi ngủ. Và vì Down/Up không bị chen ngang nên không còn khe hở giữa \"kiểm tra\" và \"đi ngủ\" như Sleep &amp; Wakeup.</p>
+
+<p><b>Hai cách dùng (slide 86):</b></p>
+<table><tr><th>Cách dùng</th><th>Khởi tạo</th><th>Code</th><th>Ý nghĩa</th></tr>
+<tr><td><b>Loại trừ lẫn nhau</b></td><td>s = 1</td><td>mọi Pi: <code>Down(s); CS; Up(s);</code></td><td>Chỉ 1 \"vé\" nên mỗi lúc chỉ 1 người trong CS</td></tr>
+<tr><td><b>Định thứ tự</b></td><td>s = 0</td><td>P1: <code>Job1; Up(s);</code><br>P2: <code>Down(s); Job2;</code></td><td>Job2 <b>luôn chạy sau</b> Job1. P2 tới trước thì ngủ ở Down cho tới khi P1 làm xong Job1 và Up</td></tr></table>
+<p><b>Chạy thử định thứ tự, P2 tới trước:</b> P2 Down: 0 → −1, ngủ. P1 làm Job1, Up: −1 → 0, đánh thức P2. P2 làm Job2. <b>P1 tới trước:</b> P1 làm Job1, Up: 0 → 1 (ghi nhớ). P2 Down: 1 → 0, không ngủ, làm Job2 luôn. Cả hai trường hợp Job2 đều sau Job1.</p>
+<div class="tip"><b>Ví von:</b> semaphore như <b>bãi gửi xe có N chỗ</b> và một bảng đếm. Xe vào (Down) thì trừ 1; hết chỗ thì xếp hàng chờ ngoài cổng. Xe ra (Up) thì cộng 1 và gọi xe đầu hàng vào. Bảng đếm âm 2 nghĩa là có 2 xe đang chờ.</div>
+<p><span class="xs">ngoài slide</span> Semaphore chỉ nhận 0 và 1 gọi là <b>semaphore nhị phân (binary)</b>, dùng cho loại trừ; nhận số bất kỳ gọi là <b>semaphore đếm (counting)</b>, dùng khi có N tài nguyên giống nhau. Lỗi hay gặp: <b>quên Up</b> → người sau chờ mãi; <b>viết ngược</b> Up trước Down → hỏng loại trừ.</p>
+
+<div class="demo" data-demo="sem"></div>
+
+<h4 class="sub">3. Monitor (slide 87–90)</h4>
+<p>Đề xuất bởi <b>Hoare (1974)</b> và <b>Brinch Hansen (1975)</b>. Khác semaphore (do HĐH cung cấp, lập trình viên tự đặt Down/Up), monitor là cơ chế <b>do ngôn ngữ lập trình cung cấp</b>: gói các biến dùng chung và các thủ tục thao tác trên chúng vào một khối.</p>
+<pre class="q-pre">monitor monitor-name {
+    shared variable declarations      // biến dùng chung, chỉ truy cập qua các thủ tục
+    procedure body P1 (…) { … }
+    procedure body P2 (…) { … }
+    …
+    { initialization code }
+}</pre>
+<ul><li><b>Loại trừ tự động:</b> mỗi lúc chỉ <b>một</b> tiến trình được chạy bên trong monitor. Tiến trình khác gọi thủ tục của monitor lúc đó sẽ phải chờ ở cửa. Lập trình viên không cần tự viết Down/Up, nên khó viết sai hơn.</li>
+<li><b>Biến điều kiện (condition)</b> để định thứ tự: <b>Wait(c)</b> – ngủ chờ điều kiện c và <b>tạm nhả monitor</b> cho người khác vào; <b>Signal(c)</b> – đánh thức một tiến trình đang chờ c.</li></ul>
+<p><b>Ví dụ slide 90:</b></p>
+<table><tr><th>Mục đích</th><th>Monitor</th><th>Tiến trình dùng</th></tr>
+<tr><td>Loại trừ</td><td>Function AccessMutual chứa CS truy cập tài nguyên RC</td><td>Pi chỉ cần gọi <code>M.AccessMutual();</code></td></tr>
+<tr><td>Định thứ tự</td><td>F1: Job1; Signal(c). F2: Wait(c); Job2.</td><td>P1 gọi <code>M.F1()</code>, P2 gọi <code>M.F2()</code> → Job2 sau Job1</td></tr></table>
+<div class="tip"><b>Ví von:</b> monitor như <b>phòng khám có lễ tân</b>. Bệnh nhân chỉ cần vào phòng chờ, lễ tân tự bảo đảm mỗi lúc một người vào gặp bác sĩ. Ai phải chờ kết quả xét nghiệm thì ra ghế ngồi (Wait), có kết quả thì được gọi lại (Signal).</div>
+
+<h4 class="sub">4. Message passing (slide 91)</h4>
+<ul><li>Hai lời gọi: <b>send(P, message)</b> gửi message tới tiến trình P; <b>receive(Q, message)</b> nhận message từ tiến trình Q. Tiến trình phải <b>biết rõ tên</b> tiến trình bên kia.</li>
+<li>Đặc tính liên kết: được <b>thiết lập tự động</b>; mỗi liên kết gắn với <b>đúng một cặp</b> tiến trình; giữa mỗi cặp có <b>đúng một</b> liên kết; liên kết có thể một chiều nhưng thường là <b>hai chiều</b>.</li>
+<li>Đồng bộ ở chỗ: <b>receive phải chờ</b> tới khi có message gửi tới, nên bên nhận tự động chạy sau bên gửi. <span class="xs">ngoài slide</span> Không cần bộ nhớ chung, nên dùng được cả giữa hai máy qua mạng.</li></ul>
+<div class="tip"><b>Ví von:</b> nhắn tin cho bạn. Bạn chưa nhận được tin (receive) thì cứ chờ; không ai phải dùng chung một cuốn sổ.</div>
+
+<h4 class="sub">5. Các bài toán đồng bộ kinh điển (slide 92)</h4>
+<table><tr><th>Bài toán</th><th>Tình huống</th><th>Cần bảo đảm</th></tr>
+<tr><td><b>Bounded-Buffer</b> (Producer–Consumer)</td><td>Người sản xuất bỏ hàng vào kho N ô; người tiêu dùng lấy ra</td><td>Kho đầy thì sản xuất phải chờ; kho rỗng thì tiêu dùng phải chờ; không hai người cùng sửa kho</td></tr>
+<tr><td><b>Readers and Writers</b></td><td>Nhiều người đọc và người ghi cùng một dữ liệu</td><td>Nhiều người đọc cùng lúc được; người ghi phải <b>độc quyền</b></td></tr>
+<tr><td><b>Dining-Philosophers</b></td><td>5 triết gia ngồi quanh bàn, giữa mỗi hai người có 1 chiếc đũa, muốn ăn phải cầm đủ 2 chiếc</td><td>Không ai đói mãi; tránh cả 5 cùng cầm đũa trái rồi chờ đũa phải → <b>kẹt (deadlock)</b></td></tr></table>
+<p><span class="xs">ngoài slide</span> Lời giải Producer–Consumer bằng semaphore: <code>mutex = 1</code> (bảo vệ kho), <code>empty = N</code> (số ô trống), <code>full = 0</code> (số ô có hàng).</p>
+<pre class="q-pre">/* Producer */                    /* Consumer */
+Down(empty);  // chờ có ô trống   Down(full);   // chờ có hàng
+Down(mutex);                      Down(mutex);
+  bỏ hàng vào kho;                  lấy hàng ra;
+Up(mutex);                        Up(mutex);
+Up(full);     // thêm 1 ô có hàng Up(empty);    // thêm 1 ô trống</pre>
+
+<h4 class="sub">So sánh các giải pháp ngủ – đánh thức</h4>
+<table><tr><th></th><th>Ai cung cấp</th><th>Cách dùng</th><th>Ưu / nhược</th></tr>
+<tr><td>Sleep &amp; Wakeup</td><td>HĐH (2 system call)</td><td>Tự viết busy, blocked</td><td>Không tốn CPU nhưng <b>mất tín hiệu</b></td></tr>
+<tr><td>Semaphore</td><td>HĐH (Down, Up)</td><td>Tự đặt Down/Up đúng chỗ</td><td>Mạnh, nhưng đặt sai/quên Up là lỗi</td></tr>
+<tr><td>Monitor</td><td>Ngôn ngữ lập trình</td><td>Gọi thủ tục của monitor</td><td>Loại trừ tự động, dễ dùng hơn</td></tr>
+<tr><td>Message passing</td><td>HĐH (send, receive)</td><td>Gửi / nhận message</td><td>Không cần bộ nhớ chung</td></tr></table>
+<div class="tip"><b>Mẹo nhớ:</b> Sleep &amp; Wakeup <b>mất tín hiệu</b> · Semaphore <b>đếm vé</b> (Down xin, Up trả; âm = số người chờ) · Monitor <b>lễ tân tự lo</b> (Wait / Signal) · Message passing <b>nhắn tin</b> (send / receive).</div>
+`},
 {id:"s2-12",title:"✔ Ghi nhớ nhanh Chương 2",
  figs:[], yt:"",
  html:`

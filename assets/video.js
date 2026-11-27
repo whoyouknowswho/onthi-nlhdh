@@ -164,7 +164,9 @@ var EN = {
   "while":"oai","windows":"uyn đâu","word":"uốt","working":"uốc kinh","worst":"uốt","write":"rai","xyz":"ích i dét","abc":"a bê xê",
   "cat":"két","ant":"en","chrome":"crôm","dog":"đóc","pig":"pích","cow":"cao","fox":"phốc","from":"phờ rom","for":"pho","fork":"phóc","exec":"ếch xéc",
   "test and set lock":"tét en xét lóc","exit":"ếch xít","kill":"kiu","process group":"pờ rô xét gờ rúp","process":"pờ rô xét","group":"gờ rúp","running":"ran ninh","blocked":"bờ lốc","server":"xơ vơ","web":"guép","dispatcher":"đít pát chơ","worker":"uốc cơ","round robin":"rao rốp bin","quantum":"quan tầm","real-time":"ri ồ tai","hard":"hát","soft":"xóp","peterson":"pi tơ sần","lock":"lóc","turn":"tơn","interest":"in tơ rét","sleep":"xờ líp","wakeup":"quây ắp","semaphore":"xe ma pho","dijkstra":"đai cờ xtra","down":"đao","monitor":"mo ni tơ","hoare":"ho","brinch hansen":"brin han xần","signal":"xích nồ","message passing":"me xịt pát xinh","send":"xen","receive":"ri xíp","ready":"rét đi",
-  "memory manager":"me mô ri ma na giơ","bit map":"bít máp","bitmap":"bít máp","device driver":"đi vai đờ rai vơ"
+  "memory manager":"me mô ri ma na giơ","bit map":"bít máp","bitmap":"bít máp","device driver":"đi vai đờ rai vơ",
+  "message":"mét xịt","value":"va liu","mutex":"miu tếch","empty":"em ti","full":"phun","producer":"pờ rô đu xơ","consumer":"cơn xu mơ","deadlock":"đét lóc",
+  "job1":"gióp một","job2":"gióp hai","f1":"ép một","f2":"ép hai","accessmutual":"ác xét miu chu ồ"
 };
 var CIRC = "①②③④⑤⑥⑦⑧⑨";
 function esc(s){ return s.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"); }

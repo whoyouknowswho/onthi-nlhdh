@@ -638,3 +638,15 @@ main:has(.sum-layout.has-gl){max-width:1720px}
 .cs-log{margin-top:10px;max-height:190px;overflow:auto;font-size:13.5px;line-height:1.7;border-top:1px dashed var(--line2);padding-top:8px}
 .cs-dt{font-size:13px}
 @media (max-width:640px){ .cs-grid{grid-template-columns:1fr} }
+/* Chương 2 mục 11: semaphore */
+.sem-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:6px 0 12px}
+.sem-val{font-size:20px;padding:8px 16px;border-radius:12px;background:var(--violet-soft);border:1px solid var(--line2)}
+.sem-val.neg{background:var(--bad-soft)}
+.sem-m{color:var(--muted);font-size:14.5px}
+.sem-q{flex-basis:100%;font-size:14.5px}
+.sem-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sem-p{border:1px solid var(--line2);border-radius:12px;padding:10px;background:var(--card2);display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.sem-p.on{border-color:var(--ok)}
+.sem-p.zz{border-color:var(--warn);opacity:.85}
+.sem-b{display:flex;gap:6px}
+@media (max-width:640px){ .sem-grid{grid-template-columns:repeat(2,1fr)} }
